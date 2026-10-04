@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Claude (Antigravity) took over on 2026-10-04; Codex has stopped editing.
+Ownership: Codex took over on 2026-10-04 after the user confirmed Claude idle.
 Do not have both agents edit this checkout concurrently.
 
 Claude session 2026-10-04 17:10 (verification only, no code changes):
@@ -175,3 +175,23 @@ Replace this section when needed; remove stale entries after completing them.
 - Backup and restoration plan:
 - Exact next action:
 - Latest local commit / remote pushed or pending:
+
+## Codex native acceptance session (IN PROGRESS)
+
+User confirmed Claude idle; Codex owns this checkout for live checks.
+Git clean at 0534e61 before takeover. Windows Computer Use initialized; no game window.
+Game-closed backup: runtime/backups/console-native-20261004 (SarahConsoleCase,
+latestSave/options/key settings). New disposable copy: SarahConsoleNativeCase.
+Restore only game-closed after preserving this new case: copy backed-up settings
+back to their original isolated paths; original SarahConsoleCase stays preserved.
+Next: launch isolated profile; check native input/Options/teardown. Hold duration
+is not exposed by the supported desktop API; no hold-repeat pass claimed.
+
+
+Session progress: isolated Java process 40024 launched outside sandbox; Continue
+entered SarahConsoleNativeCase. Mouse/screenshot capture work. Injected F9 did
+not open console; injected Escape did not open vanilla pause menu. This is a
+key-delivery limitation, not evidence of a Sarah defect. User-assisted hold/Escape
+check requested; result pending. No production code changed. All 68 automated
+checks rerun successfully. Live log reports ACTIVE/RESTORED b, worn=3 and local
+player preserved. Game running while awaiting physical checks; no teardown pass.

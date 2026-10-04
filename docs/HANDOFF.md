@@ -192,3 +192,21 @@ GitHub app authentication remains untested; Git uses the existing repository/rem
 The app warned that its bundled customization/skills token budget was exceeded;
 Sarah's AGENTS.md was nevertheless shown in the loaded rules breakdown. Unrelated
 global skills/settings were left unchanged.
+
+## Coding and native-test ownership (2026-10-04)
+
+The user confirmed Claude idle and authorized Codex to take over the canonical
+checkout. Codex owns the current native M1 slice A test session. Claude receives
+coding/automated-test tasks only when the user sends the prepared handoff prompt.
+Codex handles desktop observation, isolated game setup and native acceptance.
+Do not edit concurrently. Each owner commits/pushes its checkpoint and states
+whether the game is running, the active case, backups, evidence and next task.
+No automatic agent messaging/switching is configured; the user forwards prompts.
+
+Current case: runtime/isolated/Saves/Rising/SarahConsoleNativeCase, copied from
+SarahConsoleCase with game closed. Backup: runtime/backups/console-native-20261004.
+Original case, latestSave.ini, options.ini and Lua/keysB42.ini preserved there.
+For restoration, close game, preserve latest NativeCase into a new backup first,
+then copy saved settings to their original isolated paths. Do not erase cases.
+Codex Windows Computer Use captures this game and clicks successfully; F9 and
+Escape injection had no observed effect. Physical key checks remain user-assisted.
