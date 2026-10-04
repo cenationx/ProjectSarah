@@ -255,3 +255,14 @@ Retest runtime: game running in SarahConsoleNativeCase, restored a; production
 fix active and probe reports guard=true. Physical F9/Escape retest requested;
 result pending. All acceptance boxes remain unchanged. Probe remains deployed
 until game-closed cleanup. Codex retains sole ownership.
+
+## Latest native result and desktop diagnostic
+
+Escape fix PASS in user-operated retest: first Escape closes console only;
+subsequent Escape opens normal game menu. Probe corroborates raw Escape close,
+armed/expired swallow and guard=true. Supersedes awaiting-Escape-retest notes.
+All other slice A checks remain pending. Desktop diagnosis: injected i works,
+F9/Escape do not with confirmed focus; F9 also tested unpaused. Supported API
+has no held-key/timing control. Exact tool failure cause unconfirmed; no helper
+patch attempted. See docs/desktop-input-diagnostic.md. Game running and paused,
+NativeCase active, ZZSarahEscapeProbe still deployed. Codex owns checkout.

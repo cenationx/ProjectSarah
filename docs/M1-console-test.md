@@ -101,3 +101,12 @@ These do NOT prove native behavior. Native retest by Codex/user is required: dep
 production source game-closed after backup, press Escape once with the console open, and
 confirm the console closes and the pause menu does not appear. If it fails, capture raw
 ESC state, OnKeyPressed calls and tick order with a temporary probe.
+
+## Escape fix native retest PASS (user-operated, 2026-10-04)
+
+User confirmed both requested results: physical F9 then Escape closes console
+without game menu; later Escape opens normal menu. Probe records panel true then
+raw Escape/panel false/swallow true, expiry back to false and guard=true.
+This establishes bounded Escape behavior, not all remaining slice A acceptance.
+Physical Escape stopped Computer Use in the prior turn; result is still valid.
+See desktop-input-diagnostic.md for separate automated special-key limitation.
