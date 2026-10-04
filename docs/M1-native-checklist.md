@@ -1,7 +1,7 @@
 # M1 slice A native acceptance checklist
 
 Updated: 2026-10-04 (Europe/Helsinki).
-Status: OPEN. Physical F9 open/close, read-only commands (help, status, inventory), and physical Escape (first-close console, second-open menu) PASSED. Six remaining acceptance gates below must be completed before M1 slice A is accepted or slice B (stop/cancellation) begins.
+Status: PASSED in the isolated native case (2026-10-05). Physical F9 open/close, read-only commands and Escape behavior passed; all six gates below now passed with scoped evidence.
 
 ## Safeguards and pre-flight rules
 
@@ -15,7 +15,7 @@ Status: OPEN. Physical F9 open/close, read-only commands (help, status, inventor
 
 ## Ordered acceptance checklist
 
-All remaining gates are currently pending. Mark `[x]` only when direct native evidence is captured.
+All six gates passed. Instrumentation limits are recorded below.
 
 - [x] **1. Hold-repeat behavior (F9)**
   - **Action**: Open game in `SarahConsoleNativeCase`. Physically press and hold `F9` down steadily for 1–2 seconds.
@@ -37,7 +37,7 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
   - **Expected result**: Rebound key opens and closes the console; in-console toggle status shows the updated key name; binding persists in isolated `keysB42.ini` across full process restart.
   - **Evidence to record**: Updated binding in `keysB42.ini`, successful toggle before and after full restart.
 
-- [ ] **5. Conflict refusal and context menu fallback**
+- [x] **5. Conflict refusal and context menu fallback**
   - **Action**: In Options, rebind `Sarah Console` to a conflicting key used by movement (e.g. `W` / Forward) Confirm the other action remains bound to the same key: Options may clear collisions automatically. Unbound (`0`) is a separate fallback check and does not establish collision refusal. Return to game and press that key. Then right-click the game world to open the context menu.
   - **Expected result**: Pressing the conflicting key refuses to open the console (movement behaves normally without conflict errors). Right-click world context menu displays `Sarah: console`; clicking it opens the console, displaying conflict warning text in the history.
   - **Evidence to record**: Console opens via context menu; conflict warning banner visible; conflicting gameplay action operates safely without unintended opening.
@@ -67,3 +67,17 @@ or UIManager-membership claim; evidence covers visible cleanup and session behav
 Movement result (2026-10-04): user completed the requested Escape-close and mouse-Close walking sequence and reported movement fine. User-operated native PASS; no coordinate probe deployed. Hold-repeat confirmation requested separately; still pending.
 
 2026-10-04: user confirms holding F9 then releasing leaves console open (hold-repeat PASS). Codex visually verified Project Sarah / Sarah Console / F9 labels in native Options (English labels PASS). Rebind dialog prepared; F7 assignment requested, not yet verified/applied.
+
+## Final slice A native acceptance (2026-10-05)
+Actual duplicate binding retained through native Options Keep Both: Forward and
+Sarah Console both key:17 (W). User reports movement with no console opening.
+Codex clicked world Sarah: console fallback and directly observed the panel with
+Key conflict with Forward; rebind Sarah Console in Options. Conflict/fallback PASS.
+All six native checklist gates complete in this isolated case. No source changes.
+Game closed normally: SAVED b / GameThread exited, no native game window.
+Final world/settings/logs: runtime/backups/codex-resume-20261004-234837/Final-acceptance.
+Original acceptance root keysB42.ini was zero bytes. Restored the full pre-Gemini
+F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
+Forward verified key:17; explicit restored F9 file verified, no additional launch
+claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
+offline only. Next bounded work: slice B stop/cancellation; external AI on hold.

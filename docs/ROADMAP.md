@@ -72,7 +72,7 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
   console without menu; subsequent Escape opens menu). See `M1-console-test.md`.
 - [x] User-operated physical F9 open/status/close, corroborated by probe samples;
   full restart with one Sarah/local player and final native scrolling output.
-- [ ] Configurable unused binding: provisional F9, conflict checks and actual
+- [x] Configurable unused binding: provisional F9, conflict checks and actual
   key delivery verified; safe input focus, close and mouse fallback.
 - [ ] Slice B: stop, cancellation and bounded request/result history.
 - [ ] Slice C: walk here, initially nearby/same-floor; one action, true completion

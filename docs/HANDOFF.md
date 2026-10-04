@@ -295,3 +295,17 @@ Existing hidden-style launcher produced a usable visible game through Codex; the
 blanket hidden-window diagnosis above is not established for GLFW across runners.
 
 
+
+## Final slice A native acceptance (2026-10-05)
+Actual duplicate binding retained through native Options Keep Both: Forward and
+Sarah Console both key:17 (W). User reports movement with no console opening.
+Codex clicked world Sarah: console fallback and directly observed the panel with
+Key conflict with Forward; rebind Sarah Console in Options. Conflict/fallback PASS.
+All six native checklist gates complete in this isolated case. No source changes.
+Game closed normally: SAVED b / GameThread exited, no native game window.
+Final world/settings/logs: runtime/backups/codex-resume-20261004-234837/Final-acceptance.
+Original acceptance root keysB42.ini was zero bytes. Restored the full pre-Gemini
+F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
+Forward verified key:17; explicit restored F9 file verified, no additional launch
+claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
+offline only. Next bounded work: slice B stop/cancellation; external AI on hold.

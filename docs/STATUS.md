@@ -1,18 +1,18 @@
 # Current project state
 
-Updated: 2026-10-04 (Europe/Helsinki).
-State: M0 broader hardening open. M1 read-only console slice A in progress. Physical F9 open/close, read-only commands (help, status, inventory), and physical Escape (first-close console, second-open menu) PASSED. Remaining native slice A acceptance OPEN (see `docs/M1-native-checklist.md`).
+Updated: 2026-10-05 (Europe/Helsinki).
+State: M0 broader hardening open. M1 read-only console slice A native acceptance PASSED in the isolated case. See `docs/M1-native-checklist.md` for evidence boundaries. Next bounded task: slice B stop/cancellation design and implementation.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex released checkout for user-started Gemini assisted native acceptance.
+Ownership: Codex. All launches/live tests stay in Codex; Gemini handles bounded offline tasks only.
 Do not have two agents edit this checkout concurrently.
 
 ## Current local runtime state
 
-- Game is CLOSED (SAVED a, GameThread exited, no native window).
+- Game is CLOSED (SAVED b, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
 - Production mod deployed at `runtime/isolated/mods/SarahFoundation/` with verified `Console.lua` (Escape pause-menu guard included) and English `UI.json`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
-- Backups: Latest backup is `runtime/backups/input-comparison-20261004/After-comparison`. Earlier baseline, appearance, travel, module-cleanup, and native escape backups remain intact.
+- Backups: Latest final case/settings/logs: `runtime/backups/codex-resume-20261004-234837/Final-acceptance`. Full pre-Gemini key settings restored with Sarah Console reset to F9; Forward remains W. Original acceptance root key baseline is empty, so it was not used as explicit binding evidence.
 - Automated tests: 71 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 12 command + 11 console).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
@@ -26,7 +26,7 @@ Do not have two agents edit this checkout concurrently.
 - **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
 - **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
-## Next task: finish M1 slice A native acceptance
+## Completed: M1 slice A native acceptance
 
 Follow the ordered checklist in `docs/M1-native-checklist.md`:
 1. Hold-repeat behavior (F9).
@@ -36,7 +36,7 @@ Follow the ordered checklist in `docs/M1-native-checklist.md`:
 5. Conflict refusal and context menu fallback.
 6. Same-process menu return and world cleanup.
 
-Only after slice A acceptance is complete: proceed to Slice B (stop/cancellation). External AI and stop/walk remain on hold.
+All six checklist gates passed. Next: bounded Slice B stop/cancellation work; slice C walking and external AI remain deferred. No source changed during final native acceptance.
 
 ## Open issues and known boundaries
 
@@ -178,3 +178,17 @@ User confirms F7 opens/closes after reload. Callback counts/UIManager membership
 were not instrumented. Only conflict refusal/context-menu fallback remains pending.
 Game running in NativeCase with F7; original complete F9 baseline remains backed up.
 
+
+## Final slice A native acceptance (2026-10-05)
+Actual duplicate binding retained through native Options Keep Both: Forward and
+Sarah Console both key:17 (W). User reports movement with no console opening.
+Codex clicked world Sarah: console fallback and directly observed the panel with
+Key conflict with Forward; rebind Sarah Console in Options. Conflict/fallback PASS.
+All six native checklist gates complete in this isolated case. No source changes.
+Game closed normally: SAVED b / GameThread exited, no native game window.
+Final world/settings/logs: runtime/backups/codex-resume-20261004-234837/Final-acceptance.
+Original acceptance root keysB42.ini was zero bytes. Restored the full pre-Gemini
+F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
+Forward verified key:17; explicit restored F9 file verified, no additional launch
+claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
+offline only. Next bounded work: slice B stop/cancellation; external AI on hold.
