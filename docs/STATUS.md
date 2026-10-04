@@ -90,3 +90,17 @@ Only after slice A acceptance is complete: proceed to Slice B (stop/cancellation
 - Created `docs/M1-native-checklist.md` with ordered pending acceptance steps and safeguards.
 - Released checkout ownership to Codex for native testing.
 
+
+## Native acceptance IN PROGRESS (Codex)
+Game closed verified via native window inventory; no temporary probes deployed.
+Fresh game-closed backup: G:\Codex\Project Sarah\runtime\backups\acceptance-20261004-183708 (NativeCase and isolated settings).
+Restore only game-closed after preserving latest case: keys to isolated/Lua/keysB42.ini,
+options/latestSave to isolated root, world to Saves/Rising/SarahConsoleNativeCase.
+Next: physical hold-F9 and movement after Escape/mouse Close. Other gates pending.
+
+
+Acceptance runtime: isolated Java PID 36520; NativeCase entered, RESTORED a,
+ACTIVE npc=true worn=3 localPlayerPreserved=true. No temporary probe active.
+Physical hold-F9 and movement after Escape/mouse Close requested; results pending.
+Game running; Codex computer control paused while user operates keys. No new pass claimed.
+
