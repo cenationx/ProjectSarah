@@ -109,6 +109,10 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             self:cancelActive('controller replaced')
             return false,'controller replaced'
         end
+        if self.active.owner and currentOwner==nil then
+            self:cancelActive('controller unavailable')
+            return false,'controller unavailable'
+        end
         if self.active.npc and currentNpc and self.active.npc~=currentNpc then
             self:cancelActive('npc replaced')
             return false,'npc replaced'
@@ -178,6 +182,10 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             self:cancelActive('controller replaced')
             return false,'stale or cancelled'
         end
+        if self.active.owner and currentOwner==nil then
+            self:cancelActive('controller unavailable')
+            return false,'stale or cancelled'
+        end
         if self.active.npc and currentNpc and self.active.npc~=currentNpc then
             self:cancelActive('npc replaced')
             return false,'stale or cancelled'
@@ -202,6 +210,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         if self.active then self:cancelActive('session reset') end
         self.active=nil
         self.lastAction=nil
+        self.sequence=0
         self.token=0
         self.session=self.session+1
         self.history={}
@@ -331,6 +340,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
                 details={targetX=tx,targetY=ty,targetZ=tz}
             }
             self.active=action
+            addHistory({id=action.id,command=command,state='running',summary=string.format('Walking to (%d, %d, %d)',tx,ty,tz)})
             local actId=action.id
             local actToken=action.token
             local function onComplete()
@@ -361,14 +371,18 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             local walkOk,walkErr=self:invokeWalk(resolvedTarget,onComplete,onFail,action)
             if not walkOk then
                 self.active=nil
+                self:updateHistory(action.id,'failed','Start failed: '..tostring(walkErr))
                 result.state='failed'
                 result.lines={'Walk failed to start: '..tostring(walkErr)..'.'}
-                addHistory({id=result.id,command=command,state='failed',summary='Start failed: '..tostring(walkErr)})
+                return result
+            end
+            if not self.active then
+                result.state=action.state
+                result.lines={action.summary or ('Walk '..action.state)}
                 return result
             end
             result.state='running'
             result.lines={string.format('Walking to (%d, %d, %d).',tx,ty,tz)}
-            addHistory({id=result.id,command=command,state='running',summary=string.format('Walking to (%d, %d, %d)',tx,ty,tz)})
             return result
         end
         if command=='history' then

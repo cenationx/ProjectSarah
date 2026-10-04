@@ -23,13 +23,15 @@ no temporary driver active. User completed physical F9 open/close and physical
 Escape checks (first Escape closes console without menu; second Escape opens menu),
 corroborated by probe samples.
 
-Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-120 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 49 command,
-19 console). Slice A native acceptance passed. Slice B verified natively. Slice C (walk here,
-completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
-scoping, unambiguous private identity contract preserving production controller shape, and safe context menu routing)
-corrected and validated offline; native acceptance pending Codex live check. Automated special-key delivery remains limited by Computer Use;
-physical keys need the user. Keep external AI on hold.
+Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
+123 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 52 command,
+19 console). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
+and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
+Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
+scoping, production controller contract, and safe context menu routing) implemented and reviewed offline at d93c730,
+hardened against synchronous callbacks, sequence reset, and controller availability (123 automated checks); native
+acceptance of walking, arrival, and live cancellation pending Codex live check per `docs/M1-slice-c-checklist.md`.
+Automated special-key delivery remains limited by Computer Use; physical keys need the user. Keep external AI on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
 module-cleanup case/selections/keys, First-live-before-repair and Final-console.
@@ -87,13 +89,12 @@ It uses Lupa from `tools/dependencies/python`. The last tested installation was
 Lupa 2.8; on a fresh setup install it into that project-local directory using an
 available Python, with temporary/output directories under the project. This test
 executes actual Lua source with fake engine adapters and events. It does not
-prove gameplay compatibility. Expected latest result: 27 foundation checks.
-Also run `tools/test_render.py`: 13 engine adapter checks.
-Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
+prove gameplay compatibility. Expected latest result: 29 foundation checks.
 Run `tools/test_render.py`: 15 engine adapter checks.
-Run `tools/test_commands.py`: 45 command parser/cancellation/movement checks.
-Run `tools/test_console.py`: 17 simulated console UI/key/session checks.
-112 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
+Run `tools/test_commands.py`: 52 command parser/cancellation/movement checks.
+Run `tools/test_console.py`: 19 simulated console UI/key/session checks.
+123 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -383,3 +384,35 @@ Gemini completed M1 slice C implementation and automated validation (offline onl
   - Step 4: Verify Sarah walks to player square, reports arrival in status and history, halts cleanly on `stop`, rejects movement when busy or already at target, and context menu routes cleanly.
   - Step 5: Clean shutdown and save.
 - External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.
+
+## M1 slice C lifecycle audit, hardening, and native checklist handoff (2026-10-05)
+
+Gemini completed the lifecycle audit and hardening of M1 command and action boundaries (offline only; no game launches or desktop control):
+- **Lifecycle audit findings**:
+  - Traced Commands.lua, Console.lua, Engine.lua, and SarahFoundation.lua together across request start, adapter rejection, completion, failure, stop, timeout, controller/NPC replacement, and session teardown.
+  - Inspected PZ 42.21.0 engine `IsoGridSquare.isFree(false)`: passes `bCountOtherCharacters=false`, verifying that player occupancy does not prevent Sarah from navigating to the player's square.
+- **Reproduced defect and hardening: Synchronous callbacks**:
+  - Reproduced defect where an adapter or timed action calling `onFail` or `onComplete` synchronously during `invokeWalk()` left `execute('walk here')` reporting `running` and recording a `running` history entry, even though the action had already finished and cleared `self.active`.
+  - Fix: Pre-registers `running` history before invoking walk callback; updates history to `failed` if `walkOk` is false; accurately returns `action.state` and `action.summary` in `result` if the action finished synchronously during `invokeWalk()`.
+- **Reproduced defect and hardening: Session reset sequence and controller availability**:
+  - `Commands:reset()` resets `self.sequence = 0`, ensuring new sessions cleanly begin request numbering at `#1`.
+  - Symmetrical controller availability: `currentOwner == nil` triggers `'controller unavailable'` action invalidation in `checkLifecycle()` and `completeAction()`.
+- **Automated test suite (123 passing checks)**:
+  - Added 3 regression unit tests in `tools/test_commands.py` (52 checks total):
+    1. `walk here synchronous failure during start updates history and returns failed outcome`.
+    2. `walk here synchronous completion during start updates history and returns completed outcome`.
+    3. `session reset resets sequence counter and controller unavailable invalidates active action`.
+  - Full suite: 29 foundation + 15 engine adapter + 8 checkpoint + 52 command + 19 console = 123 checks passing.
+- **Native acceptance checklist**:
+  - Created `docs/M1-slice-c-checklist.md` with ordered 7-gate native testing procedure:
+    1. Normal walk arrival and tracking (`walk here` -> running -> arrival -> completed).
+    2. Already-at-target detection (`Already at target` immediate completion without movement).
+    3. Target refusal (> 8 tiles distance limit rejection).
+    4. Live in-motion stop cancellation (`walk here` -> in motion -> `stop` -> halted -> cancelled).
+    5. Immediate walk resumption after cancellation.
+    6. Context menu "Sarah: walk here" routing and visible onscreen feedback.
+    7. Session reset and clean reload (`SESSION_RESET`, history reset, request `#1`).
+- **Live testing handoff to Codex**:
+  - Game is CLOSED.
+  - Follow `docs/M1-slice-c-checklist.md` in `SarahConsoleNativeCase`.
+  - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

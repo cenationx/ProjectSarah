@@ -80,4 +80,4 @@ Original acceptance root keysB42.ini was zero bytes. Restored the full pre-Gemin
 F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
 Forward verified key:17; explicit restored F9 file verified, no additional launch
 claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
-offline only. Next bounded work: slice B stop/cancellation; external AI on hold.
+offline only. Slice A acceptance complete. See docs/M1-slice-c-checklist.md for Slice C and active movement cancellation acceptance. External AI on hold.

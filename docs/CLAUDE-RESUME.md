@@ -7,7 +7,7 @@ swallow armed and expired).
 
 The user now uses Codex for sustained coding and native testing, with Gemini assisting
 on bounded tasks. Claude is reserved only for explicit user requests. Read `docs/STATUS.md`,
-`docs/HANDOFF.md`, and `docs/M1-native-checklist.md` for current owner and remaining acceptance gates.
+`docs/HANDOFF.md`, `docs/M1-native-checklist.md`, and `docs/M1-slice-c-checklist.md` for current owner and remaining acceptance gates.
 External in-game AI remains on hold.
 
 ---

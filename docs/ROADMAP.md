@@ -9,7 +9,7 @@ before adding broader features. Multiplayer is outside the initial scope.
 |---|---|---|
 | M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
 | M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
-| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B implemented |
+| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B smoke passed, slice C implemented offline |
 | M2: Minimal AI vertical slice | One bounded model-to-action loop | ON HOLD; explicit user approval required |
 | M3: Sarah behavior and continuity | Personality, limited memory and useful behaviors | PROPOSED |
 | M4: Release candidate | Installation, regression checks and user documentation | PROPOSED |
@@ -74,9 +74,9 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
   full restart with one Sarah/local player and final native scrolling output.
 - [x] Configurable unused binding: provisional F9, conflict checks and actual
   key delivery verified; safe input focus, close and mouse fallback.
-- [x] Slice B: stop, cancellation and bounded request/result history; 94 automated checks and native idle-stop/history/console smoke checks passed. Native active-action cancellation remains required alongside slice C.
+- [x] Slice B: stop, cancellation and bounded request/result history; 94 automated checks and native idle-stop/history/session-reset smoke checks passed. Native active-action cancellation remains required alongside slice C.
 - [x] Slice C: walk here, initially nearby/same-floor; one action, true completion
-  tracking, timeout and busy/invalid-target rejection (120 automated checks pass; native live movement verification pending Codex check).
+  tracking, timeout, busy/invalid-target rejection, and synchronous callback hardening (123 automated checks pass; native live movement and cancellation verification pending Codex check per docs/M1-slice-c-checklist.md).
 - [x] Reset/invalidate actions on unload, death, controller change and world switch.
 - [ ] Native live command/focus/rebind/movement/restart tests in backed-up
   isolated cases; one Sarah and local player preserved.

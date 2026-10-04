@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B verified natively. M1 slice C corrected and validated offline with 120 passing automated checks (29 foundation + 15 engine adapter + 8 checkpoint readback + 49 command + 19 console). Native movement and cancellation acceptance pending Codex live check.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and reviewed offline at d93c730, hardened against synchronous callbacks, sequence reset, and controller availability with 123 passing automated checks (29 foundation + 15 engine adapter + 8 checkpoint readback + 52 command + 19 console). Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,19 +13,17 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
-- Automated tests: 120 automated checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 49 command + 19 console).
+- Automated tests: 123 automated checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 52 command + 19 console).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 120 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 49 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases).
+- **Automated policy checks**: 123 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 52 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases).
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
-- **M1 slice A read-only commands**: Native execution of `help`, `status`, and `inventory` commands passed; local player and NPC preserved; scrolling list box and native font metrics verified.
-- **M1 slice A physical F9**: Physical F9 open, command entry, and F9 close verified natively by user; corroborated by probe samples.
-- **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
-- **M1 slice B stop, cancellation, and history**: Implemented `stop` command with engine error propagation, action lifecycle tokens and independent lifecycle invalidation (death, unload, controller replacement, closed-console tick), shallow-copied action API records protecting internal state, bounded queryable history (capped at 30 records, no mutable engine handles exposed), handle-free public observations (`Observations.read()` returns strictly copied data with no controller/NPC/adapter handles), private action identity provider, and console panel integration. 19 command unit tests and 4 console simulation tests added (94 automated checks total). Native acceptance pending Codex live check.
-- **M1 slice C bounded movement ("walk here"), tracking, and cancellation**: Implemented `walk here` console command and `requestWalk(target)` dispatch. Target validated to 8 tiles on same floor, rejects invalid/NaN/infinite coordinates, different floor, distant tiles, and occupied/blocked or unloaded squares. Returns immediate `completed` when already at target. Rejects concurrent requests while busy. Cancels active walk immediately if Sarah dies, unloads, or controller is replaced. True arrival verification: checks Sarah's observed position against target square before marking completed; reports failure (`Stopped before target`) if stopped early. Integrates with user `stop` command and 600-tick timeout to halt engine timed actions. Revised per Codex review: removed direct `ISTimedActionQueue` fallback from `"Sarah: walk here"` menu callback (all walks route through validated dispatch, refusing clearly with player feedback if unavailable), and established an unambiguous private identity contract between Console and Commands (`Commands:getIdentity()` directly unpacks `(controller, npc)` without mistakenly treating `{npc=npc, adapter=adapter}` as a wrapper table; controller replacement with the same NPC cancels old requests, rejects stale callbacks, and isolates replacement controllers from stale stop operations, while preserving same-controller NPC replacement). 26 new automated tests (120 total). Native acceptance pending Codex live check.
+- **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
+- **M1 slice B stop, cancellation, and history**: Implemented `stop` command with engine error propagation, action lifecycle tokens and independent lifecycle invalidation (death, unload, controller replacement, closed-console tick), shallow-copied action API records protecting internal state, bounded queryable history (capped at 30 records, no mutable engine handles exposed), handle-free public observations (`Observations.read()` returns strictly copied data with no controller/NPC/adapter handles), private action identity provider, and console panel integration. Native idle-stop, history retention across reopen, and session-reset history clearing smoke checks PASSED in Codex live check. Active moving-action cancellation remains native testing pending alongside slice C.
+- **M1 slice C bounded movement ("walk here"), tracking, and cancellation**: Implemented `walk here` console command and `requestWalk(target)` dispatch. Target validated to 8 tiles on same floor, rejects invalid/NaN/infinite coordinates, different floor, distant tiles, and occupied/blocked or unloaded squares. Returns immediate `completed` when already at target. Rejects concurrent requests while busy. Cancels active walk immediately if Sarah dies, unloads, or controller/NPC is replaced. True arrival verification: checks Sarah's observed position against target square before marking completed; reports failure (`Stopped before target`) if stopped early. Integrates with user `stop` command and 600-tick timeout to halt engine timed actions. Removed direct `ISTimedActionQueue` fallback from context menu (routes strictly through validated dispatch with visible feedback). Private identity contract preserves production controller shape `{npc=npc, adapter=adapter}` without handle exposure. Hardened against synchronous callbacks (pre-registers running history, updates final outcome accurately), session reset sequence counter, and symmetrical controller availability. Implemented and reviewed offline at `d93c730` with 123 automated checks. Native walking, arrival, and cancellation acceptance pending Codex live check per `docs/M1-slice-c-checklist.md`.
 - **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
 ## Completed: M1 slice A native acceptance
@@ -327,3 +325,26 @@ When ready for native testing:
 15. Clean Quit to Desktop / save.
 
 Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.
+
+## M1 slice C lifecycle audit, hardening, and native checklist (2026-10-05)
+
+Gemini completed the lifecycle audit and hardening of M1 commands and actions (offline only; no game launches or desktop control):
+- **Lifecycle audit of Commands, Console, Engine, SarahFoundation**:
+  - Traced request start, adapter rejection, completion, failure, stop, timeout, controller/NPC replacement, and session teardown together.
+  - Inspected PZ 42.21.0 engine implementations of `ISWalkToTimedAction`, `ISTimedActionQueue`, and `IsoGridSquare.isFree(false)`. Verified `isFree(false)` passes `bCountOtherCharacters=false`, allowing navigation to squares occupied by the player while rejecting solid barriers.
+- **Reproduced defect and hardening: Synchronous callbacks in `walk here`**:
+  - *Reproduction*: If an adapter or timed action failed (`onFail`) or completed (`onComplete`) synchronously during `invokeWalk()`, `execute('walk here')` returned `running`, and added a `running` record to `self.history`, even though the action had already completed/failed and cleared `self.active`.
+  - *Fix*: History record is pre-registered as `running` before invoking walk callback. If `walkOk` is false (start failure), history is updated to `failed`. If `not self.active` upon `invokeWalk` return (synchronous completion/failure), `result.state` and `result.lines` accurately reflect `action.state` and `action.summary` instead of falsely reporting `running`.
+- **Reproduced defect and hardening: Sequence counter and controller availability**:
+  - Symmetrical controller availability guard: if `currentOwner == nil` while an action is active, `checkLifecycle()` and `completeAction()` cancel the action with `'controller unavailable'`.
+  - Session reset: `d:reset()` resets `self.sequence = 0` so new sessions cleanly begin request IDs at `#1`.
+- **Automated test suite (123 passing checks)**:
+  - Added 3 new unit tests to `tools/test_commands.py` (52 checks total):
+    1. `walk here synchronous failure during start updates history and returns failed outcome`.
+    2. `walk here synchronous completion during start updates history and returns completed outcome`.
+    3. `session reset resets sequence counter and controller unavailable invalidates active action`.
+  - All 5 test suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 52 command + 19 console = 123 checks total.
+- **Native acceptance checklist**:
+  - Prepared concise, ordered 7-gate native acceptance checklist in `docs/M1-slice-c-checklist.md` covering normal walk arrival, already-at-target detection, distance refusal, live in-motion stop cancellation, immediate walk resumption, context menu routing/feedback, and session reset.
+
+Checkout ownership is RELEASED to Codex for native testing following `docs/M1-slice-c-checklist.md`. External AI remains strictly ON HOLD.
