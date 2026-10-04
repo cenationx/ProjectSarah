@@ -3,15 +3,16 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Active agent: Codex, M1 read-only console implementation/test. Antigravity resume prompt
-remains unsent; no second agent is authorized to edit this checkout concurrently.
+Ownership: Codex is preparing the handoff to Claude in Antigravity. Claude may
+continue once the user submits the resume prompt; Codex stops project edits after
+this checkpoint. Do not have both agents edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `1e1a4f3` on `main`, pushed to
+Latest verified implementation checkpoint: `8f4f882` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-This checkpoint implements the read-only console and records its test boundaries.
-Use Git history and remote refs to identify the new checkpoint commit.
+This implements the read-only console and records its test boundaries. The next
+documentation checkpoint prepares Claude's handoff; identify it using Git history.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
 - Independent SarahM0 probe demonstrated NPC spawn, walking, inventory transfer,
@@ -20,7 +21,8 @@ Use Git history and remote refs to identify the new checkpoint commit.
   clothing items, two-slot saves, unload/restore, full restart restoration,
   recovery from a deliberately truncated latest checkpoint, and saved death
   preventing resurrection after restart.
-- 48 automated checks pass: 27 foundation, 13 engine adapter and 8 checkpoint readback cases.
+- 68 automated checks pass: 27 foundation, 13 engine adapter, 8 checkpoint
+  readback, 12 read-only command and 8 simulated console UI/key/session cases.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
   their behavior is covered by simulated events and the live transitions below.

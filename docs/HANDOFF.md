@@ -169,18 +169,26 @@ GitHub stores shared files, not chats, local saves, backups or tool permissions.
 No automatic agent switching or background quota monitor is configured. The user
 can switch tools/models and ask the next agent to continue using these files.
 
-## Antigravity setup verified on 2026-10-04
+## Antigravity / Claude handoff verified on 2026-10-04
 
 Project Sarah was added in the Antigravity desktop app from the canonical folder.
 The project customization breakdown explicitly listed
 `g:\Codex\Project Sarah\AGENTS.md` as a loaded rule. The new-conversation screen
-showed local execution and Claude Sonnet 5.5 Medium selected. A resume prompt was
-prepared in the composer but not submitted; no Antigravity agent was started.
+showed local execution and Claude Sonnet 5.5 Medium selected. Use
+`CLAUDE.md` and `docs/CLAUDE-RESUME.md` for the current resume instructions.
+The user will submit the prompt; Codex has not started an Antigravity agent.
 Re-check selection and draft availability when returning to the app.
 
-Security and plan-review presets were inherited from global settings; they were
-inspected without changes. No permission rules or GitHub app authentication were
-configured or tested. Git uses the existing local repository and remote.
+Project Sarah's Local Permissions now contain Allow `G:\` for File Reads and
+File Writes, and Allow `*` for Terminal Commands, as requested by the user.
+Saved file rows were reopened and visually verified; terminal wildcard saved
+row and project counts (2 file rules, 1 command rule) were visually verified.
+This command wildcard covers all terminal commands, including PowerShell/native
+tools; it does not constrain arbitrary shell execution to G:\. No Claude run has
+tested whether inherited policies produce additional approvals. Security and
+plan-review presets remain inherited, and unrelated global/network/MCP settings
+were unchanged. App permissions are local and are not distributed through Git.
+GitHub app authentication remains untested; Git uses the existing repository/remote.
 The app warned that its bundled customization/skills token budget was exceeded;
 Sarah's AGENTS.md was nevertheless shown in the loaded rules breakdown. Unrelated
 global skills/settings were left unchanged.
