@@ -63,3 +63,12 @@ Final state: game closed, saved b; final world backed up as Final-console. Probe
 disabled outside the mod; production modules deployed. Raw final log retained
 locally; sanitized Sarah-only summary in evidence/console-live-summary.txt. Normal
 profile console still 18675 bytes / 2026-10-04 04:03:05; installed game untouched.
+
+## Native follow-up: Codex session 2026-10-04
+
+User reports physical F9 shows the console and Escape works in the isolated
+SarahConsoleNativeCase. Record this as user-operated F9 open / Escape close
+confirmation. Hold duration/repeat and absence of a pause menu after closing
+were not explicitly reported, so those details remain pending. Rebind/conflict
+persistence, English Options labels, movement restoration and same-process
+console teardown remain open. No production code changes from this result.

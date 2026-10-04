@@ -195,3 +195,8 @@ key-delivery limitation, not evidence of a Sarah defect. User-assisted hold/Esca
 check requested; result pending. No production code changed. All 68 automated
 checks rerun successfully. Live log reports ACTIVE/RESTORED b, worn=3 and local
 player preserved. Game running while awaiting physical checks; no teardown pass.
+
+User follow-up: physical F9 opens the console and Escape works. User-operated
+open/close confirmed; no held-key duration or pause-menu release detail reported.
+Hold-repeat, rebind/conflicts, English Options labels, movement restoration and
+same-process teardown remain pending. Codex retains checkout ownership.
