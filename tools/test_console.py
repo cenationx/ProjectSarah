@@ -206,9 +206,11 @@ test('console dispatch stop callback rejects stale NPC and leaves replacement NP
     }
     local dispatch=s.getDispatch()
     dispatch:reset()
+    local idCtrl,idNpc=dispatch:getIdentity()
+    assert(idCtrl==SarahFoundation.controller and idNpc==npc1)
     local res=dispatch:execute('walk here')
     assert(res.state=='running')
-    assert(dispatch.active and dispatch.active.npc==npc1)
+    assert(dispatch.active and dispatch.active.owner==SarahFoundation.controller and dispatch.active.npc==npc1)
     -- Replace NPC within controller
     SarahFoundation.controller.npc=npc2
     -- Execute stop command via dispatch
@@ -216,6 +218,47 @@ test('console dispatch stop callback rejects stale NPC and leaves replacement NP
     assert(stopRes.state=='failed')
     assert(stopRes.lines[2]:find('stale npc'))
     assert(stoppedNpc==nil)
+    dispatch:reset()
+end)
+test('console dispatch rejects controller replacement with same NPC and leaves replacement untouched',function()
+    local sharedNpc={x=10,y=20,z=0}
+    local stopped1,stopped2=nil,nil
+    local ctrl1={
+        npc=sharedNpc,
+        adapter={
+            walk=function(npc,sq,onComp,onFail) return true,{} end,
+            stop=function(n) stopped1=n; return true end,
+            validateTarget=function(npc,tgt) return true,tgt end
+        }
+    }
+    local ctrl2={
+        npc=sharedNpc,
+        adapter={
+            walk=function(npc,sq,onComp,onFail) return true,{} end,
+            stop=function(n) stopped2=n; return true end,
+            validateTarget=function(npc,tgt) return true,tgt end
+        }
+    }
+    SarahFoundation={controller=ctrl1}
+    local dispatch=s.getDispatch()
+    dispatch:reset()
+    local idCtrl,idNpc=dispatch:getIdentity()
+    assert(idCtrl==ctrl1 and idNpc==sharedNpc)
+    local res=dispatch:execute('walk here')
+    assert(res.state=='running')
+    assert(dispatch.active and dispatch.active.owner==ctrl1 and dispatch.active.npc==sharedNpc)
+    -- Replace controller with ctrl2 (same NPC)
+    SarahFoundation.controller=ctrl2
+    local idCtrl2,idNpc2=dispatch:getIdentity()
+    assert(idCtrl2==ctrl2 and idNpc2==sharedNpc)
+    local valid,reason=dispatch:tick()
+    assert(not valid and reason=='controller replaced')
+    assert(dispatch.active==nil and dispatch.lastAction.state=='cancelled')
+    assert(dispatch.lastAction.reason=='controller replaced')
+    -- Stop callback targeting replacement controller is refused and leaves replacement untouched
+    local stopRes=dispatch:invokeStop('test_stale',{owner=ctrl1,npc=sharedNpc})
+    assert(stopRes==false)
+    assert(stopped2==nil)
     dispatch:reset()
 end)
 print('RESULT '..count..' simulated console checks passed')

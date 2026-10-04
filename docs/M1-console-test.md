@@ -217,14 +217,14 @@ Gemini implemented, revised per Codex review, and validated slice C bounded move
   - Busy check: Refuses second action if an action is currently active.
   - Active tracking: Registers action with request ID, session token, and dual controller+NPC identity (`owner` and `npc`). Status command reflects `Action: #<id> walk here (running)`.
   - True arrival verification: `onComplete` verifies Sarah's observed position against target square before marking completed; reports failure (`Stopped before target`) if stopped early.
-  - Dual-identity scoping: Actions are scoped to both the originating controller and NPC. Replacement of the NPC within the same controller immediately invalidates active work (`'npc replaced'`). Late completion callbacks check NPC identity before inspecting positions and reject without evaluating arrival against the replacement NPC.
-  - Stop integration: `stop` command cancels active walking and invokes engine stop (`adapter.stop(npc)`) on game thread. Stale callbacks from cancelled actions or mismatched NPC identities are safely rejected; replacement NPCs are left untouched.
+  - Dual-identity scoping & unambiguous private identity contract: Actions are scoped to both the originating controller and NPC. `Commands:getIdentity()` directly unpacks `(controller, npc)` from `identityProvider()` without treating `{npc=npc, adapter=adapter}` as a wrapper table or querying `ctrl.controller` (which yielded nil). Preserves exact controller and NPC references privately without exposing handles through public observations. Replacement of the NPC or controller immediately invalidates active work (`'npc replaced'` or `'controller replaced'`). Late completion callbacks check identity before inspecting positions and reject without evaluating arrival against replacement entities.
+  - Stop integration: `stop` command cancels active walking and invokes engine stop (`adapter.stop(npc)`) on game thread. Stale callbacks from cancelled actions or mismatched identities are safely rejected; replacement controllers and NPCs are left untouched.
   - Timeout: 600-tick timeout cancels active walk and invokes engine stop.
   - Lifecycle invalidation: Background unload, death, controller replacement, or NPC replacement invalidates active walk immediately.
   - `requestWalk(target)`: Exposes direct programmatic dispatch.
 - `Console.lua`:
-  - `walkSarah` and `stopSarah` callbacks scope to both controller and NPC identity (`action.npc`), refusing with `stale npc` and leaving replacement NPCs untouched.
-  - Identity provider returns `controller, controller.npc`.
+  - `walkSarah` and `stopSarah` callbacks scope to both controller and NPC identity (`action.npc` and `action.owner`), refusing with `stale npc` or `stale controller` and leaving replacement controllers and NPCs untouched.
+  - Identity provider contract: returns `controller, controller and controller.npc` directly.
   - Exposes `state.getDispatch = getDispatch`.
   - Updated prompt line to include `walk here`.
 - `SarahFoundation.lua`:
@@ -234,11 +234,11 @@ Gemini implemented, revised per Codex review, and validated slice C bounded move
 - `Engine.lua`:
   - `SarahWalkAction` derived from `ISWalkToTimedAction` via `getWalkActionClass()`, hooking `perform()` and `stop()`.
   - `adapter.validateTarget(npc, target)` and `adapter.walk(npc, square, onSuccess, onFail)`.
-- Automated test coverage: 118 total passing checks (up from 112, originally 94):
-  - `tools/test_foundation.py`: 29 passing checks (+2 new: context menu unavailable dispatcher queues no engine action with refusal feedback, and context menu provides visible feedback across rejection, failure, running, and completion).
+- Automated test coverage: 120 total passing checks (up from 118, originally 94):
+  - `tools/test_foundation.py`: 29 passing checks.
   - `tools/test_render.py`: 15 passing checks (validateTarget and adapter.walk).
   - `tools/test_checkpoint.py`: 8 passing readback token/cleanup checks.
-  - `tools/test_commands.py`: 48 passing checks (+3 new: walk invalidated by NPC replacement within same controller, late completion after NPC replacement does not evaluate replacement position or complete, timeout/stop callback after NPC replacement leaves replacement NPC untouched).
-  - `tools/test_console.py`: 18 passing checks (+1 new: console dispatch stop callback rejects stale NPC and leaves replacement NPC untouched).
+  - `tools/test_commands.py`: 49 passing checks (+1 new: production controller shape `{npc=npc, adapter=adapter}` preserves identity, controller replacement with same NPC cancels old action, rejects late completion, and isolates replacement from stale stop operations).
+  - `tools/test_console.py`: 19 passing checks (+1 new: console dispatch rejects controller replacement with same NPC, cancelling action and leaving replacement controller untouched).
 
 Native acceptance remains pending Codex live verification following the checklist in `docs/STATUS.md`.

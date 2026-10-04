@@ -24,11 +24,11 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-118 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 48 command,
-18 console). Slice A native acceptance passed. Slice B verified natively. Slice C (walk here,
+120 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 49 command,
+19 console). Slice A native acceptance passed. Slice B verified natively. Slice C (walk here,
 completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
-scoping, and safe context menu routing without direct queue fallback) revised and validated offline;
-native acceptance pending Codex live check. Automated special-key delivery remains limited by Computer Use;
+scoping, unambiguous private identity contract preserving production controller shape, and safe context menu routing)
+corrected and validated offline; native acceptance pending Codex live check. Automated special-key delivery remains limited by Computer Use;
 physical keys need the user. Keep external AI on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original

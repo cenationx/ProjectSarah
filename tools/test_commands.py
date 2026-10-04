@@ -484,11 +484,91 @@ test('requestWalk convenience method routes directly to walk here',function()
     assert(res.state=='running' and res.lines[1]=='Walking to (14, 20, 0).')
     assert(walkTarget and walkTarget.x==14)
 end)
+test('production controller shape preserves identity and controller replacement with same NPC cancels and isolates replacement',function()
+    local sharedNpc={x=10,y=20,z=0}
+    local stoppedNpc1,stoppedNpc2=nil,nil
+    local adapter1={
+        stop=function(n) stoppedNpc1=n; return true end,
+        walk=function() return true end,
+        validateTarget=function(_,tgt) return true,tgt end
+    }
+    local adapter2={
+        stop=function(n) stoppedNpc2=n; return true end,
+        walk=function() return true end,
+        validateTarget=function(_,tgt) return true,tgt end
+    }
+    local ctrl1={npc=sharedNpc,adapter=adapter1}
+    local ctrl2={npc=sharedNpc,adapter=adapter2}
+    local currentCtrl=ctrl1
+    local compCb=nil
+    local function stopSarah(reason,action)
+        if currentCtrl and currentCtrl.npc then
+            local owner=action and (action.owner or action.controller)
+            if owner and owner~=currentCtrl then
+                return false,'stale controller'
+            end
+            local actionNpc=action and action.npc
+            if actionNpc and actionNpc~=currentCtrl.npc then
+                return false,'stale npc'
+            end
+            local ok,err=pcall(currentCtrl.adapter.stop,currentCtrl.npc)
+            if not ok then return false,tostring(err) end
+            if err==false then return false,'adapter stop failed' end
+            return true
+        end
+        return true
+    end
+    local obsState='active'
+    local d=Commands.new(function()
+        return {state=obsState,npc=sharedNpc,player={x=12,y=20,z=0}}
+    end,stopSarah,function()
+        return currentCtrl,currentCtrl and currentCtrl.npc
+    end,function(target,onComp)
+        compCb=onComp; return true
+    end)
+    -- 1. Verify getIdentity preserves the exact controller reference and NPC reference
+    local idCtrl,idNpc=d:getIdentity()
+    assert(idCtrl==ctrl1,'getIdentity lost controller reference')
+    assert(idNpc==sharedNpc,'getIdentity lost NPC reference')
+    -- 2. Start walk here request
+    local rWalk=d:execute('walk here')
+    assert(rWalk.state=='running')
+    assert(d.active and d.active.owner==ctrl1 and d.active.npc==sharedNpc)
+    -- 3. Replace controller with ctrl2 (same shared NPC!)
+    currentCtrl=ctrl2
+    local idCtrl2,idNpc2=d:getIdentity()
+    assert(idCtrl2==ctrl2,'getIdentity lost replacement controller reference')
+    assert(idNpc2==sharedNpc,'getIdentity lost NPC reference on replacement')
+    -- 4. Tick triggers lifecycle check which must cancel the old request
+    local valid,reason=d:tick()
+    assert(not valid and reason=='controller replaced')
+    assert(d.active==nil and d.lastAction.state=='cancelled')
+    assert(d.lastAction.reason=='controller replaced')
+    -- 5. Late completion from old walk on ctrl1 must not evaluate replacement or complete
+    sharedNpc.x=12; sharedNpc.y=20; sharedNpc.z=0
+    compCb()
+    assert(d.active==nil and d.lastAction.state=='cancelled')
+    assert(not d.lastAction.reason:find('Reached target'))
+    -- 6. Stop callback targeting replacement controller is refused and leaves replacement untouched
+    local stopOk,stopErr=stopSarah('test_stale',{owner=ctrl1,npc=sharedNpc})
+    assert(not stopOk and stopErr=='stale controller')
+    assert(stoppedNpc2==nil,'replacement controller adapter.stop was erroneously called')
+    -- 7. Idle stop on current controller ctrl2 operates cleanly
+    local rStop=d:execute('stop')
+    assert(rStop.state=='completed')
+    assert(stoppedNpc2==sharedNpc,'idle stop should cleanly stop current controller')
+end)
 test('walk here is invalidated by NPC replacement within the same controller',function()
-    local currentCtrl={name='controller'}
     local npc1={id=1}
     local npc2={id=2}
     local currentNpc=npc1
+    local currentCtrl={
+        npc=currentNpc,
+        adapter={
+            stop=function() return true end,
+            walk=function() return true end
+        }
+    }
     local stoppedAction=nil
     local d=Commands.new(function()
         return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
@@ -496,12 +576,13 @@ test('walk here is invalidated by NPC replacement within the same controller',fu
         stoppedAction=act
         return true
     end,function()
-        return currentCtrl,currentNpc
+        return currentCtrl,currentCtrl and currentCtrl.npc
     end,function() return true end)
     local rWalk=d:execute('walk here')
     assert(rWalk.state=='running')
     assert(d.active and d.active.owner==currentCtrl and d.active.npc==npc1)
     currentNpc=npc2
+    currentCtrl.npc=npc2
     local valid,reason=d:tick()
     assert(not valid and reason=='npc replaced')
     assert(d.active==nil and d.lastAction.state=='cancelled')
@@ -511,22 +592,29 @@ test('walk here is invalidated by NPC replacement within the same controller',fu
     assert(h[#h].id==rWalk.id and h[#h].state=='cancelled' and h[#h].summary=='npc replaced')
 end)
 test('late completion after NPC replacement does not evaluate replacement position or complete',function()
-    local currentCtrl={name='controller'}
     local npc1={id=1}
     local npc2={id=2}
     local currentNpc=npc1
+    local currentCtrl={
+        npc=currentNpc,
+        adapter={
+            stop=function() return true end,
+            walk=function() return true end
+        }
+    }
     local compCb=nil
     local obsNpc={x=10,y=20,z=0}
     local d=Commands.new(function()
         return {state='active',npc=obsNpc,player={x=12,y=20,z=0}}
     end,function() return true end,function()
-        return currentCtrl,currentNpc
+        return currentCtrl,currentCtrl and currentCtrl.npc
     end,function(target,onComp)
         compCb=onComp; return true
     end)
     local rWalk=d:execute('walk here')
     assert(rWalk.state=='running' and compCb)
     currentNpc=npc2
+    currentCtrl.npc=npc2
     obsNpc.x=12; obsNpc.y=20; obsNpc.z=0
     compCb()
     assert(d.active==nil)
@@ -535,16 +623,15 @@ test('late completion after NPC replacement does not evaluate replacement positi
 end)
 test('timeout and stop callback after NPC replacement leave replacement NPC untouched',function()
     local stoppedNpc=nil
+    local npc1={id=1}
+    local npc2={id=2}
+    local currentNpc=npc1
     local currentCtrl={
-        npc=nil,
+        npc=npc1,
         adapter={
             stop=function(n) stoppedNpc=n; return true end
         }
     }
-    local npc1={id=1}
-    local npc2={id=2}
-    currentCtrl.npc=npc1
-    local currentNpc=npc1
     local function stopSarah(reason,action)
         if currentCtrl and currentCtrl.npc then
             local actionNpc=action and action.npc
@@ -559,7 +646,7 @@ test('timeout and stop callback after NPC replacement leave replacement NPC unto
     local d=Commands.new(function()
         return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
     end,stopSarah,function()
-        return currentCtrl,currentNpc
+        return currentCtrl,currentCtrl and currentCtrl.npc
     end,function() return true end)
     local rWalk=d:execute('walk here')
     assert(rWalk.state=='running')

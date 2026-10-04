@@ -82,6 +82,7 @@ local function getDispatch()
         state.dispatch=Commands.new(function(inventory)
             return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
         end,stopSarah,function()
+            -- Private identity provider contract: returns (controller, npc) references directly.
             local ctrl=SarahFoundation and SarahFoundation.controller
             return ctrl,ctrl and ctrl.npc
         end,walkSarah)

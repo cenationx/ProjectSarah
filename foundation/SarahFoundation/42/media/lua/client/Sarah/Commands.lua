@@ -15,19 +15,15 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         identityProvider=identityProvider,
         walkCallback=walkCallback
     }
+    -- Unambiguous private identity contract:
+    -- identityProvider function returns (controller, npc) references directly.
+    -- Preserves exact controller and NPC identities without wrapper ambiguity
+    -- and without exposing mutable engine handles through public observations.
     function self:getIdentity()
         if type(self.identityProvider)=='function' then
-            local ok,ctrlOrId,npcId=pcall(self.identityProvider)
-            if ok then
-                if type(ctrlOrId)=='table' and (ctrlOrId.controller or ctrlOrId.npc) then
-                    return ctrlOrId.controller,ctrlOrId.npc
-                end
-                return ctrlOrId,npcId
-            end
+            local ok,ctrl,npc=pcall(self.identityProvider)
+            if ok then return ctrl,npc end
             return nil,nil
-        end
-        if type(self.identityProvider)=='table' and (self.identityProvider.controller or self.identityProvider.npc) then
-            return self.identityProvider.controller,self.identityProvider.npc
         end
         return self.identityProvider,nil
     end
