@@ -155,3 +155,26 @@ Codex can remove `-WindowStyle Hidden` or launch interactively as needed for liv
 - Full baseline backup preserved at `runtime/backups/acceptance-20261004-183708` (including vanilla `keysB42.ini` baseline).
 - Checkout ownership is RELEASED to Codex.
 
+## Codex native acceptance resumed (2026-10-04)
+
+Codex owns the checkout; Gemini is restricted to offline tasks. Verified clean
+checkpoint 8224446. No Java game process before backup. Preserved current case,
+F7 settings and prelaunch log at runtime/backups/codex-resume-20261004-234837.
+Isolated game launched successfully with the existing launcher, brought forward
+via Computer Use and moved to the left edge per user preference. This disproves
+the blanket claim above that Hidden necessarily keeps the GLFW window invisible;
+Antigravity's launch failure cause remains unverified. Its earlier force-kill
+was not evidence of a clean save/shutdown.
+
+Fresh process PID 41784 loaded NativeCase: RESTORED b, ACTIVE npc=true worn=3
+localPlayerPreserved=true. User reports all requested restart checks PASS:
+F7 opens/closes, console label says F7, F9 inactive. Checklist gate 4 passed.
+Game running; same-process teardown and conflict/fallback gates remain pending.
+
+Same-process teardown/reload native PASS: PID 41784 retained start time through
+Quit to main menu and Continue. No orphaned console visible on main menu. SAVED a,
+SESSION_RESET, ACTIVE npc=true worn=3 localPlayerPreserved=true and RESTORED a logged.
+User confirms F7 opens/closes after reload. Callback counts/UIManager membership
+were not instrumented. Only conflict refusal/context-menu fallback remains pending.
+Game running in NativeCase with F7; original complete F9 baseline remains backed up.
+

@@ -284,4 +284,14 @@ Per user directive:
 - Active case: `runtime/isolated/Saves/Rising/SarahConsoleNativeCase`; key file retains `Sarah Console=key:65`. Full baseline backups preserved in `runtime/backups/acceptance-20261004-183708`.
 - Checkout ownership is RELEASED to Codex.
 
+Codex resumed at 8224446; game-closed backup runtime/backups/codex-resume-20261004-234837.
+Native F7 full-restart persistence, updated label and old F9 inactivity PASS per user.
+Same-process Quit/Continue PASS: PID 41784 unchanged, SAVED a and SESSION_RESET,
+RESTORED a / ACTIVE npc=true worn=3 localPlayerPreserved=true. User confirms F7
+toggle after reload. No orphaned console visible on main menu; callback counts not
+instrumented. Game running; conflict/fallback remaining, full F9 baseline restoration
+still due at game-closed cleanup. Codex owns all live tests; Gemini offline only.
+Existing hidden-style launcher produced a usable visible game through Codex; the
+blanket hidden-window diagnosis above is not established for GLFW across runners.
+
 

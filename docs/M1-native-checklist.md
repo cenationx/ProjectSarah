@@ -32,7 +32,7 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
   - **Expected result**: Section reads `Project Sarah` and action is labeled `Sarah Console` bound to `F9` (no untranslated keys like `UI_...` or missing text).
   - **Evidence to record**: Screenshot or visual confirmation of clean English labels in vanilla Options dialog.
 
-- [ ] **4. Key rebinding and persistence across restart**
+- [x] **4. Key rebinding and persistence across restart**
   - **Action**: In `Options` -> `Key Bindings`, rebind `Sarah Console` to an unused key (e.g. `F10` or an unused keyboard letter). Save/apply options. Return to game and press the new key. Then exit game completely to desktop, restart via `launch-isolated.ps1 -NoDebug`, and press the rebound key.
   - **Expected result**: Rebound key opens and closes the console; in-console toggle status shows the updated key name; binding persists in isolated `keysB42.ini` across full process restart.
   - **Evidence to record**: Updated binding in `keysB42.ini`, successful toggle before and after full restart.
@@ -42,7 +42,7 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
   - **Expected result**: Pressing the conflicting key refuses to open the console (movement behaves normally without conflict errors). Right-click world context menu displays `Sarah: console`; clicking it opens the console, displaying conflict warning text in the history.
   - **Evidence to record**: Console opens via context menu; conflict warning banner visible; conflicting gameplay action operates safely without unintended opening.
 
-- [ ] **6. Same-process menu return and world cleanup**
+- [x] **6. Same-process menu return and world cleanup**
   - **Action**: In `SarahConsoleNativeCase` with console open or closed, first close the console, then press `Escape` again to open the pause menu -> select `Exit to Main Menu`. Return to the main menu, then select `Continue` back into `SarahConsoleNativeCase`.
   - **Expected result**: Console panel is closed and removed from UIManager on menu exit; no orphaned UI elements on main menu; session reset runs cleanly. On reload, `F9` toggles console cleanly; a new session controller is initialized from saved state, with one restored Sarah and the current local player. Do not require retaining the old controller/object across sessions.
   - **Evidence to record**: Clean session reset in log; one Sarah restored; absence of new Sarah-specific errors; retain known map warnings. Duplicate-callback assertions need a separately scoped observation probe; one visible panel alone does not prove callback counts.
@@ -50,6 +50,12 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
 ---
 
 ## Post-test cleanup and settings restoration
+
+2026-10-04 same-process native PASS: process 41784 retained start time throughout
+Quit to main menu and Continue. No console panel visible on main menu. Log records
+SAVED a, SESSION_RESET, ACTIVE npc=true worn=3 localPlayerPreserved=true and RESTORED a.
+User confirms F7 opens/closes normally after reload. No instrumented callback-count
+or UIManager-membership claim; evidence covers visible cleanup and session behavior.
 
 1. Close game cleanly; verify GameThread exit and save completion (`SAVED a` or `b`).
 2. Restore the backed-up isolated key file (including any movement bindings changed by Options), then verify Sarah Console is F9. Do not restore just one setting and leave another displaced.

@@ -123,3 +123,14 @@ User confirms holding F9 then releasing leaves console open, following the two-s
 
 F7 rebind follow-up: user reports F7 works. Native rebound-key functionality confirmed; old F9 inactivity, full-restart persistence and updated console key text remain pending. Game closed normally and saved b before Gemini handoff.
 
+# Native restart acceptance (2026-10-04)
+
+Same-process native PASS: PID 41784 retained identity/start time through menu exit
+and Continue; no orphaned console visible on main menu. SAVED a, SESSION_RESET,
+ACTIVE npc=true worn=3 localPlayerPreserved=true / RESTORED a. User confirms F7
+opens/closes after reload. Callback counts/UIManager membership not instrumented.
+
+User-operated PASS after full-process restart: F7 opens/closes, console toggle
+label displays F7, old F9 inactive. Persisted isolated binding key:65. NativeCase
+RESTORED b in process 41784; ACTIVE npc=true worn=3 localPlayerPreserved=true.
+Prelaunch backup: runtime/backups/codex-resume-20261004-234837.
