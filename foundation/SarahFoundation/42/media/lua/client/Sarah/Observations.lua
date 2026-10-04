@@ -4,7 +4,6 @@ function Observations.read(controller,player,includeInventory)
     local data={state='unavailable'}
     if player then data.player=position(player) end
     if not controller then data.reason='Foundation is not ready.'; return data end
-    data.controller=controller
     local a,npc=controller.adapter,controller.npc
     if a.meta.dead or (npc and a.isDead(npc)) then data.state='dead'; return data end
     if controller.travelBlocked or a.verificationNPC then data.state='blocked'; data.reason='Recovery or cleanup is blocked; preserve the case and investigate.'; return data end

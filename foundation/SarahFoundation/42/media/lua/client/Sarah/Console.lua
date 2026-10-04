@@ -34,7 +34,8 @@ state.dispatch=old and old.dispatch or nil
 local function stopSarah(reason,action)
     if SarahFoundation and SarahFoundation.controller and SarahFoundation.controller.npc then
         local controller=SarahFoundation.controller
-        if action and action.controller and action.controller~=controller then
+        local owner=action and (action.owner or action.controller)
+        if owner and owner~=controller then
             return false,'stale controller'
         end
         local ok,err=pcall(controller.adapter.stop,controller.npc)
@@ -48,7 +49,9 @@ local function getDispatch()
     if not state.dispatch then
         state.dispatch=Commands.new(function(inventory)
             return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
-        end,stopSarah)
+        end,stopSarah,function()
+            return SarahFoundation and SarahFoundation.controller
+        end)
     end
     return state.dispatch
 end

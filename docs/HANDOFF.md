@@ -24,9 +24,9 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-92 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 29 command,
+94 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 31 command,
 15 console). Slice A native acceptance passed. Slice B (stop, cancellation, history)
-revised and unit tested; native acceptance pending Codex live check.
+revised with handle-free observations and private identity provider; native acceptance pending Codex live check.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user.
 Keep external AI on hold; movement commands (slice C) deferred.
 
@@ -89,9 +89,9 @@ executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
 Also run `tools/test_render.py`: 13 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 29 command parser/cancellation checks.
+Run `tools/test_commands.py`: 31 command parser/cancellation checks.
 Run `tools/test_console.py`: 15 simulated console UI/key/session checks.
-92 automated checks total. Simulated checks do not prove exceptional native cleanup.
+94 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -328,12 +328,14 @@ Gemini completed M1 slice B implementation and automated validation (offline onl
 - External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.
 ## M1 slice B revision handoff (2026-10-05)
 
-Gemini completed offline revision of slice B:
+Gemini completed offline revision and review correction of slice B:
 - Propagated engine stop failures (exceptions and `false, reason` returns) into structured `failed` outcomes and history, while cleanly invalidating the command.
 - Added independent lifecycle invalidation: `completeAction` revalidates state and controller before accepting success, and `Console.lua` game-thread tick runs lifecycle checks while console is closed.
-- Scoped actions to originating controller and session; rejected stale callbacks targeting replacement controllers.
-- Hardened action API to return immutable copies.
-- Automated tests: 92 passing checks across all 5 test suites.
+- Decoupled internal action ownership from public observations: `Observations.read()` exposes strictly copied data (`state`, `player`, `npc`, `reason`, `inventory`) with no mutable engine handles (`controller`, `adapter`, `npc`).
+- Private identity provider: `Commands.new(observe, stopCallback, identityProvider)` accepts a private identity provider closure/token. `Console.lua` passes `function() return SarahFoundation and SarahFoundation.controller end`.
+- Scoped actions and stop callback to controller identity: `checkLifecycle` invalidates active work on controller replacement (`'controller replaced'`), stale callbacks targeting replaced controllers are rejected, and `stopSarah` verifies `action.owner` to reject stale stops.
+- Record snapshot protection: Action records returned by `beginAction`, `cancelActive`, and `getHistory` are shallow-copied snapshots protecting internal dispatch state (`self.active`, `self.history`) from caller mutation.
+- Automated tests: 94 passing checks across all 5 test suites (27 foundation + 13 engine adapter + 8 checkpoint readback + 31 command + 15 console).
 - Live gameplay testing: Handed off to Codex. Game is CLOSED.
   - Step 1: Deploy `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation`.
   - Step 2: Launch `SarahConsoleNativeCase`.

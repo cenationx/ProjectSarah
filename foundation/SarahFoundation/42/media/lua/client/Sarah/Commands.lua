@@ -1,7 +1,7 @@
 -- Command parser, validation, dispatch and action boundary.
 -- No mutable engine handles are exposed to callers.
 local Commands={}
-function Commands.new(observe,stopCallback)
+function Commands.new(observe,stopCallback,identityProvider)
     local self={
         sequence=0,
         session=1,
@@ -11,8 +11,17 @@ function Commands.new(observe,stopCallback)
         maxHistory=30,
         lastAction=nil,
         observe=observe or function() return {state='unavailable'} end,
-        stopCallback=stopCallback
+        stopCallback=stopCallback,
+        identityProvider=identityProvider
     }
+    function self:getIdentity()
+        if type(self.identityProvider)=='function' then
+            local ok,id=pcall(self.identityProvider)
+            if ok then return id end
+            return nil
+        end
+        return self.identityProvider
+    end
     local function addHistory(record)
         self.history[#self.history+1]=record
         while #self.history>self.maxHistory do table.remove(self.history,1) end
@@ -58,7 +67,8 @@ function Commands.new(observe,stopCallback)
             id=action.id,
             command=action.command,
             state=action.state,
-            controller=action.controller,
+            owner=action.owner,
+            controller=action.owner,
             session=action.session
         })
         return true,{id=action.id,command=action.command,state=action.state,summary=action.summary},stopOk,stopErr
@@ -75,7 +85,8 @@ function Commands.new(observe,stopCallback)
             self:cancelActive(data.state)
             return false,data.state
         end
-        if self.active.controller and data.controller and self.active.controller~=data.controller then
+        local currentOwner=self:getIdentity()
+        if self.active.owner and currentOwner and self.active.owner~=currentOwner then
             self:cancelActive('controller replaced')
             return false,'controller replaced'
         end
@@ -96,24 +107,26 @@ function Commands.new(observe,stopCallback)
         if type(details)=='table' then
             for k,v in pairs(details) do detailsCopy[k]=v end
         end
+        local owner=self:getIdentity()
         local action={
             id=self.sequence,
             session=self.session,
             command=name,
             state='running',
             token=self.token,
-            controller=data.controller,
+            owner=owner,
+            controller=owner,
             details=detailsCopy
         }
         self.active=action
         addHistory({id=action.id,command=action.command,state='running',summary='Started '..name})
         return true,{id=action.id,command=action.command,state=action.state,token=action.token}
     end
-    function self:completeAction(id,token,success,message,controller)
+    function self:completeAction(id,token,success,message,owner)
         if not self.active or self.active.id~=id or self.active.token~=token then
             return false,'stale or cancelled'
         end
-        if controller and self.active.controller and controller~=self.active.controller then
+        if owner and self.active.owner and owner~=self.active.owner then
             return false,'stale or cancelled'
         end
         local valid,reason=self:checkLifecycle()
@@ -243,8 +256,11 @@ function Commands.new(observe,stopCallback)
         if self.active then
             if data.state~='active' then
                 self:cancelActive(data.state)
-            elseif self.active.controller and data.controller and self.active.controller~=data.controller then
-                self:cancelActive('controller replaced')
+            else
+                local currentOwner=self:getIdentity()
+                if self.active.owner and currentOwner and self.active.owner~=currentOwner then
+                    self:cancelActive('controller replaced')
+                end
             end
         end
         result.state='completed'

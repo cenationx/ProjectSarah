@@ -1,7 +1,7 @@
 # M1 read-only console slice A: 2026-10-04
 
 IN PROGRESS: slice A native acceptance PASSED; slice B (stop, cancellation, history)
-REVISED and automated suite increased to 92 passing checks (29 command, 15 console).
+REVISED and automated suite increased to 94 passing checks (31 command, 15 console).
 Native acceptance of slice B pending Codex live check. Commands/Observations/Console implement
 help, status, inventory, stop, and history. No external AI or movement commands (slice C deferred).
 Automated tests do not establish native input.
@@ -173,17 +173,18 @@ Gemini implemented and validated slice B cancellation and bounded history:
 Native acceptance remains pending Codex live verification following the checklist in `docs/STATUS.md`.
 ## M1 slice B revision automated validation (2026-10-05)
 
-Gemini addressed the two review blockers in slice B:
+Gemini addressed the review blockers and review corrections in slice B:
 - Stop failure propagation: `invokeStop` checks exceptions and `false, reason` return values from the adapter stop callback. Invalidation of the request is preserved, while the stop command outcome accurately reflects `failed` when the engine stop fails.
 - Independent lifecycle invalidation: `completeAction` revalidates Sarah's state and controller match before accepting completion. Rejects completion without requiring prior status queries if Sarah died or unloaded.
 - Closed-console lifecycle monitoring: `Console.tick()` calls `dispatch:tick()` on every frame even when the UI panel is closed.
-- Controller scoping: Controller references tracked through `Observations.read(controller, ...)`. Callbacks from stale or replaced controllers are rejected.
-- Immutable action API: Action records returned by `beginAction`, `cancelActive`, etc. are copies/snapshots to prevent caller mutation of internal engine state.
-- Automated tests: Increased from 84 to 92 passing checks:
+- Handle-free public observations: `Observations.read()` exposes strictly copied data (`state`, `player`, `npc`, `reason`, `inventory`) without exposing mutable engine handles (`controller`, `adapter`, `npc`).
+- Decoupled action ownership & identity provider: `Commands.new(observe, stopCallback, identityProvider)` accepts a private identity provider closure or token. `Console.lua` supplies `function() return SarahFoundation and SarahFoundation.controller end` as identity provider and checks `action.owner` in `stopSarah` to reject stops targeting stale controllers.
+- Action record snapshot protection: Action records returned by `beginAction`, `cancelActive`, and `getHistory` are shallow-copied snapshots that protect internal dispatch state (`self.active`, `self.history`) from caller mutation.
+- Automated tests: Increased from 84 to 94 passing checks:
   - `tools/test_foundation.py`: 27 checks
   - `tools/test_render.py`: 13 checks
   - `tools/test_checkpoint.py`: 8 checks
-  - `tools/test_commands.py`: 29 checks (was 22)
+  - `tools/test_commands.py`: 31 checks (was 22, then 29; added regression tests for handle-free observations and controller identity stop scoping)
   - `tools/test_console.py`: 15 checks (was 14)
 
 Native acceptance remains pending Codex live verification.

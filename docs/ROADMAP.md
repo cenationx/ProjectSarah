@@ -74,7 +74,7 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
   full restart with one Sarah/local player and final native scrolling output.
 - [x] Configurable unused binding: provisional F9, conflict checks and actual
   key delivery verified; safe input focus, close and mouse fallback.
-- [x] Slice B: stop, cancellation and bounded request/result history (revised with stop error propagation, independent lifecycle invalidation, and 92 automated checks complete; native acceptance pending Codex live check).
+- [x] Slice B: stop, cancellation and bounded request/result history (revised with stop error propagation, independent lifecycle invalidation, handle-free public observations, private identity provider, and 94 automated checks complete; native acceptance pending Codex live check).
 - [ ] Slice C: walk here, initially nearby/same-floor; one action, true completion
   tracking, timeout and busy/invalid-target rejection.
 - [ ] Reset/invalidate actions on unload, death, controller change and world switch.

@@ -38,6 +38,20 @@ test('active status is read-only and contains copied positions',function()
     data.npc.x=90; assert(n:getX()==1 and c.npc==n)
     assert(Commands.new(function() return Observations.read(c,n,false) end):execute('status').state=='completed')
 end)
+test('public observations contain no controller, adapter, or NPC handles',function()
+    local c,n=fixture()
+    local data=Observations.read(c,n,true)
+    assert(data.controller==nil,'controller handle leaked in observation')
+    assert(data.adapter==nil,'adapter handle leaked in observation')
+    assert(data.npc~=n,'NPC handle leaked in observation')
+    assert(type(data.npc)=='table' and data.npc.x==1 and data.npc.y==2 and data.npc.z==0)
+    assert(data.player~=n,'player handle leaked in observation')
+    assert(type(data.player)=='table' and data.player.x==1)
+    assert(data.inventory and data.inventory.total==3)
+    for _,item in ipairs(data.inventory.items) do
+        assert(type(item.type)=='string' and type(item.count)=='number')
+    end
+end)
 test('inventory aggregates items without returning mutable handles',function()
     local c,n=fixture(); local data=Observations.read(c,n,true)
     assert(data.inventory.total==3 and #data.inventory.items==2 and data.inventory.items[1].count==2)
@@ -186,7 +200,7 @@ test('death or unload before completion without status query rejects completion'
 end)
 test('controller replacement rejects stale completion and invalidates action',function()
     local currentCtrl={id='ctrl1'}
-    local d=Commands.new(function() return {state='active',controller=currentCtrl} end)
+    local d=Commands.new(function() return {state='active'} end,nil,function() return currentCtrl end)
     local ok,action=d:beginAction('walk here')
     assert(ok and d.active)
     currentCtrl={id='ctrl2'}
@@ -197,7 +211,7 @@ test('controller replacement rejects stale completion and invalidates action',fu
 end)
 test('stale callback targeting replacement controller is rejected',function()
     local currentCtrl={id='ctrl1'}
-    local d=Commands.new(function() return {state='active',controller=currentCtrl} end)
+    local d=Commands.new(function() return {state='active'} end,nil,function() return currentCtrl end)
     local ok,action=d:beginAction('walk here')
     -- Stale callback passing an old/unrelated controller object
     local ok2,err2=d:completeAction(action.id,action.token,true,'arrived',{id='old_foreign_ctrl'})
@@ -207,7 +221,27 @@ test('stale callback targeting replacement controller is rejected',function()
     local ok3,state3=d:completeAction(action.id,action.token,true,'arrived',currentCtrl)
     assert(ok3 and state3=='completed')
 end)
-test('action API returns immutable record copies',function()
+test('stop callback scopes to controller identity and rejects stale controller',function()
+    local currentCtrl={id='ctrl1'}
+    local stoppedFor=nil
+    local function stopCb(reason,act)
+        if act and act.owner and act.owner~=currentCtrl then return false,'stale controller' end
+        stoppedFor=act and act.owner
+        return true
+    end
+    local d=Commands.new(function() return {state='active'} end,stopCb,function() return currentCtrl end)
+    local ok,act=d:beginAction('walk here')
+    assert(ok and d.active)
+    local res=d:execute('stop')
+    assert(res.state=='completed' and stoppedFor==currentCtrl)
+
+    currentCtrl={id='ctrl1'}
+    local ok2,act2=d:beginAction('walk here')
+    currentCtrl={id='ctrl2'}
+    local res2=d:execute('stop')
+    assert(res2.state=='failed' and res2.lines[2]:find('stale controller'))
+end)
+test('action API returns shallow-copied records protecting internal state',function()
     local d=Commands.new(function() return {state='active'} end)
     local ok,action=d:beginAction('walk here',{x=10,y=20})
     action.state='tampered'; action.token=999; action.id=999
