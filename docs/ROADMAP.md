@@ -33,7 +33,9 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Independent alive/dead disposable worlds pass session assertions across
   full process restarts (not same-process world switching).
 - [ ] Live menu return, continuing and switching disposable worlds.
-- [ ] Live Lua reload and cleanup/reference checks.
+- [x] Live main-script reload: retained controller/NPC, one tick per frame and
+  one save callback after two reloads.
+- [ ] Broader module reload and actual incomplete-cleanup reference checks.
 - [ ] Clear visual clothing/appearance inspection.
 - [ ] Investigate map-load errors using a fresh disposable control world.
 - [ ] Define and test offscreen/unloaded-square policy and safe deferred recovery.

@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none after the session-test checkpoint. Antigravity resume prompt
+Active agent: none after the main-script reload checkpoint. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
@@ -28,6 +28,10 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
   full process restarts: alive case restored exactly one Sarah and saved;
   death case retained its tombstone and zero live Sarahs. Player instance was
   preserved in both. See `M0-session-test.md` for the narrower test boundary.
+- Live main-script reload passed twice: same controller/NPC, one tagged Sarah,
+  one current tick per frame, one real OnSave adapter call and player preserved.
+  Earlier counter-based probe FAILs were false positives caused by B42 forwarding
+  old state tables. No production code change was needed. See `M0-reload-test.md`.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
@@ -41,8 +45,9 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
    one Sarah, correct metadata, and the original player character.
 4. Verify switching between two independently disposable worlds does not transfer
    Sarah's state or death flag. If unsupported or blocked, record the exact cause.
-5. Test live Lua reload separately, including callback counts and incomplete
-   cleanup references. Fix only problems the test exposes.
+5. Main-script reload is verified. Test broader module reload and retention of
+   references from actual incomplete cleanup separately if needed; do not infer
+   these from the normal alive-controller reload result.
 6. Record observations, update milestones, run the automated suite if code
    changes, and commit/push the checkpoint.
 
@@ -59,11 +64,11 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 ## Local runtime state at handoff
 
 Game closed. Only SarahFoundation selected in the isolated profile. Temporary
-live/death/tombstone/session probe scripts moved out of the mod into
-`runtime/disabled-probes`. Continue selects the original dated death-test world;
+live/death/tombstone/session/reload probe scripts moved out of the mod into
+`runtime/disabled-probes`. Continue selects the alive `SarahSessionAlive` world;
 `SarahSessionAlive` is a separate alive copy. Automated Escape input did not
-open the pause menu during this run, so same-process menu/world-switch and live
-Lua reload checks remain open. Full process restarts were used instead.
+open the pause menu, so same-process menu/world-switch checks remain open.
+Main-script reload passed in the alive world; the dated world remains dead.
 Runtime files and backups exist locally but are excluded from Git.
 No known tracked code changes are unfinished. Check Git status before work.
 

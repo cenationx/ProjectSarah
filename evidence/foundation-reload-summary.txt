@@ -1,0 +1,14 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:240> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:240> [SarahReloadProbe] RELOADED twice sameController=true sameNPC=true
+LOG  : Lua          f:241> [SarahReloadProbe] SETTLED oldDelta=1 middleDelta=1 newTicks=1
+LOG  : Lua          f:600> [SarahReloadProbe] COUNTS oldDelta=359 middleDelta=359 newTicks=360 oldIsCurrent=false middleIsCurrent=false oldEqualsMiddle=false hooks=false
+LOG  : Lua          f:600> [SarahFoundation] SAVED b
+LOG  : Lua          f:600> [SarahReloadProbe] SAVES writes=1 eventOK=true
+LOG  : Lua          f:600> [SarahReloadProbe] PASS tickRate=1 saveCallbacks=1 tagged=1 sameController=true sameNPC=true playerPreserved=true
+LOG  : Lua          f:4181> [SarahFoundation] SAVED a

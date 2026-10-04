@@ -20,7 +20,11 @@ The existing canonical checkout is the easiest handoff on this computer.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. `latestSave.ini` currently selects the dated death case.
+  world remains dead. `latestSave.ini` currently selects the alive copy.
+- Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
+  before the reload investigation. Main-script reload passed; use
+  `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
+  event and does not verify broader module reload or same-process world switching.
 - Session-test backup: `runtime/backups/sessions-before-20261004` contains the
   original death world before these runs. Restore only with the game closed:
   first preserve the current target, then copy the desired backup into a new
