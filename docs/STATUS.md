@@ -3,15 +3,15 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; appearance/control checkpoint completed. Antigravity resume prompt
+Active agent: none; rendering checkpoint completed by Codex. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Latest gameplay/source checkpoint: `8b17b21` on `main`, pushed to
+Previous published checkpoint: `ca76815` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The handoff documentation is published in a subsequent commit; use Git history
-and remote refs to identify the newest checkpoint instead of this historical ID.
+The accompanying checkpoint adds the world-render fix and verification below;
+use Git history and remote refs to identify its commit rather than this parent ID.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
 - Independent SarahM0 probe demonstrated NPC spawn, walking, inventory transfer,
@@ -20,7 +20,7 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
   clothing items, two-slot saves, unload/restore, full restart restoration,
   recovery from a deliberately truncated latest checkpoint, and saved death
   preventing resurrection after restart.
-- 19 automated checks pass: 16 lifecycle cases plus 3 simulated callback cases.
+- 29 automated checks pass: 20 foundation cases and 9 rendering cases.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
   their behavior is covered by simulated events and the live transitions below.
@@ -45,28 +45,35 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
   before/after full restart, one NPC and player preserved. World opacity=1,
   target opacity=1 and culling=false at ticks 600/1800, but ordinary world-scene
   visibility was not confirmed. See `M0-appearance-control-test.md`.
+- Subsequent world-render diagnosis found the B42 FBO player-pass omission.
+  Foundation now draws its actual visible same-floor NPC through the world
+  event. Ordinary scene screenshots passed for restored and newly spawned
+  Sarah; local player preserved in probe samples and exactly one tagged NPC.
+  Fresh spawn's hidden square produced zero draws; walking into view showed her.
+  See `M0-world-render-test.md` for the tested boundaries and recovery steps.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: ordinary world-scene visibility
+## Next task: offscreen and unloaded-square recovery
 
-1. Inspect Git/runtime state and back up `SarahAppearanceFresh` and selections
+1. Inspect Git/runtime state and back up the selected fresh rendering case and selections
    with game closed. Preserve all independent alive/dead/no-mod cases.
-2. Use a temporary narrow probe to inspect actual NPC square/object registration,
-   world model, player-view visibility and rendering flags. Compare with the
-   local player and installed engine paths. No forced opacity/visibility fix
-   without a demonstrated cause; do not conflate model viewer and scene output.
-3. Arrange separated player/NPC positions in unobstructed space and directly
-   observe Sarah in the world scene. Use screenshots plus matching coordinates.
-4. If a production fix is justified, make the smallest adapter change and verify
-   live spawn/restore/player preservation plus automated lifecycle checks.
-5. Record limitations, close game, disable probes and commit/push. Keep AI on hold.
+2. Inspect how the engine removes/culls NPCs as squares unload. Specify whether
+   to checkpoint/unload before travel or safely defer restoration at the saved
+   square. Preserve identity and never create a fresh replacement or teleport.
+3. Exercise the chosen policy with simulated faults, then a bounded disposable
+   live case: travel away, return, save/reload, exactly one Sarah and local player
+   preserved. Record unloaded-square, object-list and controller observations.
+4. Check same-floor visibility and occlusion as travel permits; broader floor
+   cutaways and world-event cursor availability remain unverified limitations.
+5. Close game, disable temporary probes, update docs and commit/push. Keep AI on hold.
 
 ## Open issues
 
-- Actual-NPC clothing/model viewer passed; ordinary world-scene visibility still
-  needs direct verification and diagnosis.
+- Ordinary same-floor world rendering passed in the tested room. Broad cutaway,
+  multi-floor and cursor-state correctness remain unverified; adapter scope is
+  conservative and deliberately skips unseen/other-floor NPCs.
 - Duplicate room/invalid map metadata errors reproduce with all mods disabled;
   origin not diagnosed. Do not call the runs entirely error-free.
 - Disk-write failures have simulated policy coverage only.
@@ -77,26 +84,30 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 ## Local runtime state at handoff
 
 Game closed; native window inventory confirmed no Project Zomboid window.
-Only SarahFoundation selected. Continue selects `SarahAppearanceFresh`, the
-foundation-enabled copy of fresh mod-free `2026-10-04_06-16-14`. Original control
+Only SarahFoundation selected. Continue selects `SarahWorldRenderFresh`, a
+foundation-enabled separate copy of mod-free `2026-10-04_06-16-14`. Original control
 has an empty world mod list; older alive/dead cases remain preserved.
-All temporary live/death/tombstone/session/reload/menu/appearance drivers are
-outside the mod in `runtime/disabled-probes`. Appearance case final state saved
-slot b and backed up as `appearance-before-20261004/Appearance-final`.
+All temporary drivers, including world rendering, are outside the mod in
+`runtime/disabled-probes`. Production Engine/main deployed to isolated mod.
+Fresh render case saved slot a; appearance restore test saved slot a.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
-Latest backup group: `runtime/backups/appearance-before-20261004`: both older
-worlds, original selections, fresh control before/after reload, appearance case
-before restart and final state. Restore only game-closed,
+Latest backup group: `runtime/backups/world-render-before-20261004`: appearance
+world/selections, Appearance-before-hook, Appearance-before-production,
+Appearance-production-final and Fresh-spawn-final. Older appearance and
+alive/dead backups remain preserved. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-No production code changes or unfinished tracked edits. Check Git status and
-fresh native window inventory before resuming UI work.
+Production world-render change and evidence are included in this checkpoint.
+No unfinished work remains for this bounded task; M0 hardening is still open.
+Check Git status and fresh native window inventory before resuming UI work.
 
 ## Interrupted-session note template
 
 Replace this section when needed; remove stale entries after completing them.
+
+No interrupted work at this checkpoint.
 
 - Work item / owner / date:
 - State: IN PROGRESS / BLOCKED / VERIFIED

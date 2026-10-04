@@ -1,0 +1,10 @@
+PASS visible actual NPC drawn with its square lighting
+PASS no player or NPC produces no drawing
+PASS local player never drawn through NPC path
+PASS legacy renderer and other player views skipped
+PASS network modes skipped
+PASS dead partial and unrelated characters skipped
+PASS unregistered or removal-pending NPC skipped
+PASS offscreen hidden or other-floor NPC skipped
+PASS missing square or lighting skipped
+RESULT 9 rendering checks passed

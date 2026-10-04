@@ -8,6 +8,7 @@ if SarahFoundation then
     Events.OnFillWorldObjectContextMenu.Remove(SarahFoundation.menu)
     Events.OnSave.Remove(SarahFoundation.save)
     Events.OnPlayerDeath.Remove(SarahFoundation.death)
+    if SarahFoundation.render then Events.RenderOpaqueObjectsInWorld.Remove(SarahFoundation.render) end
     if SarahFoundation.reset then
         Events.OnGameStart.Remove(SarahFoundation.reset)
         Events.OnMainMenuEnter.Remove(SarahFoundation.reset)
@@ -17,7 +18,7 @@ end
 SarahFoundation={ticks=0,controller=SarahFoundation and SarahFoundation.controller or nil}
 local state=SarahFoundation
 state.reset=function()
-    state.controller=nil; state.ticks=0; state.disabled=nil
+    state.controller=nil; state.ticks=0; state.disabled=nil; state.renderDisabled=nil
     print("[SarahFoundation] SESSION_RESET")
 end
 state.tick=function()
@@ -34,6 +35,14 @@ state.tick=function()
     if not state.controller.npc and state.ticks==120 then state.controller:ensure() end
 end
 state.save=function() if state.controller then state.controller:save() end end
+state.render=function(playerIndex)
+    if state.renderDisabled or not state.controller or not state.controller.npc then return end
+    local ok,err=pcall(state.controller.adapter.render,state.controller.npc,playerIndex)
+    if not ok then
+        state.renderDisabled=true
+        print("[SarahFoundation] RENDER_DISABLED " .. tostring(err))
+    end
+end
 state.death=function(player)
     if state.controller and state.controller.npc==player then state.controller.adapter.meta.dead=true end
 end
@@ -50,6 +59,7 @@ state.menu=function(playerIndex,context,objects,test)
 end
 Events.OnTick.Add(state.tick)
 Events.OnSave.Add(state.save)
+Events.RenderOpaqueObjectsInWorld.Add(state.render)
 Events.OnPlayerDeath.Add(state.death)
 Events.OnFillWorldObjectContextMenu.Add(state.menu)
 Events.OnGameStart.Add(state.reset)

@@ -1,0 +1,76 @@
+"""Exercise the actual engine adapter's world-render boundaries with fake objects."""
+from pathlib import Path
+import sys
+root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / 'tools/dependencies/python'))
+from lupa import LuaRuntime
+lua = LuaRuntime(unpack_returned_tuples=True)
+lua.globals().Engine = lua.execute((root / 'foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua').read_text())
+lua.execute(r'''
+Core={getMyDocumentFolder=function() return 'G:/Codex/Project Sarah/runtime/isolated' end}
+ModData={getOrCreate=function() return {} end}
+local count=0
+local function fixture()
+    local f={draws=0,shadows=0,registered=true,removing=false,visible=true,light={},client=false,server=false}
+    local player={getZ=function() return 0 end}
+    local npc={data={SarahFoundationId='Sarah'},z=0,dead=false,onScreen=true,npc=true}
+    local square={isCanSee=function() return f.visible end,getLightInfo=function() return f.light end}
+    npc.square=square
+    npc.isDead=function() return npc.dead end
+    npc.isNpc=function() return npc.npc end
+    npc.getModData=function() return npc.data end
+    npc.isOnScreen=function() return npc.onScreen end
+    npc.getCurrentSquare=function() return npc.square end
+    npc.getX=function() return 10 end; npc.getY=function() return 20 end; npc.getZ=function() return npc.z end
+    npc.renderShadow=function(self,x,y,z) assert(self==npc and x==10 and y==20 and z==npc.z); f.shadows=f.shadows+1 end
+    npc.render=function(self,x,y,z,light,opaque,translucent,shader)
+        assert(self==npc and x==10 and y==20 and z==npc.z and light==f.light)
+        assert(opaque==true and translucent==false and shader==nil)
+        f.draws=f.draws+1
+    end
+    PerformanceSettings={fboRenderChunk=true}
+    isClient=function() return f.client end; isServer=function() return f.server end
+    getSpecificPlayer=function(index) assert(index==0); return f.player end
+    getCell=function() return {
+        getObjectList=function() return {contains=function(_,object) assert(object==npc); return f.registered end} end,
+        getRemoveList=function() return {contains=function(_,object) assert(object==npc); return f.removing end} end
+    } end
+    f.player=player; f.npc=npc; f.adapter=Engine.new()
+    return f
+end
+local function test(name,run) run(); count=count+1; print('PASS '..name) end
+local function skipped(change,index)
+    local f=fixture(); change(f)
+    assert(f.adapter.render(f.npc,index or 0)==false)
+    assert(f.draws==0 and f.shadows==0)
+end
+test('visible actual NPC drawn with its square lighting',function()
+    local f=fixture(); local player=f.player
+    assert(f.adapter.render(f.npc,0)); assert(f.draws==1 and f.shadows==1 and f.player==player)
+end)
+test('no player or NPC produces no drawing',function()
+    skipped(function(f) f.player=nil end); skipped(function(f) f.npc=nil end)
+end)
+test('local player never drawn through NPC path',function() skipped(function(f) f.player=f.npc end) end)
+test('legacy renderer and other player views skipped',function()
+    skipped(function() PerformanceSettings.fboRenderChunk=false end); skipped(function() end,1)
+end)
+test('network modes skipped',function()
+    skipped(function(f) f.client=true end); skipped(function(f) f.server=true end)
+end)
+test('dead partial and unrelated characters skipped',function()
+    skipped(function(f) f.npc.dead=true end); skipped(function(f) f.npc.data.SarahFoundationPartial=true end)
+    skipped(function(f) f.npc.data.SarahFoundationId='Other' end); skipped(function(f) f.npc.npc=false end)
+end)
+test('unregistered or removal-pending NPC skipped',function()
+    skipped(function(f) f.registered=false end); skipped(function(f) f.removing=true end)
+end)
+test('offscreen hidden or other-floor NPC skipped',function()
+    skipped(function(f) f.npc.onScreen=false end); skipped(function(f) f.visible=false end)
+    skipped(function(f) f.npc.z=1 end)
+end)
+test('missing square or lighting skipped',function()
+    skipped(function(f) f.npc.square=nil end); skipped(function(f) f.light=nil end)
+end)
+print('RESULT '..count..' rendering checks passed')
+''')

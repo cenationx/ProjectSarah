@@ -38,7 +38,9 @@ before adding broader features. Multiplayer is outside the initial scope.
   one save callback after two reloads.
 - [ ] Broader module reload and actual incomplete-cleanup reference checks.
 - [x] Actual-NPC clothing/model viewer inspection before/after full restart.
-- [ ] Direct ordinary world-scene visibility, separated positions and diagnosis.
+- [x] Direct ordinary world-scene visibility, separated positions and diagnosis;
+  bounded B42 FBO hook passed restored/fresh NPC scenes. Broad cutaways/floors
+  and event availability remain limitations in `M0-world-render-test.md`.
 - [x] Fresh no-mod control reproduces duplicate/invalid room metadata errors;
   root cause remains unknown, with no Sarah fix justified by this comparison.
 - [ ] Define and test offscreen/unloaded-square policy and safe deferred recovery.

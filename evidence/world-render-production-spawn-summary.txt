@@ -1,0 +1,14 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:240> [SarahWorldRenderProbe] SAMPLE ticks=240 world=SarahWorldRenderFresh playerPreserved=true renderCalls=0
+LOG  : Lua          f:240> [SarahWorldRenderProbe] PLAYER xyz=10770.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=1 targetAlpha=1 culled=false squareCanSee=true
+LOG  : Lua          f:240> [SarahWorldRenderProbe] SARAH xyz=10772.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=0 targetAlpha=0 culled=false squareCanSee=false
+LOG  : Lua          f:600> [SarahWorldRenderProbe] SAMPLE ticks=600 world=SarahWorldRenderFresh playerPreserved=true renderCalls=0
+LOG  : Lua          f:600> [SarahWorldRenderProbe] PLAYER xyz=10770.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=1 targetAlpha=1 culled=false squareCanSee=true
+LOG  : Lua          f:600> [SarahWorldRenderProbe] SARAH xyz=10772.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=0 targetAlpha=0 culled=false squareCanSee=false
+LOG  : Lua          f:1800> [SarahWorldRenderProbe] SAMPLE ticks=1800 world=SarahWorldRenderFresh playerPreserved=true renderCalls=0
+LOG  : Lua          f:1800> [SarahWorldRenderProbe] PLAYER xyz=10770.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=1 targetAlpha=1 culled=false squareCanSee=true
+LOG  : Lua          f:1800> [SarahWorldRenderProbe] SARAH xyz=10772.5,10271.5,0 square=true squareRegistered=true objectRegistered=true activeModel=true modelManager=true doRender=true spriteInvisible=false alpha=0 targetAlpha=0 culled=false squareCanSee=false
+LOG  : Lua          f:4842> [SarahFoundation] SAVED a

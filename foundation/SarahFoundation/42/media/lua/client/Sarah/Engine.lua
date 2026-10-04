@@ -11,6 +11,25 @@ function Engine.new()
     function adapter.exists(slot) return fileExists(file(slot)) end
     function adapter.isDead(npc) return npc:isDead() end
     function adapter.isIncomplete(npc) return npc:getModData().SarahFoundationPartial == true end
+    -- B42 FBO skips IsoPlayer in the moving-object pass, but its player pass
+    -- only draws local player slots. Draw our NPC through the world event.
+    function adapter.render(npc, playerIndex)
+        if playerIndex ~= 0 or not PerformanceSettings.fboRenderChunk or isClient() or isServer() then return false end
+        local player=getSpecificPlayer(0)
+        if not player or not npc or npc==player or not npc:isNpc() or npc:isDead() then return false end
+        local data=npc:getModData()
+        if data.SarahFoundationId~="Sarah" or data.SarahFoundationPartial or not npc:isOnScreen() then return false end
+        local cell=getCell()
+        if not cell:getObjectList():contains(npc) or cell:getRemoveList():contains(npc) then return false end
+        local square=npc:getCurrentSquare()
+        -- Conservative scope: visible squares on the local player's floor.
+        if not square or math.floor(npc:getZ())~=math.floor(player:getZ()) or not square:isCanSee(playerIndex) then return false end
+        local light=square:getLightInfo(playerIndex)
+        if not light then return false end
+        npc:renderShadow(npc:getX(),npc:getY(),npc:getZ())
+        npc:render(npc:getX(),npc:getY(),npc:getZ(),light,true,false,nil)
+        return true
+    end
     function adapter.listNPCs()
         local result, seen = {}, {}
         for _, list in ipairs({getCell():getObjectList(), getCell():getAddList()}) do

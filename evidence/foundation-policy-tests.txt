@@ -22,4 +22,7 @@ PASS Lua script reload retains controller with one callback per event
 PASS main menu resets controller
 [SarahFoundation] SESSION_RESET
 PASS new game clears old session state
-RESULT 19 total foundation checks passed
+[SarahFoundation] RENDER_DISABLED [string "<python>"]:16: render failure
+[SarahFoundation] SESSION_RESET
+PASS rendering failure stops retries until session reset
+RESULT 20 total foundation checks passed

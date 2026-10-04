@@ -96,7 +96,7 @@ print('RESULT '..count..' lifecycle tests passed')
 ''')
 lua.execute(r'''
 Events={}
-for _,name in ipairs({'OnTick','OnFillWorldObjectContextMenu','OnSave','OnPlayerDeath','OnGameStart','OnMainMenuEnter'}) do
+for _,name in ipairs({'OnTick','OnFillWorldObjectContextMenu','OnSave','OnPlayerDeath','OnGameStart','OnMainMenuEnter','RenderOpaqueObjectsInWorld'}) do
     local handlers={}
     Events[name]={handlers=handlers,
         Add=function(fn) handlers[fn]=true end,
@@ -122,5 +122,12 @@ SarahFoundation.controller={}; SarahFoundation.disabled=true; SarahFoundation.ti
 for callback in pairs(Events.OnGameStart.handlers) do callback() end
 assert(SarahFoundation.controller==nil and SarahFoundation.disabled==nil and SarahFoundation.ticks==0)
 print('PASS new game clears old session state')
-print('RESULT 19 total foundation checks passed')
+local failures=0
+SarahFoundation.controller={npc={},adapter={render=function() failures=failures+1; error('render failure') end}}
+SarahFoundation.render(0); SarahFoundation.render(0)
+assert(failures==1 and SarahFoundation.renderDisabled)
+SarahFoundation.reset()
+assert(SarahFoundation.renderDisabled==nil)
+print('PASS rendering failure stops retries until session reset')
+print('RESULT 20 total foundation checks passed')
 ''')
