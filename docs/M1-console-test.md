@@ -109,3 +109,10 @@ raw Escape/panel false/swallow true, expiry back to false and guard=true.
 This establishes bounded Escape behavior, not all remaining slice A acceptance.
 Physical Escape stopped Computer Use in the prior turn; result is still valid.
 See desktop-input-diagnostic.md for separate automated special-key limitation.
+
+## Movement restoration PASS (user-operated, 2026-10-04)
+User completed requested walking checks after Escape close and mouse Close and
+reported movement fine. No stuck focus/movement reported. Screenshot afterward
+shows changed world framing/player location; no coordinate probe deployed.
+Hold-repeat remains pending explicit confirmation; no additional gate inferred.
+

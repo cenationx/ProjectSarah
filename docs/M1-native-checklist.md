@@ -22,7 +22,7 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
   - **Expected result**: Sarah Console opens on the initial down-edge and remains open without flickering, stuttering, or repeatedly toggling open and closed while held.
   - **Evidence to record**: Visual confirmation of a steady panel and user-reported hold duration and observed panel behavior. Transition logging requires a separately backed-up, observation-only probe; production does not log panel transitions.
 
-- [ ] **2. Restored movement input after closing**
+- [x] **2. Restored movement input after closing**
   - **Action**: Open console (`F9`), confirm input box has focus. Close console (via `Escape` or mouse clicking `Close`). Ensure the game is unpaused, then press movement keys (`WASD`). Test Escape close and mouse Close separately.
   - **Expected result**: Character movement responds immediately without stuck movement keys, swallowed inputs, or residual keyboard focus.
   - **Evidence to record**: Character visibly moves; coordinates from a read-only status result before/after movement (or a deployed observation probe); no stuck-key state.
@@ -57,3 +57,5 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
 4. Preserve final test case into `runtime/backups/`.
 5. Update `STATUS.md`, `ROADMAP.md`, and `M1-console-test.md` with captured evidence.
 
+
+Movement result (2026-10-04): user completed the requested Escape-close and mouse-Close walking sequence and reported movement fine. User-operated native PASS; no coordinate probe deployed. Hold-repeat confirmation requested separately; still pending.

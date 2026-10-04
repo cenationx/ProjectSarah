@@ -104,3 +104,9 @@ ACTIVE npc=true worn=3 localPlayerPreserved=true. No temporary probe active.
 Physical hold-F9 and movement after Escape/mouse Close requested; results pending.
 Game running; Codex computer control paused while user operates keys. No new pass claimed.
 
+
+Native movement restoration PASS: user completed requested Escape/mouse Close
+walking sequence and reports movement fine. Hold-repeat confirmation requested
+separately. Next: user opens Options; Codex checks English labels/rebinding.
+Game remains running (paused in last observation); no temporary probes.
+
