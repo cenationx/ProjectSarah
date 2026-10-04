@@ -1,0 +1,14 @@
+/runtime/
+/vendor/
+/candidates/
+/tools/dependencies/
+/tools/compiled/
+/tools/class-inspection/
+/evidence/class-inspection/
+*.bin
+__pycache__/
+*.pyc
+/evidence/live-spawn-first.txt
+/evidence/live-sequence-second.txt
+/evidence/live-checkpoint-third.txt
+/evidence/live-reload-fourth.txt

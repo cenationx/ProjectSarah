@@ -1,0 +1,74 @@
+{
+  "game": "G:\\Games\\ProjectZomboid",
+  "version_constants": [],
+  "jar_sha256": "e1a69eb743ede60b213a0fe7f8b83d4fcab773036d256cc4543a336f3b058a33",
+  "lua_files": 79,
+  "api_checks": [
+    {
+      "check": "IsoPlayer.setNPC(Z)V",
+      "pass": false
+    },
+    {
+      "check": "IsoPlayer.setSceneCulled(Z)V",
+      "pass": true
+    },
+    {
+      "check": "IsoPlayer.setForname(Ljava/lang/String;)V",
+      "pass": false
+    },
+    {
+      "check": "IsoPlayer.setSurname(Ljava/lang/String;)V",
+      "pass": false
+    },
+    {
+      "check": "PZNS five-argument IsoPlayer constructor",
+      "pass": true
+    },
+    {
+      "check": "SurvivorFactory.CreateSurvivor(type, boolean)",
+      "pass": true
+    }
+  ],
+  "constructors": [
+    {
+      "name": "<init>",
+      "descriptor": "(Lzombie/iso/IsoCell;)V",
+      "public": true
+    },
+    {
+      "name": "<init>",
+      "descriptor": "(Lzombie/iso/IsoCell;Lzombie/characters/SurvivorDesc;IIIZ)V",
+      "public": true
+    },
+    {
+      "name": "<init>",
+      "descriptor": "(Lzombie/iso/IsoCell;Lzombie/characters/SurvivorDesc;III)V",
+      "public": true
+    }
+  ],
+  "survivor_factory_overloads": [
+    {
+      "name": "CreateSurvivor",
+      "descriptor": "()Lzombie/characters/SurvivorDesc;",
+      "public": true
+    },
+    {
+      "name": "CreateSurvivor",
+      "descriptor": "(Lzombie/characters/SurvivorFactory$SurvivorType;Z)Lzombie/characters/SurvivorDesc;",
+      "public": true
+    },
+    {
+      "name": "CreateSurvivor",
+      "descriptor": "(Lzombie/characters/SurvivorFactory$SurvivorType;)Lzombie/characters/SurvivorDesc;",
+      "public": true
+    }
+  ],
+  "unresolved_requires": [
+    {
+      "file": "media\\lua\\client\\09_mod_ui\\PZNS_ISGeneralDebug.lua",
+      "require": "PZNS_ISDebugPanelBase"
+    }
+  ],
+  "b42_versioned_layout": false,
+  "boundary": "Binary API and Lua dependency inspection only; no live NPC/gameplay test."
+}

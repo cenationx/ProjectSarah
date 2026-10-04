@@ -1,0 +1,4 @@
+name=Project Sarah M0 - isolated NPC probe
+id=SarahM0
+description=Disposable single-player NPC compatibility probe. No AI integration.
+versionMin=42.21

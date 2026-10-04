@@ -1,0 +1,22 @@
+LOG  : Lua          f:0> [SarahM0] LOADED; isolated spawn probe; no AI layer
+LOG  : Lua          f:0> [SarahM0] GAME_START version=42.21.0 4a0e9546ec
+LOG  : Lua          f:180> [SarahM0] RESTORED name=Sarah inventory=1 dead=false
+LOG  : Lua          f:180> [SarahM0] RESTORED_TOKEN Sarah M0 persistence token
+LOG  : Lua          f:180> [SarahM0] SPAWN npc=true name=Sarah
+LOG  : Lua          f:180> [SarahM0] INVENTORY add=false count=1
+LOG  : Lua          f:180> [SarahM0] POSITION 7976.50390625,11402.5,0
+LOG  : Lua          f:180> [SarahM0] LOCAL_PLAYER preserved=true
+LOG  : Lua          f:300> [SarahM0] HEARTBEAT dead=false position=7976.50390625,11402.5
+LOG  : Lua          f:360> [SarahM0] WALK_QUEUED from=7976.50390625,11402.5
+LOG  : Lua          f:600> [SarahM0] HEARTBEAT dead=false position=7976.50390625,11402.5
+LOG  : Lua          f:900> [SarahM0] WALK_RESULT moved=false position=7976.50390625,11402.5
+LOG  : Lua          f:900> [SarahM0] TRANSFER_TO_PLAYER contains=true
+LOG  : Lua          f:900> [SarahM0] TRANSFER_TO_NPC contains=true
+LOG  : Lua          f:900> [SarahM0] HEARTBEAT dead=false position=7976.50390625,11402.5
+LOG  : Lua          f:1200> [SarahM0] SAVED file=G:\Codex\Project Sarah\runtime\isolated\Saves\Rising\2026-10-04_04-21-54\SarahM0-checkpoint
+LOG  : Lua          f:1200> [SarahM0] HEARTBEAT dead=false position=7976.50390625,11402.5
+LOG  : Lua          f:1500> [SarahM0] HEARTBEAT dead=false position=7976.50390625,11402.5
+LOG  : Lua          f:1800> [SarahM0] CHECKPOINT_EXISTS true
+LOG  : Lua          f:1800> [SarahM0] TOKEN Sarah M0 persistence token
+LOG  : Lua          f:1800> [SarahM0] REMOVED
+LOG  : Lua          f:1800> [SarahM0] TEST_SEQUENCE_FINISHED

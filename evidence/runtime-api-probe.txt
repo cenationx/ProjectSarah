@@ -1,0 +1,8 @@
+BUILD REVISION=4a0e9546ec
+FAIL missing public method: setNPC
+PASS public void zombie.characters.IsoGameCharacter.setSceneCulled(boolean)
+FAIL missing public method: setForname
+FAIL missing public method: setSurname
+PASS public zombie.characters.IsoPlayer(zombie.iso.IsoCell,zombie.characters.SurvivorDesc,int,int,int)
+PASS public static zombie.characters.SurvivorDesc zombie.characters.SurvivorFactory.CreateSurvivor(zombie.characters.SurvivorFactory$SurvivorType,boolean)
+RESULT: 3 required public API methods missing. No gameplay tested.

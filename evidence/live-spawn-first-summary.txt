@@ -1,0 +1,45 @@
+LOG  : Lua          f:0> [SarahM0] LOADED; isolated spawn probe; no AI layer
+LOG  : Lua          f:0> [SarahM0] GAME_START version=42.21.0 4a0e9546ec
+LOG  : Lua          f:180> [SarahM0] SPAWN npc=true name=Sarah
+LOG  : Lua          f:180> [SarahM0] INVENTORY add=true count=1
+LOG  : Lua          f:180> [SarahM0] POSITION 7978.5,11402.5,0
+LOG  : Lua          f:180> [SarahM0] LOCAL_PLAYER preserved=true
+LOG  : Lua          f:300> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:600> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:900> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:1200> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:1500> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:1800> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:2100> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:2400> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:2700> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:3000> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:3300> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:3600> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:3900> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:4200> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:4500> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:4800> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:5100> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:5400> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:5700> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:6000> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:6300> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:6600> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:6900> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:7200> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:7500> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:7800> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:8100> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:8400> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:8700> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:9000> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:9300> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:9600> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:9900> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:10200> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:10500> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:10800> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:11100> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:11400> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
+LOG  : Lua          f:11700> [SarahM0] HEARTBEAT dead=false position=7978.5,11402.5
