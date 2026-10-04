@@ -3,6 +3,10 @@
 Started: 2026-10-04. Requested target: Project Zomboid 42.21.
 Project folder: `G:\Codex\Project Sarah`.
 
+**Continuing with another agent?** Read [current status](docs/STATUS.md),
+[roadmap](docs/ROADMAP.md), [handoff/setup](docs/HANDOFF.md) and [agent instructions](AGENTS.md).
+These files are the shared checkpoints and must be updated as work progresses.
+
 M0 is the NPC framework compatibility gate. The AI layer has not been created or started. No model, AI service, dialogue system, or integration has been installed.
 
 ## Current decision

@@ -1,0 +1,93 @@
+# Agent handoff and checkpoint workflow
+
+## Start here
+
+Open `G:\Codex\Project Sarah` in Codex or Antigravity. Read root `AGENTS.md`,
+then STATUS and ROADMAP. Git is standard and tool-independent. Repository:
+https://github.com/cenationx/ProjectSarah, branch `main`, author `cenationx` using
+a GitHub noreply address. Do not assume a separate app inherits authentication
+or this conversation; check its Git access without displaying credentials.
+
+Read Git status before fetching/pulling. Never discard another agent's work.
+Only one agent should modify this checkout at a time. For a remote clone, choose
+a directory under `G:\Codex`; runtime/dependencies are not included in GitHub.
+The existing canonical checkout is the easiest handoff on this computer.
+
+## What exists only on this computer
+
+- Installed game: `G:\Games\ProjectZomboid`, read-only.
+- Isolated profile: `runtime/isolated` under the canonical project.
+- Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
+- Backups: `runtime/backups/foundation-before-20261004-045750` and
+  `runtime/backups/recovery-before-20261004-050552`, each containing the world
+  directory. Verify contents before using them.
+- Current test world has Sarah dead by design. Before an alive-NPC test, close
+  the game, copy current world to a new backup/case directory, then restore a
+  separate copy of the alive backup. Never delete the last copy of a case.
+- Upstream PZNS: `vendor/PZNS`, commit
+  `20a30212f98aa891aec9cb070bb96164be27c12a`, from
+  https://github.com/Project-Zomboid-Community-Modding/PZNS.
+- Mechanically patched PZNS candidate: `candidates/PZNS_B42_M0`, unverified.
+- Dependencies: `tools/dependencies`; generated/decompiled classes and raw
+  machine logs are ignored. Do not upload them.
+
+If these files are absent, reconstruct the isolated setup before running game
+tests. Do not substitute the normal game profile. Consult the existing reports
+and scripts; the current engine adapter deliberately rejects other profile paths.
+
+## Automated checks
+
+From the project directory in PowerShell, the tested command is:
+
+```powershell
+& 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\test_foundation.py
+```
+
+It uses Lupa from `tools/dependencies/python`. The last tested installation was
+Lupa 2.8; on a fresh setup install it into that project-local directory using an
+available Python, with temporary/output directories under the project. This test
+executes actual Lua source with fake engine adapters and events. It does not
+prove gameplay compatibility. Expected latest result: 19 total checks passed.
+
+API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
+the Java probes. The legacy PZNS compatibility probe is expected to fail missing
+APIs; that failure is not a regression in SarahFoundation. ECJ 3.43.0 is needed
+locally for compilation; CFR 0.152 was used only for local engine inspection.
+
+## Live tests
+
+1. Read STATUS and the applicable test report. Confirm game process is closed.
+2. Back up the disposable world and mod selection; record the backup path and
+   restoration procedure before mutations or destructive fault tests.
+3. Deploy `foundation/SarahFoundation` to `runtime/isolated/mods`. Keep its
+   `common` directory. Enable only SarahFoundation, with SarahM0 disabled, in
+   isolated profile and save mod selections. Never edit the normal selections.
+4. Temporary probe drivers are in `tools`: FoundationLiveProbe, FoundationDeathProbe
+   and FoundationTombstoneProbe. Deploy only the driver(s) required by the test
+   before game launch. The death probe kills Sarah; the tombstone probe assumes
+   she was already killed and saved. They are not production mod features.
+5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
+   failures). Inspect the game UI, continue the disposable world, dismiss the
+   survival guide, and verify outcomes against logs and game state.
+6. Preserve raw logs locally under runtime; publish only sanitized result
+   excerpts. Record failures and engine/map warnings as well as passes.
+7. Close the game, preserve the final test case, and move temporary test drivers
+   out of the mod (currently `runtime/disabled-probes`). Record final state.
+
+For every restoration/move, verify absolute source/destination paths stay under
+this project. Keep normal saves and installed game files untouched.
+
+## Checkpoint routine
+
+Update STATUS whenever a bounded task finishes and before stopping. Update the
+roadmap only when evidence meets the milestone, and HANDOFF when setup changes.
+Commit related code, notes and sanitized evidence together; push and verify.
+Checkpoints should be small enough that a usage limit leaves useful saved state.
+
+An interruption note must explain how to continue from partial work. Do not
+leave the next agent guessing whether a game is running, which save was changed,
+or whether a pass came from fake engine tests or live gameplay.
+
+GitHub stores shared files, not chats, local saves, backups or tool permissions.
+No automatic agent switching or background quota monitor is configured. The user
+can switch tools/models and ask the next agent to continue using these files.
