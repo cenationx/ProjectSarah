@@ -13,8 +13,9 @@ function Engine.new()
     function adapter.listNPCs()
         local result, seen = {}, {}
         for _, list in ipairs({getCell():getObjectList(), getCell():getAddList()}) do
-            for i=0,list:size()-1 do
-                local object = list:get(i)
+            local iterator=list:iterator()
+            while iterator:hasNext() do
+                local object = iterator:next()
                 if instanceof(object,"IsoPlayer") and object:getModData().SarahFoundationId == "Sarah" and not seen[object] then
                     seen[object]=true; result[#result+1]=object
                 end
