@@ -116,3 +116,7 @@ reported movement fine. No stuck focus/movement reported. Screenshot afterward
 shows changed world framing/player location; no coordinate probe deployed.
 Hold-repeat remains pending explicit confirmation; no additional gate inferred.
 
+
+## Hold-repeat and English labels PASS (2026-10-04)
+User confirms holding F9 then releasing leaves console open, following the two-second instruction. Codex visually verified native Options displays Project Sarah, Sarah Console and F9 without untranslated labels. No probe used. F7 rebinding dialog prepared; assignment/apply/runtime/persistence checks still pending.
+

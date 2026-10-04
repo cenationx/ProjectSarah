@@ -17,7 +17,7 @@ Status: OPEN. Physical F9 open/close, read-only commands (help, status, inventor
 
 All remaining gates are currently pending. Mark `[x]` only when direct native evidence is captured.
 
-- [ ] **1. Hold-repeat behavior (F9)**
+- [x] **1. Hold-repeat behavior (F9)**
   - **Action**: Open game in `SarahConsoleNativeCase`. Physically press and hold `F9` down steadily for 1–2 seconds.
   - **Expected result**: Sarah Console opens on the initial down-edge and remains open without flickering, stuttering, or repeatedly toggling open and closed while held.
   - **Evidence to record**: Visual confirmation of a steady panel and user-reported hold duration and observed panel behavior. Transition logging requires a separately backed-up, observation-only probe; production does not log panel transitions.
@@ -27,7 +27,7 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
   - **Expected result**: Character movement responds immediately without stuck movement keys, swallowed inputs, or residual keyboard focus.
   - **Evidence to record**: Character visibly moves; coordinates from a read-only status result before/after movement (or a deployed observation probe); no stuck-key state.
 
-- [ ] **3. English Options key-binding labels**
+- [x] **3. English Options key-binding labels**
   - **Action**: Open Main Menu / Pause Menu -> `Options` -> `Key Bindings`. Scroll to the Project Sarah section.
   - **Expected result**: Section reads `Project Sarah` and action is labeled `Sarah Console` bound to `F9` (no untranslated keys like `UI_...` or missing text).
   - **Evidence to record**: Screenshot or visual confirmation of clean English labels in vanilla Options dialog.
@@ -59,3 +59,5 @@ All remaining gates are currently pending. Mark `[x]` only when direct native ev
 
 
 Movement result (2026-10-04): user completed the requested Escape-close and mouse-Close walking sequence and reported movement fine. User-operated native PASS; no coordinate probe deployed. Hold-repeat confirmation requested separately; still pending.
+
+2026-10-04: user confirms holding F9 then releasing leaves console open (hold-repeat PASS). Codex visually verified Project Sarah / Sarah Console / F9 labels in native Options (English labels PASS). Rebind dialog prepared; F7 assignment requested, not yet verified/applied.

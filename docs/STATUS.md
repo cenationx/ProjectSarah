@@ -110,3 +110,13 @@ walking sequence and reports movement fine. Hold-repeat confirmation requested
 separately. Next: user opens Options; Codex checks English labels/rebinding.
 Game remains running (paused in last observation); no temporary probes.
 
+
+Native acceptance: hold-repeat PASS (user confirms held F9/release leaves console open); English Options labels PASS (Codex direct screenshot inspection). Movement already passed. Remaining gates: rebind/persistence, conflict refusal/menu fallback, same-process teardown. Game running in Options rebinding dialog; user asked to press F7, no Apply yet. Codex owns checkout.
+
+
+Rebind progress: physical F7 assigned in vanilla dialog, visually verified and saved
+through Accept. Isolated Lua/keysB42.ini now Sarah Console=key:65 (F7).
+Game resumed; user asked to test F7 open/close and old F9 inactivity.
+Runtime toggle/full restart persistence remain pending. Keep F7 until retest,
+then restore backed-up complete isolated key settings after final checks.
+
