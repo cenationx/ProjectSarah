@@ -17,7 +17,7 @@ M0 is the NPC framework compatibility gate. The AI layer has not been created or
 - `tools`: reproducible source/binary inspection and headless JVM API probe.
 - `evidence`: test results from the installed game.
 - `docs`: findings and M0 acceptance criteria.
-- `foundation/SarahFoundation`: experimental hardened NPC lifecycle candidate; 15 automated failure tests pass, plus isolated spawn, duplicate prevention, unload/restore and full restart checks. See [candidate status](foundation/SarahFoundation/README.md).
+- `foundation/SarahFoundation`: experimental hardened NPC lifecycle candidate; 19 automated checks pass, plus isolated spawn, duplicate prevention, unload/restore, full restart and corrupted-checkpoint recovery checks. See [candidate status](foundation/SarahFoundation/README.md).
 
 ## License
 

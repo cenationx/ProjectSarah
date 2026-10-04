@@ -8,9 +8,18 @@ if SarahFoundation then
     Events.OnFillWorldObjectContextMenu.Remove(SarahFoundation.menu)
     Events.OnSave.Remove(SarahFoundation.save)
     Events.OnPlayerDeath.Remove(SarahFoundation.death)
+    if SarahFoundation.reset then
+        Events.OnGameStart.Remove(SarahFoundation.reset)
+        Events.OnMainMenuEnter.Remove(SarahFoundation.reset)
+    end
 end
-SarahFoundation={ticks=0,controller=nil}
+-- Preserve a controller during script reload so failed-cleanup references survive.
+SarahFoundation={ticks=0,controller=SarahFoundation and SarahFoundation.controller or nil}
 local state=SarahFoundation
+state.reset=function()
+    state.controller=nil; state.ticks=0; state.disabled=nil
+    print("[SarahFoundation] SESSION_RESET")
+end
 state.tick=function()
     if isClient() or isServer() or not getSpecificPlayer(0) then return end
     if state.disabled then return end
@@ -43,4 +52,6 @@ Events.OnTick.Add(state.tick)
 Events.OnSave.Add(state.save)
 Events.OnPlayerDeath.Add(state.death)
 Events.OnFillWorldObjectContextMenu.Add(state.menu)
+Events.OnGameStart.Add(state.reset)
+Events.OnMainMenuEnter.Add(state.reset)
 print("[SarahFoundation] LOADED; no external AI layer")

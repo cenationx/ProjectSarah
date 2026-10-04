@@ -15,6 +15,7 @@ function Lifecycle.new(adapter)
             local found = adapter.listNPCs()
             if #found > 1 then error("multiple Sarah objects; refusing to create another") end
             if #found == 1 then
+                if adapter.isIncomplete and adapter.isIncomplete(found[1]) then error("partial NPC construction; refusing adoption") end
                 self.npc = found[1]
                 if adapter.isDead(self.npc) then adapter.meta.dead=true; return nil end
                 return self.npc
@@ -30,7 +31,14 @@ function Lifecycle.new(adapter)
                             return nil
                         end
                         local ok, npc = pcall(adapter.restore, record)
-                        if ok and npc then self.npc=npc; adapter.log("RESTORED " .. record.slot); return npc end
+                        if ok and npc then
+                            self.npc=npc
+                            -- Promote the recovered good slot before the next save;
+                            -- never overwrite it using stale failed-slot metadata.
+                            adapter.meta.checkpoints={record}
+                            adapter.log("RESTORED " .. record.slot)
+                            return npc
+                        end
                         adapter.log("RECOVERY rejected " .. record.slot .. ": " .. tostring(npc))
                         -- A failed restore may have left a game object behind. Never
                         -- try the older slot until cleanup is confirmed.

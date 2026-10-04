@@ -47,3 +47,45 @@ Lua reload, returning to the menu and switching worlds, offscreen unloading,
 combat and multiplayer remain unverified. Failure scenarios have simulated
 policy tests only. The candidate is experimental and restricted to the isolated
 profile. This does not establish full PZNS compatibility. Game closed afterward.
+
+## Follow-up recovery and death tests
+
+The subsequent isolated runs on the same date resolved two of the above gates.
+Before mutation, the entire world was backed up again at
+`runtime/backups/recovery-before-20261004-050552`. Only the disposable world's
+current checkpoint `b` was truncated to two bytes; the older `a` was preserved.
+These runs used `tools/launch-isolated.ps1 -NoDebug` so deliberate load failures
+would not stop execution in the debugger.
+
+The damaged `b` was rejected, `a` restored successfully with three equipped
+items, and repeated ensure/save/unload/restore checks passed. The expected game
+load error was logged. The adapter uses a pending identity during load, so a
+failed or silently skipped load cannot pass the restored-identity check. It
+tags incomplete constructions and refuses to adopt them. Objects already queued
+for removal are excluded from scanning.
+
+Recovery now promotes the good fallback slot before saving again, preserving
+that good file while replacing the failed slot. An automated test covers the
+previous bug where stale metadata could instead overwrite the good copy.
+See [corruption evidence](../evidence/foundation-corruption-summary.txt).
+
+A later run set Sarah's health to zero, observed death, recorded the tombstone,
+removed the NPC, and verified another ensure request did not resurrect her.
+After a full process restart, death metadata remained true, no tagged live Sarah
+existed, and another ensure request still refused resurrection. See
+[death](../evidence/foundation-death-summary.txt) and
+[death restart](../evidence/foundation-tombstone-restart-summary.txt).
+The disposable world is intentionally left with Sarah dead; the pre-test backup
+is available for subsequent alive-NPC tests.
+
+The suite now passes 19 checks: 16 lifecycle cases and 3 simulated callback
+integration checks. Script reload retains the controller and replaces callbacks
+instead of duplicating them. Main-menu/game-start callbacks clear old session
+state. Actual menu/world switching and live script reload are still unverified;
+the reset callbacks were observed during normal launches only.
+
+Disk-write failures remain simulation-only. Offscreen unloading, visual clothing
+inspection, combat, multiplayer and broader stability remain open. Existing map
+metadata errors persist. All temporary probe scripts were disabled after the
+test and the game was closed; normal profile console timestamp stayed 04:03:05.
+No external AI layer was started.

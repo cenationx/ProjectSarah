@@ -20,3 +20,7 @@ callback ran before GlobalModData saving, and recovery metadata survived restart
 Run `tools/test_foundation.py` with the project-local Lupa dependency to check the
 actual Lua lifecycle module using simulated engine failures. Those tests verify
 policy, not Project Zomboid gameplay compatibility.
+
+The automated suite also executes the mod's callback registration with simulated
+events to check reload and session reset behavior (19 checks total). These
+callback checks are not a live game/world-switch test.

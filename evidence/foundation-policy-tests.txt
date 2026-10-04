@@ -7,10 +7,19 @@ PASS failed save retains metadata and active NPC
 PASS missing write is not published
 PASS cleanup failure retains reference and blocks replacement
 PASS corrupt current checkpoint falls back after clean removal
+PASS partially constructed NPC is never adopted
 PASS corrupt checkpoints never create fresh replacement
 PASS missing checkpoints preserve recovery metadata
 PASS unloaded saved square defers without older fallback
 PASS partial restore cleanup failure blocks fallback
 PASS death survives unload and prevents resurrection
 PASS successful unload restores same checkpoint
-RESULT 15 lifecycle tests passed
+RESULT 16 lifecycle tests passed
+[SarahFoundation] LOADED; no external AI layer
+[SarahFoundation] LOADED; no external AI layer
+PASS Lua script reload retains controller with one callback per event
+[SarahFoundation] SESSION_RESET
+PASS main menu resets controller
+[SarahFoundation] SESSION_RESET
+PASS new game clears old session state
+RESULT 19 total foundation checks passed

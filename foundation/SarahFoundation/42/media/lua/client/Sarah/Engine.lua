@@ -10,13 +10,14 @@ function Engine.new()
     end
     function adapter.exists(slot) return fileExists(file(slot)) end
     function adapter.isDead(npc) return npc:isDead() end
+    function adapter.isIncomplete(npc) return npc:getModData().SarahFoundationPartial == true end
     function adapter.listNPCs()
         local result, seen = {}, {}
         for _, list in ipairs({getCell():getObjectList(), getCell():getAddList()}) do
             local iterator=list:iterator()
             while iterator:hasNext() do
                 local object = iterator:next()
-                if instanceof(object,"IsoPlayer") and object:getModData().SarahFoundationId == "Sarah" and not seen[object] then
+                if instanceof(object,"IsoPlayer") and object:getModData().SarahFoundationId == "Sarah" and not seen[object] and not getCell():getRemoveList():contains(object) then
                     seen[object]=true; result[#result+1]=object
                 end
             end
@@ -33,8 +34,10 @@ function Engine.new()
             desc:setForename("Sarah"); desc:setSurname("M0")
             npc=IsoPlayer.new(getCell(),desc,square:getX(),square:getY(),square:getZ())
             npc:getModData().SarahFoundationId="Sarah"
+            npc:getModData().SarahFoundationPartial=true
             npc:setNpc(true); npc:setSceneCulled(false)
             if record then
+                npc:getModData().SarahFoundationId="PendingRestore"
                 npc:load(file(record.slot))
                 if npc:isDead() or npc:getModData().SarahFoundationId ~= "Sarah" then error("invalid restored identity or dead checkpoint") end
             else
@@ -48,10 +51,13 @@ function Engine.new()
                 inv:AddItem("Base.Bandage")
             end
             npc:setNpc(true); npc:setSceneCulled(false); npc:resetModel()
+            npc:getModData().SarahFoundationPartial=nil
         end)
         IsoPlayer.setInstance(previous)
         if not ok then
             if npc then
+                npc:getModData().SarahFoundationId="Sarah"
+                npc:getModData().SarahFoundationPartial=true
                 local cleaned, cleanupError=pcall(adapter.remove,npc)
                 if not cleaned then error("construction failed and cleanup failed: " .. tostring(cleanupError)) end
             end

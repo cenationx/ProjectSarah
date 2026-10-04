@@ -60,6 +60,12 @@ end)
 test('corrupt current checkpoint falls back after clean removal',function()
     local a,c=fixture(); a.files={a=true,b=true}; a.meta.checkpoints={{slot='b',bad=true},{slot='a'}}
     assert(c:ensure()); assert(a.restored==2); assert(a.created==1)
+    assert(a.meta.checkpoints[1].slot=='a'); assert(c:save())
+    assert(a.meta.checkpoints[1].slot=='b'); assert(a.meta.checkpoints[2].slot=='a')
+end)
+test('partially constructed NPC is never adopted',function()
+    local a,c=fixture(); a.objects={{partial=true}}; a.isIncomplete=function(n) return n.partial end
+    assert(not c:ensure()); assert(c.npc==nil); assert(a.created==0)
 end)
 test('corrupt checkpoints never create fresh replacement',function()
     local a,c=fixture(); a.files={a=true,b=true}; a.meta.checkpoints={{slot='b',bad=true},{slot='a',bad=true}}
@@ -87,4 +93,34 @@ test('successful unload restores same checkpoint',function()
     assert(c:ensure()); assert(a.restored==1)
 end)
 print('RESULT '..count..' lifecycle tests passed')
+''')
+lua.execute(r'''
+Events={}
+for _,name in ipairs({'OnTick','OnFillWorldObjectContextMenu','OnSave','OnPlayerDeath','OnGameStart','OnMainMenuEnter'}) do
+    local handlers={}
+    Events[name]={handlers=handlers,
+        Add=function(fn) handlers[fn]=true end,
+        Remove=function(fn) handlers[fn]=nil end}
+end
+require=function(name) if name=='Sarah/Lifecycle' then return Lifecycle else return {} end end
+''')
+main = (source / 'SarahFoundation.lua').read_text()
+lua.execute(main)
+lua.execute('SarahFoundation.controller={sentinel=true}')
+lua.execute(main)
+lua.execute(r'''
+assert(SarahFoundation.controller.sentinel)
+for _,event in pairs(Events) do
+    local count=0; for _ in pairs(event.handlers) do count=count+1 end
+    assert(count==1,'duplicate callback registration')
+end
+print('PASS Lua script reload retains controller with one callback per event')
+for callback in pairs(Events.OnMainMenuEnter.handlers) do callback() end
+assert(SarahFoundation.controller==nil and SarahFoundation.ticks==0)
+print('PASS main menu resets controller')
+SarahFoundation.controller={}; SarahFoundation.disabled=true; SarahFoundation.ticks=100
+for callback in pairs(Events.OnGameStart.handlers) do callback() end
+assert(SarahFoundation.controller==nil and SarahFoundation.disabled==nil and SarahFoundation.ticks==0)
+print('PASS new game clears old session state')
+print('RESULT 19 total foundation checks passed')
 ''')
