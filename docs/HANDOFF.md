@@ -24,11 +24,11 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-71 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 12 command,
-11 console). Native hold-repeat, rebind/persistence, conflicts, English Options labels,
-movement restoration, and same-process teardown remain open on the checklist.
+84 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 22 command,
+14 console). Slice A native acceptance passed. Slice B (stop, cancellation, history)
+implemented and unit tested; native acceptance pending Codex live check.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user.
-Keep external AI on hold and finish slice A before stop/walk.
+Keep external AI on hold; movement commands (slice C) deferred.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
 module-cleanup case/selections/keys, First-live-before-repair and Final-console.
@@ -89,9 +89,9 @@ executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
 Also run `tools/test_render.py`: 13 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 12 read-only command checks.
-Run `tools/test_console.py`: 11 simulated console UI/key/session checks.
-71 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Run `tools/test_commands.py`: 22 command parser/cancellation checks.
+Run `tools/test_console.py`: 14 simulated console UI/key/session checks.
+84 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -309,3 +309,20 @@ F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
 Forward verified key:17; explicit restored F9 file verified, no additional launch
 claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
 offline only. Next bounded work: slice B stop/cancellation; external AI on hold.
+## M1 slice B stop, cancellation, and history handoff (2026-10-05)
+
+Gemini completed M1 slice B implementation and automated validation (offline only; no game launches or desktop control).
+- Changed source files:
+  - `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua` (stop command, lifecycle tokens, stale completion rejection, bounded history buffer capped at 30, history query command).
+  - `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` (dispatch preservation across open/close via `getDispatch()`, game thread `stopSarah` callback, session reset cleanup, prompt update).
+  - `tools/test_commands.py` (added 10 unit checks: idle stop, repeat stop, dead/unloaded stop, active action registration, busy rejection, cancellation by stop, late-completion prevention, successful completion, stale token rejection, session reset cancellation, unload/death observation cancellation, history query and immutability).
+  - `tools/test_console.py` (added 3 console checks: panel stop submission, history display, session reset dispatch cleanup).
+- Automated test results: 84 passing checks (27 foundation + 13 engine adapter + 8 checkpoint readback + 22 command + 14 console).
+- Live gameplay testing: Handed off to Codex.
+  - Game is CLOSED.
+  - Step 1: Deploy `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation` while game is closed.
+  - Step 2: Launch `SarahConsoleNativeCase`.
+  - Step 3: Open console (F9) and test commands: `help`, `status`, `inventory`, `stop`, `history`.
+  - Step 4: Verify character movement restored after closing console (Escape / mouse Close).
+  - Step 5: Clean shutdown and save.
+- External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.

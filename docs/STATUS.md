@@ -1,29 +1,30 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 read-only console slice A native acceptance PASSED in the isolated case. See `docs/M1-native-checklist.md` for evidence boundaries. Next bounded task: slice B stop/cancellation design and implementation.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B (stop, cancellation, bounded history) IMPLEMENTED and validated with 84 automated checks; native acceptance pending Codex live check.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex. All launches/live tests stay in Codex; Gemini handles bounded offline tasks only.
+Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
 
 ## Current local runtime state
 
 - Game is CLOSED (SAVED b, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
-- Production mod deployed at `runtime/isolated/mods/SarahFoundation/` with verified `Console.lua` (Escape pause-menu guard included) and English `UI.json`.
+- Production mod source updated in `foundation/SarahFoundation/` with Slice B stop/cancellation and bounded history. (Deployment to `runtime/isolated/mods/SarahFoundation/` to be performed game-closed by Codex).
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/codex-resume-20261004-234837/Final-acceptance`. Full pre-Gemini key settings restored with Sarah Console reset to F9; Forward remains W. Original acceptance root key baseline is empty, so it was not used as explicit binding evidence.
-- Automated tests: 71 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 12 command + 11 console).
+- Automated tests: 84 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 22 command + 14 console).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 71 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 12 read-only command parser/dispatch, 11 simulated console UI/key/session cases).
+- **Automated policy checks**: 84 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 22 command parser/dispatch/cancellation, 14 simulated console UI/key/session cases).
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands**: Native execution of `help`, `status`, and `inventory` commands passed; local player and NPC preserved; scrolling list box and native font metrics verified.
 - **M1 slice A physical F9**: Physical F9 open, command entry, and F9 close verified natively by user; corroborated by probe samples.
 - **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
+- **M1 slice B stop, cancellation, and history**: Implemented `stop` command, action lifecycle tokens preventing stale/late completion, bounded queryable history (capped at 30 records, no mutable engine handles exposed), and console panel integration. 10 new unit tests and 3 new console simulation tests passed. Native acceptance pending Codex live check.
 - **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
 ## Completed: M1 slice A native acceptance
@@ -192,3 +193,38 @@ F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
 Forward verified key:17; explicit restored F9 file verified, no additional launch
 claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
 offline only. Next bounded work: slice B stop/cancellation; external AI on hold.
+
+## M1 slice B stop, cancellation, and history implementation (2026-10-05)
+
+Gemini completed M1 slice B implementation and automated test coverage (offline only; no game launches or desktop control):
+- **`Commands.lua`**:
+  - `stop` command: Cancels active action (`cancelActive`), clears active tracking, invokes `stopCallback` safely on game thread (`SarahFoundation.controller.adapter.stop`), reports cancelled action ID/name, and is harmless on repeated calls when idle (`Sarah stopped; nothing active.`). Clean status on dead/unloaded states.
+  - Action lifecycle & tokens: `beginAction(name, details)` assigns a unique incrementing request `id` and generation `token`. `cancelActive(reason)` transitions state to `'cancelled'`. `completeAction(id, token, success, message)` verifies active existence, matching ID, and matching token. Stale completions from cancelled, timed out, or reset actions are rejected with `'stale or cancelled'`.
+  - Request & result history: Bounded ring buffer `self.history` capped at `maxHistory = 30`. `getHistory()` returns shallow copies of records (`id`, `command`, `state`, `summary`) without exposing mutable engine handles.
+  - `history` query command: Formats the last 10 commands with IDs, outcomes, and short summaries.
+  - `status` command: Reflects active action (`Action: #<id> <command> (running)`), idle state with last action summary (`Action: idle (last: #<id> <state>)`), or idle.
+  - `help` command: Documents `stop` and `history`.
+- **`Console.lua`**:
+  - Console panel retains `Commands` dispatch across open/close cycles via `state.dispatch` / `getDispatch()`, preserving command IDs, active action tracking, and history across panel toggles.
+  - Hooked `stopSarah` callback to call `SarahFoundation.controller.adapter.stop(SarahFoundation.controller.npc)` on the game thread.
+  - `state.reset` on session boundaries (`OnGameStart`, `OnMainMenuEnter`) resets the dispatch instance, cancelling active actions with `'session_reset'` and clearing history.
+  - Updated prompt banner: `Commands: help, status, inventory, stop, history. Enter submits.`
+- **Automated tests (84 passing)**:
+  - `tools/test_commands.py`: 10 new tests (22 total), covering idle stop, repeated stop, dead/unloaded stop, active action registration, busy rejection, cancellation by stop, late-completion rejection, successful completion, stale token rejection, session reset cancellation, unload/death observation cancellation, and bounded history retention/copy immutability.
+  - `tools/test_console.py`: 3 new tests (14 total), covering console panel `stop` submission, `history` submission and formatting, and session reset dispatch cleanup.
+  - All 5 test suites pass: 27 foundation + 13 engine adapter/render + 8 checkpoint readback + 22 command + 14 console = 84 checks total.
+
+### Codex native test checklist for Slice B
+When ready for native testing:
+1. Ensure game is CLOSED.
+2. Deploy updated `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation`.
+3. Launch isolated test game (`SarahConsoleNativeCase`).
+4. Press F9 to open Sarah Console. Verify prompt line: `Commands: help, status, inventory, stop, history. Enter submits.`
+5. Type `help` + Enter -> Verify `stop` and `history` are listed.
+6. Type `stop` + Enter -> Verify output: `Sarah stopped; nothing active.`
+7. Type `status` + Enter -> Verify output line: `Action: idle`
+8. Type `history` + Enter -> Verify history lists recent commands (`#1 help: completed`, `#2 stop: completed`, etc.).
+9. Close console via Escape or mouse Close; verify normal character movement.
+10. Quit to Desktop / save cleanly.
+
+Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.

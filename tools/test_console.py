@@ -111,5 +111,35 @@ test('reload restores vanilla handler without stacking guards; missing handler i
     assert(s.guard==nil and s.menuOriginal==nil and #Events.OnKeyPressed.callbacks==1)
     ToggleEscapeMenu=original; SarahConsole=nil; s=reload()
 end)
+test('stop command executed from console panel reports stopped and appends outcome',function()
+    s.open()
+    s.panel.entry:setText('stop')
+    s.panel:submit()
+    local foundCmd,foundResult=false,false
+    for _,item in ipairs(s.panel.history.items) do
+        if item.text=='> stop' then foundCmd=true end
+        if item.text=='Sarah stopped; nothing active.' then foundResult=true end
+    end
+    assert(foundCmd and foundResult)
+    s.close()
+end)
+test('history command executed from console panel displays formatted recent requests',function()
+    s.open()
+    s.panel.entry:setText('history')
+    s.panel:submit()
+    local found=false
+    for _,item in ipairs(s.panel.history.items) do
+        if item.text:find('Recent commands') then found=true end
+    end
+    assert(found)
+    s.close()
+end)
+test('session reset clears console dispatch and resets action tracking',function()
+    s.open()
+    local ok,action=s.panel.dispatch:beginAction('walk here')
+    assert(ok and s.panel.dispatch.active)
+    s.reset()
+    assert(not s.panel and s.dispatch.active==nil and #s.dispatch:getHistory()==0)
+end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

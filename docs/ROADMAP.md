@@ -9,7 +9,7 @@ before adding broader features. Multiplayer is outside the initial scope.
 |---|---|---|
 | M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
 | M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
-| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; read-only commands tested, keyboard gate open |
+| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B implemented |
 | M2: Minimal AI vertical slice | One bounded model-to-action loop | ON HOLD; explicit user approval required |
 | M3: Sarah behavior and continuity | Personality, limited memory and useful behaviors | PROPOSED |
 | M4: Release candidate | Installation, regression checks and user documentation | PROPOSED |
@@ -74,7 +74,7 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
   full restart with one Sarah/local player and final native scrolling output.
 - [x] Configurable unused binding: provisional F9, conflict checks and actual
   key delivery verified; safe input focus, close and mouse fallback.
-- [ ] Slice B: stop, cancellation and bounded request/result history.
+- [x] Slice B: stop, cancellation and bounded request/result history (implementation and 84 automated checks complete; native acceptance pending Codex live check).
 - [ ] Slice C: walk here, initially nearby/same-floor; one action, true completion
   tracking, timeout and busy/invalid-target rejection.
 - [ ] Reset/invalidate actions on unload, death, controller change and world switch.

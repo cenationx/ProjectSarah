@@ -1,10 +1,10 @@
 # M1 read-only console slice A: 2026-10-04
 
-IN PROGRESS: read-only slice A implemented; physical F9 check completed, broader
-keyboard acceptance still open. Commands/Observations/Console implement help, status and inventory only;
-no external AI or movement commands. Twelve automated actual-Lua command checks,
-eleven simulated UI/key/session checks and all 48 existing M0 checks passed (71 total).
-Existing M0 source is unchanged. Automated tests do not establish native input.
+IN PROGRESS: slice A native acceptance PASSED; slice B (stop, cancellation, history)
+IMPLEMENTED and automated suite increased to 84 passing checks (22 command, 14 console).
+Native acceptance of slice B pending Codex live check. Commands/Observations/Console implement
+help, status, inventory, stop, and history. No external AI or movement commands (slice C deferred).
+Automated tests do not establish native input.
 
 Game-closed SarahModuleCleanupCase, selections and keysB42.ini backed up to
 `runtime/backups/console-before-20261004`. Separate SarahConsoleCase is the test
@@ -148,3 +148,26 @@ F7-before-Gemini.ini snapshot with only Sarah Console reset to key:67 (F9).
 Forward verified key:17; explicit restored F9 file verified, no additional launch
 claimed. No probes deployed. Codex owns checkout and all live testing; Gemini
 offline only. Next bounded work: slice B stop/cancellation; external AI on hold.
+## M1 slice B automated validation (2026-10-05)
+
+Gemini implemented and validated slice B cancellation and bounded history:
+- `Commands.lua` additions:
+  - `stop`: Cancels active action (`cancelActive`), clears active tracking, invokes `stopCallback` safely on game thread (`SarahFoundation.controller.adapter.stop`), reports cancelled action ID/name, and is harmless on repeated calls when idle (`Sarah stopped; nothing active.`). Clean status on dead/unloaded states.
+  - Action lifecycle & tokens: `beginAction(name, details)` assigns a unique incrementing request `id` and generation `token`. `cancelActive(reason)` transitions state to `'cancelled'`. `completeAction(id, token, success, message)` verifies active existence, matching ID, and matching token. Stale completions from cancelled, timed out, or reset actions are rejected with `'stale or cancelled'`.
+  - Request & result history: Bounded ring buffer `self.history` capped at `maxHistory = 30`. `getHistory()` returns shallow copies of records (`id`, `command`, `state`, `summary`) without exposing mutable engine handles.
+  - `history` query command: Formats the last 10 commands with IDs, outcomes, and short summaries.
+  - `status` command: Reflects active action (`Action: #<id> <command> (running)`), idle state with last action summary (`Action: idle (last: #<id> <state>)`), or idle.
+  - `help` command: Documents `stop` and `history`.
+- `Console.lua` additions:
+  - Preserves dispatch instance across open/close cycles via `state.dispatch` / `getDispatch()`, avoiding sequence or history wipes when the UI panel closes.
+  - Connected `stopSarah` callback to call `SarahFoundation.controller.adapter.stop(npc)` on the game thread.
+  - Connected `state.reset` on session reset (`OnGameStart`, `OnMainMenuEnter`) to call `state.dispatch:reset()`, ensuring no active requests survive session boundaries.
+  - Updated initial prompt banner to `Commands: help, status, inventory, stop, history. Enter submits.`
+- Automated test coverage: 84 total passing checks (up from 71):
+  - `tools/test_foundation.py`: 27 passing lifecycle/reload/event checks.
+  - `tools/test_render.py`: 13 passing engine adapter/hysteresis checks.
+  - `tools/test_checkpoint.py`: 8 passing readback token/cleanup checks.
+  - `tools/test_commands.py`: 22 passing checks (10 new slice B tests: idle stop, repeat stop, dead/unloaded stop, active action registration, busy rejection, cancellation by stop, late-completion rejection, successful completion, stale token rejection, session reset cancellation, unload/death observation cancellation, history query and immutability).
+  - `tools/test_console.py`: 14 passing checks (3 new slice B tests: panel stop execution, history command output formatting, session reset dispatch cleanup).
+
+Native acceptance remains pending Codex live verification following the checklist in `docs/STATUS.md`.

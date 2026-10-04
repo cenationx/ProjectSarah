@@ -30,6 +30,20 @@ end
 SarahConsole={}
 local state=SarahConsole
 state.menuOriginal=menuOriginal
+state.dispatch=old and old.dispatch or nil
+local function stopSarah(reason)
+    if SarahFoundation and SarahFoundation.controller and SarahFoundation.controller.npc then
+        SarahFoundation.controller.adapter.stop(SarahFoundation.controller.npc)
+    end
+end
+local function getDispatch()
+    if not state.dispatch then
+        state.dispatch=Commands.new(function(inventory)
+            return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
+        end,stopSarah)
+    end
+    return state.dispatch
+end
 local Panel=ISPanel:derive('SarahConsolePanel')
 local function allowed()
     local root=Core.getMyDocumentFolder():gsub('\\','/'):gsub('/$','')
@@ -65,10 +79,8 @@ function Panel:initialise()
     run:initialise(); self:addChild(run)
     local close=ISButton:new(self.width-80,10,68,24,'Close',nil,state.close)
     close:initialise(); self:addChild(close)
-    self.dispatch=Commands.new(function(inventory)
-        return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
-    end)
-    self:append('Read-only: help, status, inventory. Enter submits.')
+    self.dispatch=getDispatch()
+    self:append('Commands: help, status, inventory, stop, history. Enter submits.')
     local conflict=state.conflict(getCore():getKey(binding))
     self:append(conflict or 'Toggle: '..getKeyName(getCore():getKey(binding))..' (Options > Key bindings)')
 end
@@ -136,7 +148,10 @@ state.guard=function(key)
     if state.swallow and key==Keyboard.KEY_ESCAPE then state.swallow=false; return end
     if state.menuOriginal then return state.menuOriginal(key) end
 end
-state.reset=function() state.close(); state.held=false; state.escapeHeld=false; state.swallow=false end
+state.reset=function()
+    state.close(); state.held=false; state.escapeHeld=false; state.swallow=false
+    if state.dispatch then state.dispatch:reset() end
+end
 state.menu=function(playerIndex,context,objects,test)
     if not test and playerIndex==0 and allowed() then context:addOption('Sarah: console',nil,state.open) end
 end
