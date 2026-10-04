@@ -38,7 +38,12 @@ callback, and reference retention after injected partial native removal across
 reload/later ticks. Replacement and unsafe saves refused. Full restart recovered
 one Sarah from a with current contents/clothes/player; final exit saved b.
 ModuleCleanupDone=true. No production change; unchanged-source/injected-fault limits
-are in `M0-module-cleanup-test.md`. Next: M0 supported-scope matrix and handoff decision.
+are in `M0-module-cleanup-test.md`.
+Scope review is now consolidated in `M0-supported-scope.md`; broad hardening
+acceptance remains open. The user's manual key-toggle console proposal is planned
+in `M1-console-plan.md`. Next implementation slice: read-only help/status/inventory,
+shared validated command boundary and configurable binding/focus checks. F9 is
+provisional; no console code, key changes or AI integration exist yet.
 All temporary drivers are disabled outside the mod. Latest backup group:
 `runtime/backups/module-cleanup-before-20261004`, Original-long-session,
 Interrupted-before-restart, Recovered-final and selections. Prior

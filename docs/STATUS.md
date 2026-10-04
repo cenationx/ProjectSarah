@@ -1,16 +1,16 @@
 # Current project state
 
 Updated: 2026-10-04 (Europe/Helsinki).
-State: M0 feasibility demonstrated; foundation hardening remains in progress.
+State: M0 evidence/scope review complete; broader hardening open. M1 console planned.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; bounded module/cleanup task completed. Antigravity resume prompt
+Active agent: none; M0 scope and M1 console planning completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `faf1645` on `main`, pushed to
+Previous published checkpoint: `8884306` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The accompanying checkpoint adds module/cleanup evidence below;
+The accompanying checkpoint consolidates scope and the manual-console plan;
 use Git history and remote refs to identify its commit rather than this parent ID.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
@@ -84,15 +84,24 @@ use Git history and remote refs to identify its commit rather than this parent I
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: supported M0 scope and handoff decision
+## Next task: M1 slice A, read-only console and command observations
 
-1. Reconcile all M0 reports and the source with a concise supported-scope matrix:
-   API inspection, simulated policy, native live tests and injected live faults.
-2. Document recovery/stop conditions and explicitly unsupported boundaries;
-   distinguish narrow feasibility from broad game compatibility or release readiness.
-3. Recommend a bounded M0 handoff decision with remaining limitations for the
-   user to review. Do not mark all hardening complete merely because tests passed.
-4. Update shared docs and commit/push the reviewable scope checkpoint. Keep AI on hold.
+1. Read `M0-supported-scope.md` and `M1-console-plan.md`. User proposed a custom
+   key-toggle console to test basic commands before complex AI; this checkpoint
+   plans it, with no implementation or new gameplay tests.
+2. Inspect installed keyboard/UI APIs and runtime binding conflicts. F9 is only
+   a provisional default, absent from inspected default bindings; actual delivery
+   and conflicts need live checks. Register a configurable binding, not a global override.
+3. Implement the small validated parser/observation boundary and read-only panel:
+   help, status and inventory. No implicit spawn/repair or action side effects.
+4. Back up a new disposable case game-closed; test focus, key toggle/rebind,
+   unavailable states and menu transitions, then checkpoint. Keep AI on hold.
+5. Stop and bounded walk here are later slices with their own action tests;
+   do not expose arbitrary Lua or bypass any lifecycle guard.
+
+Scope decision: controlled model-free development can proceed inside the tested
+envelope. Broad M0 hardening/release acceptance is still open; no limitations
+were accepted on the user's behalf. See the consolidated evidence matrix.
 
 ## Open issues
 
@@ -138,8 +147,9 @@ retains Away-before-restart and Returned-final. Older rendering, appearance and
 alive/dead backups remain preserved. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-Module-cleanup probe, evidence and handoff updates are included in this checkpoint.
-No unfinished work remains for this bounded task; M0 hardening is still open.
+This planning checkpoint changes documentation only; runtime unchanged from the
+last verified live handoff. No unfinished work remains for scope/console planning;
+M0 broader hardening is still open and no console code exists yet.
 Check Git status and fresh native window inventory before resuming UI work.
 
 ## Interrupted-session note template

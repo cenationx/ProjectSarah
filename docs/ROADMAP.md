@@ -8,8 +8,8 @@ before adding broader features. Multiplayer is outside the initial scope.
 | Milestone | Outcome | Status |
 |---|---|---|
 | M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
-| M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | IN PROGRESS |
-| M1: Deterministic action interface | Small checked set of commands and observations | PLANNED; no model required |
+| M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
+| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | PLANNED; no model required |
 | M2: Minimal AI vertical slice | One bounded model-to-action loop | ON HOLD; explicit user approval required |
 | M3: Sarah behavior and continuity | Personality, limited memory and useful behaviors | PROPOSED |
 | M4: Release candidate | Installation, regression checks and user documentation | PROPOSED |
@@ -56,21 +56,30 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Six-minute idle-room session: 12 unload/restores, 25 verified saves,
   verifier/world-list cleanup after ticks and full restart without duplication.
   Hours-long play and complete native resource reclamation remain unverified.
-- [ ] Document supported scope, remaining risks and M0 handoff decision.
+- [x] Document supported scope, remaining risks and bounded development handoff
+  in `M0-supported-scope.md`; broad hardening/release acceptance remains open.
 
 Gate: mark hardening complete only when the relevant checks have direct evidence
 or the user explicitly accepts a documented limitation. Keep the AI hold intact.
 
-## M1: action interface (planned)
+## M1: manual console and action interface (planned)
 
-- [ ] Define a small observation record: Sarah/player positions, alive state,
-  inventory summary and action status. Avoid unrestricted engine access.
-- [ ] Define deterministic commands: initially walk, stop and inspect inventory.
-- [ ] Validate targets, lifecycle state and action preconditions; return explicit
-  success/failure. Queue at most the permitted amount of work.
-- [ ] Test commands in the isolated game without an external model.
+- [x] Plan the user's key-toggle console and staged commands in `M1-console-plan.md`.
+- [ ] Slice A: shared parser/observations and help/status/inventory panel; read-only
+  commands must not implicitly spawn, restore, save or repair Sarah.
+- [ ] Configurable unused binding: provisional F9, conflict checks and actual
+  key delivery verified; safe input focus, close and mouse fallback.
+- [ ] Slice B: stop, cancellation and bounded request/result history.
+- [ ] Slice C: walk here, initially nearby/same-floor; one action, true completion
+  tracking, timeout and busy/invalid-target rejection.
+- [ ] Reset/invalidate actions on unload, death, controller change and world switch.
+- [ ] Native live command/focus/rebind/movement/restart tests in backed-up
+  isolated cases; one Sarah and local player preserved.
+- [ ] Optional guarded restore/save/unload developer commands only after A-C.
 
 Gate: commands demonstrably work and fail safely before a model can invoke them.
+Carry all M0 limitations and safeguards forward. The console contains no model
+integration; accepting this plan does not authorize M2.
 
 ## M2: AI vertical slice (on hold)
 

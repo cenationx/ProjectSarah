@@ -1,26 +1,40 @@
 # Sarah NPC foundation candidate
 
-Experimental single-player candidate for Project Zomboid 42.21. No external AI.
-Live-tested in the isolated game on 2026-10-04; see [results](../../docs/M0-foundation-live-test.md). Keep SarahM0 disabled when testing this
-candidate; use only the disposable isolated profile under this project.
+Experimental single-player foundation for installed Project Zomboid 42.21.0.
+No external AI or custom console implementation. Keep SarahM0 disabled; use only
+the exact isolated profile under this project. See the current
+[M0 scope review](../../docs/M0-supported-scope.md) and its linked reports.
 
-The lifecycle policy prevents duplicate creation, alternates two checkpoint
-files, retains the previous checkpoint, refuses silent replacement when recovery
-fails, retains references after cleanup failure, and records a death tombstone.
-A saved square that is unavailable defers restoration; use the context menu's
-spawn/restore option once the location is loaded. Automatic offscreen unloading
-and travelling NPC recovery are not implemented.
+The lifecycle prevents duplicate/partial adoption, alternates checkpoints,
+promotes recovered fallbacks, refuses fresh replacement after failed recovery,
+retains unfinished references and records death tombstones. Fresh UUID binary
+readback validates saves and checks verifier cleanup; this is not atomic
+replacement or full-file integrity validation.
 
-The engine adapter preserves the local-player instance during construction and
-requires the exact isolated profile before creating an NPC. Clothing identifiers
-were checked against the installed game's scripts; three equipped items survived
-unload/restore and a full restart. Visual appearance remains unverified. The save
-callback ran before GlobalModData saving, and recovery metadata survived restart.
+Travel attempts save/unload beyond 32 tiles or another floor, then defers saved-
+location restoration until the player is within 16 tiles on that floor and the
+square is loaded/free. Manual unload stays dormant until explicit restore in
+that session. Failed unattended recovery blocks retries; do not erase references
+or metadata to bypass it. See [travel limits](../../docs/M0-travel-test.md).
 
-Run `tools/test_foundation.py` with the project-local Lupa dependency to check the
-actual Lua lifecycle module using simulated engine failures. Those tests verify
-policy, not Project Zomboid gameplay compatibility.
+The adapter preserves the local player instance. Three clothing items survived
+unload/restart and actual model/world inspection. B42 FBO rendering uses a bounded
+world event for the resident, visible same-floor NPC; broader cutaway, cursor and
+floor behavior remains unverified.
 
-The automated suite also executes the mod's callback registration with simulated
-events to check reload and session reset behavior (19 checks total). These
-callback checks are not a live game/world-switch test.
+48 actual-Lua automated checks use fake engine objects/events: 27 foundation,
+13 adapter and 8 checkpoint readback. Run `tools/test_foundation.py`,
+`tools/test_render.py` and `tools/test_checkpoint.py` with project-local Lupa.
+They verify policies, not general gameplay compatibility.
+
+Native live evidence includes save/restart, corrupted-slot recovery, saved death,
+menu/world transitions, unchanged-source module reloads, locked-file failure/retry
+and a six-minute repeated-save session. Injected interruption after native removal
+preserved the real reference through reload and refused unsafe replacement/save;
+full restart recovered the good checkpoint. Spontaneous native cleanup failures
+and complete resource reclamation remain unproven.
+
+Broad M0 hardening/release acceptance remains open. Next planned development:
+[manual console and validated commands](../../docs/M1-console-plan.md), starting
+with read-only help/status/inventory. All existing safeguards stay in force;
+AI integration requires a separate explicit instruction.

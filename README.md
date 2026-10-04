@@ -15,13 +15,25 @@ M0 is the NPC framework compatibility gate. The AI layer has not been created or
 
 **Unmodified upstream PZNS still fails compatibility.** Its full framework was not ported or live-tested. A separate unverified mechanical candidate is preserved for further evaluation. See [the baseline report](docs/M0-PZNS-compatibility.md).
 
+The [consolidated M0 scope](docs/M0-supported-scope.md) distinguishes native live
+results, injected faults and 48 automated checks. Bounded development can continue
+in the isolated profile; normal-play/release readiness and broader hardening
+remain open. Earlier reports describe their historical test boundaries.
+
+Next planned milestone: a [manual in-game Sarah console](docs/M1-console-plan.md)
+with a configurable key, help/status/inventory, then stop and bounded walk here.
+This tests a shared command interface before external AI. No console code or AI
+integration has started.
+
 ## Contents
 
 - `vendor/PZNS`: unmodified upstream source, pinned by its checked-out commit; MIT license retained.
 - `tools`: reproducible source/binary inspection and headless JVM API probe.
 - `evidence`: test results from the installed game.
 - `docs`: findings and M0 acceptance criteria.
-- `foundation/SarahFoundation`: experimental hardened NPC lifecycle candidate; 19 automated checks pass, plus isolated spawn, duplicate prevention, unload/restore, full restart and corrupted-checkpoint recovery checks. See [candidate status](foundation/SarahFoundation/README.md).
+- `foundation/SarahFoundation`: experimental lifecycle/render/travel candidate;
+  48 automated checks and bounded isolated live tests. See
+  [candidate status](foundation/SarahFoundation/README.md).
 
 ## License
 
@@ -36,7 +48,12 @@ Third-party material retains its own license. PZNS by shadowhunter100 remains MI
 1. Confirm game version from a launch log or UI. PASS: 42.21.0, revision 4a0e9546ec, confirmed from the normal profile's version/log and isolated game UI.
 2. Resolve mod discovery and essential NPC API incompatibilities in an isolated candidate.
 3. Load the candidate in a separate cache/profile with a new disposable single-player save.
-4. Spawn one human NPC; verify movement, inventory, death/despawn, and save/reload behavior without errors.
+4. Spawn one human NPC; verify movement, inventory, death/despawn and save/reload;
+   record failures and distinguish game warnings from Sarah outcomes.
 5. Record observed results and a pass/fail decision before implementing the AI layer.
 
-Current M0 result: the narrow single-player NPC feasibility gate passes with the independent prototype. Full PZNS compatibility, longer-term stability, production persistence and multiplayer remain unresolved. All live tests used a disposable world under this project; normal game saves and settings were not changed. The test game was closed afterward.
+Current M0 result: narrow single-player feasibility and bounded hardening checks
+pass; broader normal-play compatibility, persistence guarantees, long-term
+stability and multiplayer remain unresolved. All live tests used disposable
+worlds under this project; normal saves/settings were not changed. The last test
+game was closed afterward. See the scope review for precise evidence and limits.
