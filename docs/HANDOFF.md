@@ -267,5 +267,21 @@ Escape fix PASS (first Escape closes console without menu; subsequent Escape ope
 and 71 passing automated checks. No code, tests, saves, or settings were modified.
 Checkout ownership is RELEASED to Codex for native slice A acceptance following the
 ordered checklist. External in-game AI remains on hold.
-Gemini assisted native-acceptance handoff: Codex released checkout. Game CLOSED, SAVED b; F7 binding remains in isolated key file. Backup: runtime/backups/acceptance-20261004-183708/Before-Gemini plus F7-before-Gemini.ini; original F9 baseline at group root. User reports F7 works. Remaining: old F9 inactivity, full-restart rebind persistence/key text, actual collision refusal/fallback, same-process cleanup. Gemini guides user input and inspects logs/settings; do not repeat keyboard-tool diagnosis. Restore complete original isolated key settings game-closed after final preservation. No code, stop/walk or AI expansion authorized by this handoff.
+## Gemini assisted native-acceptance handoff (2026-10-04)
+
+Codex released checkout. Game CLOSED, SAVED b; F7 binding remains in isolated key file. Backup: runtime/backups/acceptance-20261004-183708/Before-Gemini plus F7-before-Gemini.ini; original F9 baseline at group root. User reports F7 works.
+
+## Workflow boundary update: Codex handles launches & live tests (latest, 2026-10-04)
+
+Per user directive:
+- **Codex handles all game launches and live gameplay tests.**
+- **Gemini handles coding, reviews, documentation, and offline analysis only.**
+- Gemini has ceased all game launching and desktop troubleshooting.
+- Game confirmed CLOSED (no `javaw.exe` or `java.exe` processes running).
+- No saves, settings, launchers, probes, or source files were modified.
+- Diagnostic note for Codex: `tools/launch-isolated.ps1` line 8 contains `-WindowStyle Hidden` (inherited from M0 headless probe runs) which forces `SW_HIDE` on GLFW, keeping the game window invisible while audio plays. Background agent sessions also execute in an isolated virtual desktop (`WinSta0\exebox-...`). Codex can adjust the launcher or launch interactively as needed.
+- M1 slice A acceptance gates 4 (rebind persistence across restart), 5 (conflict refusal & context menu fallback), and 6 (same-process teardown) remain strictly PENDING in `docs/M1-native-checklist.md`.
+- Active case: `runtime/isolated/Saves/Rising/SarahConsoleNativeCase`; key file retains `Sarah Console=key:65`. Full baseline backups preserved in `runtime/backups/acceptance-20261004-183708`.
+- Checkout ownership is RELEASED to Codex.
+
 

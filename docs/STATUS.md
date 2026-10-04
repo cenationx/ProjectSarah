@@ -121,7 +121,7 @@ Runtime toggle/full restart persistence remain pending. Keep F7 until retest,
 then restore backed-up complete isolated key settings after final checks.
 
 
-## Gemini assisted acceptance handoff (latest, 2026-10-04)
+## Gemini assisted acceptance handoff (2026-10-04)
 
 User reports F7 works after rebind. Record native rebound-key functionality;
 old F9 inactivity and full-restart persistence are still unconfirmed. Hold-repeat,
@@ -132,11 +132,26 @@ F7 key file preserved as F7-before-Gemini.ini in that group. Original F9/setting
 baseline remains at group root. Current isolated binding: Sarah Console=key:65.
 No probes deployed. Raw log: runtime/acceptance-before-gemini-console.txt.
 
-Gemini may continue remaining acceptance using user-operated native UI/keys and
-read-only settings/log inspection, backed-up launch via tools/launch-isolated.ps1
--NoDebug. No blind key injection, helper installation or tool diagnosis. User
-provides visual outcomes; label those user-operated. Same-process log/controller
-assertions beyond available logs require scoped evidence, not guesses. No source
-changes or stop/walk/AI until gates actually pass. Restore complete original key
-file game-closed after preserving current test state. Gemini owns checkout only
-when user starts it; Codex stops edits after this checkpoint.
+## Workflow boundary and handoff to Codex (latest, 2026-10-04)
+
+Per user directive:
+- **Codex handles all game launches and live gameplay tests.**
+- **Gemini handles coding, reviews, documentation, and offline analysis only.**
+- Gemini has stopped all game launching and desktop troubleshooting.
+- No game processes are running (`javaw` / `java` absent).
+- No saves, settings, launchers, or test code were modified.
+- All remaining acceptance gates (M1 slice A checklist items 4, 5, 6: rebind persistence across restart, conflict refusal/context menu fallback, same-process menu teardown) remain strictly **PENDING** in `docs/M1-native-checklist.md`.
+
+### Launcher diagnostic note for Codex
+During isolated launch investigation, two findings were identified regarding hidden game windows:
+1. `tools/launch-isolated.ps1` line 8 specifies `-WindowStyle Hidden` when starting `javaw.exe`, setting `wShowWindow = SW_HIDE` in Win32 `STARTUPINFO`, causing the GLFW game window to remain hidden while playing background audio.
+2. Background agent tool sessions run inside an isolated virtual desktop (`WinSta0\exebox-...`) rather than the user's interactive monitor desktop (`WinSta0\Default`).
+Codex can remove `-WindowStyle Hidden` or launch interactively as needed for live tests.
+
+### State and ownership
+- Game CLOSED; no active game processes.
+- Isolated test world: `runtime/isolated/Saves/Rising/SarahConsoleNativeCase` intact.
+- Key file in `runtime/isolated/Lua/keysB42.ini` has `Sarah Console=key:65` (F7).
+- Full baseline backup preserved at `runtime/backups/acceptance-20261004-183708` (including vanilla `keysB42.ini` baseline).
+- Checkout ownership is RELEASED to Codex.
+
