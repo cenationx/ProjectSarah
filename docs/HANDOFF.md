@@ -15,25 +15,24 @@ The existing canonical checkout is the easiest handoff on this computer.
 
 ## What exists only on this computer
 
-Current override (appearance/control task IN PROGRESS): both mods disabled;
-Continue selects the fresh mod-free `Rising/2026-10-04_06-16-14` control. Game
-PID 41052 was left minimized at its main menu after UI input/activation was
-rejected by the computer-use helper. Refresh window/process state before work.
-The first control run reproduced the duplicate RoomDef error without any Sarah
-log entries. Reload and appearance checks are pending; see STATUS and
-`M0-appearance-control-test.md`. Prepared appearance probe is not deployed.
+Latest runtime state: game closed, only SarahFoundation enabled in the isolated
+default. Continue selects `Rising/SarahAppearanceFresh`, a separate copy of the
+new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
+remains empty. Older alive/dead cases are preserved. Appearance model viewer
+passed before/after restart; ordinary world visibility is the next check.
+All temporary drivers, including appearance, are disabled outside the mod.
 Backup `runtime/backups/appearance-before-20261004` preserves both older worlds,
-original default/key/latest-save files, and `FreshControl-before-reload`.
+original default/key/latest-save files, `FreshControl-before-reload`,
+`FreshControl-after-reload`, `Appearance-before-restart` and `Appearance-final`.
 Restore only game-closed after preserving the current case into a new directory.
-After completing this task, restore the isolated default selection from that
-backup and record which world Continue selects. Never alter normal selections.
+See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
 
 - Installed game: `G:\Games\ProjectZomboid`, read-only.
 - Isolated profile: `runtime/isolated` under the canonical project.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. `latestSave.ini` currently selects the alive copy.
+  world remains dead. Continue now selects the newer appearance case above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -102,6 +101,10 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    FoundationMenuProbe adds a temporary mouse entrypoint into the game's real
    pause menu for transition testing; pair it with FoundationSessionProbe.
    This does not verify physical Escape input. Disable both after testing.
+   FoundationAppearanceProbe binds a temporary model viewer to the actual NPC
+   and logs worn items/position/opacity/culling. Model output is distinct from
+   ordinary world rendering. Deploy only in the backed-up appearance case and
+   disable after use.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.

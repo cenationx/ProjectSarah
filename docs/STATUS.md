@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: Codex, appearance and fresh-world comparison. Antigravity resume prompt
+Active agent: none; appearance/control checkpoint completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
@@ -37,27 +37,37 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
   alive cases had exactly one Sarah, death case zero, and player preserved.
   Temporary mouse entrypoint used the real menu handler; physical Escape input
   remains unverified. See `M0-menu-transition-test.md` and its sanitized evidence.
+- A newly generated no-mod Rising control reproduced duplicate RoomDef metadata
+  during generation and the same four invalid room IDs on full-restart reload.
+  Sarah is not required to trigger these errors on this installation; root cause
+  remains unknown. Both no-mod and foundation-enabled copies reached gameplay.
+- Actual Sarah model viewer visually confirmed T-shirt, trousers and trainers
+  before/after full restart, one NPC and player preserved. World opacity=1,
+  target opacity=1 and culling=false at ticks 600/1800, but ordinary world-scene
+  visibility was not confirmed. See `M0-appearance-control-test.md`.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: appearance and fresh-world control
+## Next task: ordinary world-scene visibility
 
-1. Inspect Git/runtime state and, with game closed, back up both existing cases
-   and isolated selections. Preserve the independent alive and death worlds.
-2. Create a fresh disposable world in the isolated profile without copying old
-   map metadata; record its creation and restoration procedure.
-3. Compare map-load errors with the existing worlds. Use a foundation-disabled
-   fresh control if needed to distinguish engine/map issues from Sarah behavior.
-4. In a backed-up foundation-enabled case, bring Sarah into a clear view and
-   inspect clothing/appearance, recording visual evidence and engine counts.
-5. Record findings and remaining limits, disable temporary probes, close the
-   game, update shared state, and commit/push the checkpoint. Keep AI on hold.
+1. Inspect Git/runtime state and back up `SarahAppearanceFresh` and selections
+   with game closed. Preserve all independent alive/dead/no-mod cases.
+2. Use a temporary narrow probe to inspect actual NPC square/object registration,
+   world model, player-view visibility and rendering flags. Compare with the
+   local player and installed engine paths. No forced opacity/visibility fix
+   without a demonstrated cause; do not conflate model viewer and scene output.
+3. Arrange separated player/NPC positions in unobstructed space and directly
+   observe Sarah in the world scene. Use screenshots plus matching coordinates.
+4. If a production fix is justified, make the smallest adapter change and verify
+   live spawn/restore/player preservation plus automated lifecycle checks.
+5. Record limitations, close game, disable probes and commit/push. Keep AI on hold.
 
 ## Open issues
 
-- Visual NPC clothing/appearance still lacks a clear live inspection.
-- Existing test world logs duplicate room/invalid map metadata errors on load;
+- Actual-NPC clothing/model viewer passed; ordinary world-scene visibility still
+  needs direct verification and diagnosis.
+- Duplicate room/invalid map metadata errors reproduce with all mods disabled;
   origin not diagnosed. Do not call the runs entirely error-free.
 - Disk-write failures have simulated policy coverage only.
 - Offscreen unloading/travel recovery, combat, longer sessions, multiplayer and
@@ -66,40 +76,27 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 
 ## Local runtime state at handoff
 
-Appearance/control work IN PROGRESS. Isolated game PID 41052 is at the main menu
-and minimized; UI input stopped after the helper reported user input and refused
-window activation. Both mods are currently disabled. Continue selects the new
-mod-free `2026-10-04_06-16-14` control. Temporary live/death/tombstone/session/reload/menu
-drivers remain outside the mod in `runtime/disabled-probes`; appearance driver
-is only prepared in tools. Existing alive/dead cases remain preserved.
+Game closed; native window inventory confirmed no Project Zomboid window.
+Only SarahFoundation selected. Continue selects `SarahAppearanceFresh`, the
+foundation-enabled copy of fresh mod-free `2026-10-04_06-16-14`. Original control
+has an empty world mod list; older alive/dead cases remain preserved.
+All temporary live/death/tombstone/session/reload/menu/appearance drivers are
+outside the mod in `runtime/disabled-probes`. Appearance case final state saved
+slot b and backed up as `appearance-before-20261004/Appearance-final`.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
-Latest live-test backup: `runtime/backups/menu-before-20261004`, both worlds
-plus isolated key file and latest-save selection. Restore only game-closed,
+Latest backup group: `runtime/backups/appearance-before-20261004`: both older
+worlds, original selections, fresh control before/after reload, appearance case
+before restart and final state. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-Pending new probe/report are recorded below; no production code change. Check
-Git status and fresh native window inventory before resuming UI work.
+No production code changes or unfinished tracked edits. Check Git status and
+fresh native window inventory before resuming UI work.
 
 ## Interrupted-session note template
 
 Replace this section when needed; remove stale entries after completing them.
-
-IN PROGRESS: appearance/fresh control, 2026-10-04. Native window inventory
-confirmed game closed. Both existing Rising worlds and isolated default mod,
-latest-save and key files backed up to `runtime/backups/appearance-before-20261004`.
-Restore only game-closed, after preserving the current case; copy into a new
-disposable directory rather than overwriting either independent case. Autosaves
-affect only the newly created isolated world. Mod-free fresh control created as
-`Rising/2026-10-04_06-16-14`: duplicate RoomDef error reproduced without Sarah;
-first run had zero invalid-room errors and zero Sarah log entries. Fresh case
-backed up as `FreshControl-before-reload`. Relaunched control PID 41052, currently
-at main menu/minimized; user input interrupted the UI check. A question about
-bringing the game forward is pending. Prepared `FoundationAppearanceProbe.lua`
-(not yet deployed/live-tested) and `M0-appearance-control-test.md`. Next: Continue
-mod-free case, inspect saved-map errors, close game, preserve control, then use
-a separate copy with SarahFoundation for appearance. Production code unchanged.
 
 - Work item / owner / date:
 - State: IN PROGRESS / BLOCKED / VERIFIED

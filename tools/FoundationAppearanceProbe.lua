@@ -8,6 +8,17 @@ Events.OnTick.Add(function()
     local player=getSpecificPlayer(0)
     if not player then return end
     ticks=ticks+1
+    if ticks==600 or ticks==1800 then
+        local ok,err=pcall(function()
+            local npc=SarahFoundation.controller.npc
+            print('[SarahAppearanceProbe] WORLD ticks='..ticks..
+                ' npcXYZ='..npc:getX()..','..npc:getY()..','..npc:getZ()..
+                ' alpha='..npc:getAlpha(0)..' targetAlpha='..npc:getTargetAlpha(0)..
+                ' culled='..tostring(npc:isSceneCulled())..
+                ' playerPreserved='..tostring(IsoPlayer.getInstance()==player))
+        end)
+        if not ok then print('[SarahAppearanceProbe] DIAGNOSTIC_FAIL '..tostring(err)) end
+    end
     if ticks~=240 then return end
     local ok,err=pcall(function()
         local controller=SarahFoundation and SarahFoundation.controller

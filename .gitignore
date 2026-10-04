@@ -4,6 +4,7 @@
 /tools/dependencies/
 /tools/compiled/
 /tools/class-inspection/
+/tools/class-inspection-input/
 /evidence/class-inspection/
 *.bin
 __pycache__/

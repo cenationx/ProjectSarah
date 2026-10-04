@@ -1,0 +1,13 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahAppearanceProbe] NPC world=SarahAppearanceFresh name=Sarah worn=3 xyz=10770.4951171875,10271.439453125,0 playerXYZ=10770.5,10271.9296875,0
+LOG  : Lua          f:240> [SarahAppearanceProbe] WORN Base.Tshirt_WhiteTINT
+LOG  : Lua          f:240> [SarahAppearanceProbe] WORN Base.Shoes_TrainerTINT
+LOG  : Lua          f:240> [SarahAppearanceProbe] WORN Base.Trousers_DefaultTEXTURE_TINT
+LOG  : Lua          f:240> [SarahAppearanceProbe] VIEWER actualNPC=true playerPreserved=true
+LOG  : Lua          f:600> [SarahAppearanceProbe] WORLD ticks=600 npcXYZ=10770.4951171875,10271.439453125,0 alpha=1 targetAlpha=1 culled=false playerPreserved=true
+LOG  : Lua          f:1800> [SarahAppearanceProbe] WORLD ticks=1800 npcXYZ=10770.4951171875,10271.439453125,0 alpha=1 targetAlpha=1 culled=false playerPreserved=true
+LOG  : Lua          f:6212> [SarahFoundation] SAVED b
