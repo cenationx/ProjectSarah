@@ -226,3 +226,12 @@ unverified and not deployed to the isolated mod. Codex owns the checkout again: 
 game-closed, deploy production source, retest physical Escape. Antigravity has no
 desktop-control tool and no `git` on PATH (use the Codex runtime git `cmd` directory).
 Stop/walk and external AI remain on hold. See STATUS and `M1-console-test.md`.
+
+## Updated sustained-work policy (2026-10-04)
+
+User changed the workflow after Claude's Escape checkpoint 88fbafc: Codex now
+handles sustained coding and testing. Gemini can assist when the user starts a
+bounded task, respecting one-writer ownership. Do not automatically hand coding
+to Claude; reserve it for explicit user requests. Codex owns the current checkout.
+Claude's fix is native-unverified and not deployed; next task remains isolated
+Escape retest, following game-closed backups. External in-game AI stays on hold.

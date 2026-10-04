@@ -1,3 +1,12 @@
+# Superseding workflow note (2026-10-04)
+
+The Escape coding task below was completed at 88fbafc and released to Codex.
+Do not rerun it as a new handoff. The user now prefers Codex for sustained coding
+and native testing, with Gemini assistance when useful. Claude is only used on
+explicit request. Read STATUS/HANDOFF for the current owner and task. Escape fix
+still needs native acceptance; external in-game AI remains on hold.
+
+---
 # Immediate coding handoff: Escape failure (2026-10-04)
 
 This task supersedes the older resume prompt below. Codex has released the
@@ -91,4 +100,5 @@ started through Claude to test approval behavior.
 Broad capability does not change Sarah's work scope: keep project outputs under
 the canonical checkout, preserve normal saves and installed game files, and do
 not start the external AI layer. App permissions do not travel with this repo.
+
 

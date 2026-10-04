@@ -3,8 +3,8 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; Escape fix awaiting native retest; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Claude finished the Escape code fix and RELEASES the checkout to Codex for
-native retesting. Do not have both agents edit this checkout concurrently.
+Ownership: Codex owns coding and native testing after Claude released checkpoint 88fbafc.
+Do not have two agents edit this checkout concurrently.
 
 Escape fix (Claude, 2026-10-04; code + API inspection + automated tests only; game NOT launched):
 - Bug (user-reported, native): with Sarah Console open, first Escape opened the pause
@@ -228,3 +228,15 @@ No production edits or temporary probe deployments. 68 automated checks passed
 before the manual report; existing simulated Escape pass misses this native issue.
 Codex stops editing after this documentation checkpoint. Next owner: Claude,
 started by the user, coding/automated tests only. Read docs/CLAUDE-RESUME.md.
+
+## Ongoing agent workflow (user decision, 2026-10-04)
+
+Codex handles sustained coding, automated checks and native game testing. Gemini
+may assist with bounded coding/review work when the user starts it, with explicit
+checkout ownership or a separate authorized workspace. Claude is no longer the
+routine coding handoff target because of the user's weekly usage budget; only
+use Claude when explicitly requested. The user forwards any external-agent prompt.
+Codex has read Claude's completed Escape fix report and checked a clean checkout
+at 88fbafc. The reported 71 passing checks are Claude's verification; Codex has not
+rerun them yet. Fix remains native-unverified and not deployed. Next: review fix,
+back up game-closed, deploy and retest in isolated NativeCase. AI remains on hold.
