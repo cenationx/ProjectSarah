@@ -1,0 +1,26 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahEscapeProbe] MAIN_MENU
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:1> [SarahEscapeProbe] tick tick=1 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:2869> [SarahEscapeProbe] tick tick=2869 raw=false panel=true swallow=false guard=true menu=true
+LOG  : Lua          f:3159> [SarahEscapeProbe] tick tick=3159 raw=true panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3164> [SarahEscapeProbe] tick tick=3164 raw=false panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3168> [SarahEscapeProbe] tick tick=3168 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3362> [SarahEscapeProbe] tick tick=3362 raw=false panel=true swallow=false guard=true menu=true
+LOG  : Lua          f:3409> [SarahEscapeProbe] tick tick=3409 raw=true panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3412> [SarahEscapeProbe] tick tick=3412 raw=false panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3416> [SarahEscapeProbe] tick tick=3416 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3463> [SarahEscapeProbe] tick tick=3463 raw=true panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3467> [SarahEscapeProbe] release tick=3467 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3467> [SarahEscapeProbe] release tick=3467 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3758> [SarahEscapeProbe] tick tick=3758 raw=true panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3762> [SarahEscapeProbe] release tick=3762 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3762> [SarahEscapeProbe] release tick=3762 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:3845> [SarahEscapeProbe] tick tick=3845 raw=false panel=true swallow=false guard=true menu=true
+LOG  : Lua          f:3907> [SarahEscapeProbe] tick tick=3907 raw=true panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3911> [SarahEscapeProbe] tick tick=3911 raw=false panel=false swallow=true guard=true menu=true
+LOG  : Lua          f:3915> [SarahEscapeProbe] tick tick=3915 raw=false panel=false swallow=false guard=true menu=true
+LOG  : Lua          f:9001> [SarahFoundation] SAVED b

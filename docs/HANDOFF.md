@@ -235,3 +235,12 @@ bounded task, respecting one-writer ownership. Do not automatically hand coding
 to Claude; reserve it for explicit user requests. Codex owns the current checkout.
 Claude's fix is native-unverified and not deployed; next task remains isolated
 Escape retest, following game-closed backups. External in-game AI stays on hold.
+
+Latest local runtime after input comparison: game CLOSED and SAVED a; production
+Escape fix deployed, all temporary input/Escape probes disabled outside mod.
+Continue selects SarahConsoleNativeCase. Final backup is
+runtime/backups/input-comparison-20261004/After-comparison. Diagnostic/evidence
+in docs/desktop-input-diagnostic.md and evidence/input-comparison-summary.txt.
+No tool repair established; use physical special-key/hold checks where required.
+Codex owns coding/testing; do not start Claude. Remaining slice A gate unchanged
+except successful physical Escape acceptance recorded in M1-console-test.md.

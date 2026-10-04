@@ -266,3 +266,28 @@ F9/Escape do not with confirmed focus; F9 also tested unpaused. Supported API
 has no held-key/timing control. Exact tool failure cause unconfirmed; no helper
 patch attempted. See docs/desktop-input-diagnostic.md. Game running and paused,
 NativeCase active, ZZSarahEscapeProbe still deployed. Codex owns checkout.
+
+## Input comparison IN PROGRESS (Codex)
+
+User authorized continued bounded desktop diagnosis; no Claude task running.
+Closed isolated game normally, no native window; prior native Escape evidence
+saved as evidence/escape-fix-native-summary.txt and raw runtime/escape-fix-pass-console.txt.
+Fresh game-closed backup: runtime/backups/input-comparison-20261004 (NativeCase
+and settings). Replaced Escape observation probe with bounded read-only raw-key
+probe scanning codes 1..255 plus native release events; no key injection in Lua.
+Production code unchanged. Next: launch same isolated case and compare keys.
+Restore only game-closed after preserving the latest case. AI remains on hold.
+
+## Input comparison completed; helper remains unresolved
+
+Physical I validated probe (down 5094/up 5168). Later I sequence logged 5529/5624;
+automated F9/F1/Escape produced no matching raw transitions or desired behavior.
+Initial automated I/Tab/Return also lacked logged transitions. No conclusive
+mapping-versus-timing diagnosis; see desktop-input-diagnostic.md for attribution
+limits. No production changes. Sanitized evidence: input-comparison-summary.txt.
+Game now CLOSED, SAVED a, no native window. Current NativeCase preserved as
+runtime/backups/input-comparison-20261004/After-comparison. Raw log retained.
+Both observation probes disabled; fixed production Console.lua remains deployed.
+Codex owns checkout. Next: finish hold-repeat, rebind/conflicts, English Options
+labels, restored movement and same-process console teardown with physical-key
+assistance as needed. Escape first-close/later-menu behavior already passed.

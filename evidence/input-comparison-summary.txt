@@ -1,0 +1,13 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:1> [SarahInputProbe] READY scan=1..255
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED b
+LOG  : Lua          f:5094> [SarahInputProbe] RAW tick=5094 code=23 name=I down=true
+LOG  : Lua          f:5167> [SarahInputProbe] RELEASE tick=5167 code=23 name=I
+LOG  : Lua          f:5168> [SarahInputProbe] RAW tick=5168 code=23 name=I down=false
+LOG  : Lua          f:5529> [SarahInputProbe] RAW tick=5529 code=23 name=I down=true
+LOG  : Lua          f:5623> [SarahInputProbe] RELEASE tick=5623 code=23 name=I
+LOG  : Lua          f:5624> [SarahInputProbe] RAW tick=5624 code=23 name=I down=false
+LOG  : Lua          f:11441> [SarahFoundation] SAVED a
