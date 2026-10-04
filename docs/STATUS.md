@@ -16,6 +16,13 @@ Claude session 2026-10-04 17:10 (verification only, no code changes):
   hold-repeat, Escape, rebind/conflict persistence, English Options labels,
   movement input restored after close, same-process menu/world teardown.
   Physical F9 open/close remains the only native keyboard evidence.
+- Desktop-control check (17:15): Claude/Antigravity has no desktop-control tool
+  (no screenshot, no verified key injection). PowerShell reports an interactive
+  session but `CopyFromScreen` fails with "The handle is invalid", so the agent
+  cannot see the game. Blind SendKeys could not be verified, and earlier notes
+  show function-key injection was missed even by the vanilla rebind dialog.
+  Missing capability: screen capture/observation of the user's desktop plus
+  reliable key delivery. Native checks therefore stay PENDING (not simulated).
 - Next: back up a new disposable case game-closed, then the user runs these
   checks; slice A can be accepted only after they pass.
 
