@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console slice A in progress. Physical F9 open/close, read-only commands (help, status, inventory), and physical Escape (first-close console, second-open menu) PASSED. Remaining native slice A acceptance OPEN (see `docs/M1-native-checklist.md`).
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex owns the checkout after reviewing Gemini documentation checkpoint f22ce71.
+Ownership: Codex released checkout for user-started Gemini assisted native acceptance.
 Do not have two agents edit this checkout concurrently.
 
 ## Current local runtime state
@@ -120,3 +120,23 @@ Game resumed; user asked to test F7 open/close and old F9 inactivity.
 Runtime toggle/full restart persistence remain pending. Keep F7 until retest,
 then restore backed-up complete isolated key settings after final checks.
 
+
+## Gemini assisted acceptance handoff (latest, 2026-10-04)
+
+User reports F7 works after rebind. Record native rebound-key functionality;
+old F9 inactivity and full-restart persistence are still unconfirmed. Hold-repeat,
+movement after Escape/mouse Close and English Options labels passed previously.
+Game CLOSED normally: SAVED b / GameThread exited; native window absent.
+Current NativeCase preserved in runtime/backups/acceptance-20261004-183708/Before-Gemini;
+F7 key file preserved as F7-before-Gemini.ini in that group. Original F9/settings
+baseline remains at group root. Current isolated binding: Sarah Console=key:65.
+No probes deployed. Raw log: runtime/acceptance-before-gemini-console.txt.
+
+Gemini may continue remaining acceptance using user-operated native UI/keys and
+read-only settings/log inspection, backed-up launch via tools/launch-isolated.ps1
+-NoDebug. No blind key injection, helper installation or tool diagnosis. User
+provides visual outcomes; label those user-operated. Same-process log/controller
+assertions beyond available logs require scoped evidence, not guesses. No source
+changes or stop/walk/AI until gates actually pass. Restore complete original key
+file game-closed after preserving current test state. Gemini owns checkout only
+when user starts it; Codex stops edits after this checkpoint.

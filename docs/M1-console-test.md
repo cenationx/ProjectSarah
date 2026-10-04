@@ -120,3 +120,6 @@ Hold-repeat remains pending explicit confirmation; no additional gate inferred.
 ## Hold-repeat and English labels PASS (2026-10-04)
 User confirms holding F9 then releasing leaves console open, following the two-second instruction. Codex visually verified native Options displays Project Sarah, Sarah Console and F9 without untranslated labels. No probe used. F7 rebinding dialog prepared; assignment/apply/runtime/persistence checks still pending.
 
+
+F7 rebind follow-up: user reports F7 works. Native rebound-key functionality confirmed; old F9 inactivity, full-restart persistence and updated console key text remain pending. Game closed normally and saved b before Gemini handoff.
+
