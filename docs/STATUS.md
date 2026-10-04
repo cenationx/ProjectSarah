@@ -3,9 +3,21 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex is preparing the handoff to Claude in Antigravity. Claude may
-continue once the user submits the resume prompt; Codex stops project edits after
-this checkpoint. Do not have both agents edit this checkout concurrently.
+Ownership: Claude (Antigravity) took over on 2026-10-04; Codex has stopped editing.
+Do not have both agents edit this checkout concurrently.
+
+Claude session 2026-10-04 17:10 (verification only, no code changes):
+- Git: clean tree, `main` == `origin/main` at `705cec2`; `git push --dry-run origin main`
+  succeeded (GitHub access OK). `git` is not on PATH in Antigravity's shell; use
+  `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd`.
+- Automated (simulated Lua, not native input): 68/68 pass (27+13+8+12+8).
+- No Project Zomboid process running. No live test, backup or save change this session.
+- STILL UNVERIFIED (need physical keyboard by the user; the game cannot fake them):
+  hold-repeat, Escape, rebind/conflict persistence, English Options labels,
+  movement input restored after close, same-process menu/world teardown.
+  Physical F9 open/close remains the only native keyboard evidence.
+- Next: back up a new disposable case game-closed, then the user runs these
+  checks; slice A can be accepted only after they pass.
 
 ## Last verified work
 
