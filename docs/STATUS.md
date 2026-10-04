@@ -240,3 +240,18 @@ Codex has read Claude's completed Escape fix report and checked a clean checkout
 at 88fbafc. The reported 71 passing checks are Claude's verification; Codex has not
 rerun them yet. Fix remains native-unverified and not deployed. Next: review fix,
 back up game-closed, deploy and retest in isolated NativeCase. AI remains on hold.
+
+## Escape fix native retest: IN PROGRESS (Codex)
+
+All 71 automated checks rerun successfully. Native window inventory confirms game
+closed before deployment. Backup: runtime/backups/escape-fix-before-20261004,
+NativeCase/settings and prior deployed Console.lua. Deployed 88fbafc Console.lua
+plus observation-only ZZSarahEscapeProbe, scoped to SarahConsoleNativeCase.
+Probe logs raw Escape/panel/swallow/guard/menu changes and release callbacks; it
+injects no keys or commands. Restore only game-closed after preserving current
+case; original backups stay intact. Next: isolated launch and physical Escape.
+
+Retest runtime: game running in SarahConsoleNativeCase, restored a; production
+fix active and probe reports guard=true. Physical F9/Escape retest requested;
+result pending. All acceptance boxes remain unchanged. Probe remains deployed
+until game-closed cleanup. Codex retains sole ownership.
