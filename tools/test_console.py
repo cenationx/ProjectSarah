@@ -190,5 +190,33 @@ test('state.getDispatch export is available and context menu walk here routes th
     assert(dispatch.active and dispatch.active.command=='walk here')
     dispatch:reset()
 end)
+test('console dispatch stop callback rejects stale NPC and leaves replacement NPC untouched',function()
+    local stoppedNpc=nil
+    local npc1={id=1}
+    local npc2={id=2}
+    SarahFoundation={
+        controller={
+            npc=npc1,
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function(n) stoppedNpc=n; return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        }
+    }
+    local dispatch=s.getDispatch()
+    dispatch:reset()
+    local res=dispatch:execute('walk here')
+    assert(res.state=='running')
+    assert(dispatch.active and dispatch.active.npc==npc1)
+    -- Replace NPC within controller
+    SarahFoundation.controller.npc=npc2
+    -- Execute stop command via dispatch
+    local stopRes=dispatch:execute('stop')
+    assert(stopRes.state=='failed')
+    assert(stopRes.lines[2]:find('stale npc'))
+    assert(stoppedNpc==nil)
+    dispatch:reset()
+end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

@@ -176,5 +176,44 @@ assert(failures==1 and SarahFoundation.renderDisabled)
 SarahFoundation.reset()
 assert(SarahFoundation.renderDisabled==nil)
 print('PASS rendering failure stops retries until session reset')
-print('RESULT 27 total foundation checks passed')
+isClient=function() return false end
+isServer=function() return false end
+getSpecificPlayer=function() return {Say=function() end} end
+local queuedAction=false
+ISTimedActionQueue={add=function() queuedAction=true end}
+SarahFoundation.controller={npc={},ensure=function() end,unload=function() end}
+SarahConsole=nil
+local ctx={options={},addOption=function(self,text,target,fn) self.options[text]=fn end}
+SarahFoundation.menu(0,ctx,{},false)
+assert(ctx.options["Sarah: walk here"]~=nil)
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback~=nil)
+assert(SarahFoundation.lastFeedback.message:find("Sarah Console unavailable"))
+assert(SarahFoundation.lastFeedback.isBad==true)
+assert(not queuedAction)
+SarahConsole={getDispatch=function() return nil end}
+SarahFoundation.lastFeedback=nil
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback~=nil)
+assert(SarahFoundation.lastFeedback.message:find("Sarah dispatch unavailable"))
+assert(SarahFoundation.lastFeedback.isBad==true)
+assert(not queuedAction)
+print('PASS context menu with unavailable dispatcher queues no engine action and records refusal')
+local mockOutcome={state='rejected',lines={'Sarah is busy.'}}
+SarahConsole={getDispatch=function()
+    return {execute=function() return mockOutcome end}
+end}
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback.message=='Sarah is busy.' and SarahFoundation.lastFeedback.isBad==true)
+mockOutcome={state='failed',lines={'Walk failed to start: path offline.'}}
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback.message=='Walk failed to start: path offline.' and SarahFoundation.lastFeedback.isBad==true)
+mockOutcome={state='running',lines={'Walking to player.'}}
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback.message=='Walking to player.' and SarahFoundation.lastFeedback.isBad==false)
+mockOutcome={state='completed',lines={'Already at target.'}}
+ctx.options["Sarah: walk here"]()
+assert(SarahFoundation.lastFeedback.message=='Already at target.' and SarahFoundation.lastFeedback.isBad==false)
+print('PASS context menu provides visible feedback on walk rejection, failure, running, and completion')
+print('RESULT 29 total foundation checks passed')
 ''')

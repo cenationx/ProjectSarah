@@ -17,11 +17,19 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
     }
     function self:getIdentity()
         if type(self.identityProvider)=='function' then
-            local ok,id=pcall(self.identityProvider)
-            if ok then return id end
-            return nil
+            local ok,ctrlOrId,npcId=pcall(self.identityProvider)
+            if ok then
+                if type(ctrlOrId)=='table' and (ctrlOrId.controller or ctrlOrId.npc) then
+                    return ctrlOrId.controller,ctrlOrId.npc
+                end
+                return ctrlOrId,npcId
+            end
+            return nil,nil
         end
-        return self.identityProvider
+        if type(self.identityProvider)=='table' and (self.identityProvider.controller or self.identityProvider.npc) then
+            return self.identityProvider.controller,self.identityProvider.npc
+        end
+        return self.identityProvider,nil
     end
     local function addHistory(record)
         self.history[#self.history+1]=record
@@ -83,6 +91,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             state=action.state,
             owner=action.owner,
             controller=action.owner,
+            npc=action.npc,
             session=action.session
         })
         return true,{id=action.id,command=action.command,state=action.state,summary=action.summary},stopOk,stopErr
@@ -99,10 +108,18 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             self:cancelActive(data.state)
             return false,data.state
         end
-        local currentOwner=self:getIdentity()
+        local currentOwner,currentNpc=self:getIdentity()
         if self.active.owner and currentOwner and self.active.owner~=currentOwner then
             self:cancelActive('controller replaced')
             return false,'controller replaced'
+        end
+        if self.active.npc and currentNpc and self.active.npc~=currentNpc then
+            self:cancelActive('npc replaced')
+            return false,'npc replaced'
+        end
+        if self.active.npc and currentNpc==nil then
+            self:cancelActive('npc unavailable')
+            return false,'npc unavailable'
         end
         return true,data
     end
@@ -132,7 +149,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         if type(details)=='table' then
             for k,v in pairs(details) do detailsCopy[k]=v end
         end
-        local owner=self:getIdentity()
+        local owner,npcOwner=self:getIdentity()
         local action={
             id=self.sequence,
             session=self.session,
@@ -141,6 +158,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             token=self.token,
             owner=owner,
             controller=owner,
+            npc=npcOwner,
             maxTicks=detailsCopy.maxTicks or 600,
             ticks=0,
             details=detailsCopy
@@ -149,11 +167,27 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         addHistory({id=action.id,command=action.command,state='running',summary='Started '..name})
         return true,{id=action.id,command=action.command,state=action.state,token=action.token}
     end
-    function self:completeAction(id,token,success,message,owner)
+    function self:completeAction(id,token,success,message,owner,npc)
         if not self.active or self.active.id~=id or self.active.token~=token then
             return false,'stale or cancelled'
         end
         if owner and self.active.owner and owner~=self.active.owner then
+            return false,'stale or cancelled'
+        end
+        if npc and self.active.npc and npc~=self.active.npc then
+            return false,'stale or cancelled'
+        end
+        local currentOwner,currentNpc=self:getIdentity()
+        if self.active.owner and currentOwner and self.active.owner~=currentOwner then
+            self:cancelActive('controller replaced')
+            return false,'stale or cancelled'
+        end
+        if self.active.npc and currentNpc and self.active.npc~=currentNpc then
+            self:cancelActive('npc replaced')
+            return false,'stale or cancelled'
+        end
+        if self.active.npc and currentNpc==nil then
+            self:cancelActive('npc unavailable')
             return false,'stale or cancelled'
         end
         local valid,reason=self:checkLifecycle()
@@ -285,7 +319,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
                 return result
             end
             self.token=self.token+1
-            local owner=self:getIdentity()
+            local owner,npcOwner=self:getIdentity()
             local resolvedTarget={x=tx,y=ty,z=tz}
             local action={
                 id=result.id,
@@ -295,6 +329,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
                 token=self.token,
                 owner=owner,
                 controller=owner,
+                npc=npcOwner,
                 maxTicks=600,
                 ticks=0,
                 details={targetX=tx,targetY=ty,targetZ=tz}
@@ -303,20 +338,29 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             local actId=action.id
             local actToken=action.token
             local function onComplete()
+                local currentOwner,currentNpc=self:getIdentity()
+                if action.owner and currentOwner and action.owner~=currentOwner then
+                    self:completeAction(actId,actToken,false,'stale controller',action.owner,action.npc)
+                    return
+                end
+                if action.npc and currentNpc and action.npc~=currentNpc then
+                    self:completeAction(actId,actToken,false,'stale npc',action.owner,action.npc)
+                    return
+                end
                 local obsOk,obsData=pcall(self.observe,false)
                 if not obsOk or type(obsData)~='table' or obsData.state~='active' or not obsData.npc then
-                    self:completeAction(actId,actToken,false,'Sarah unavailable on arrival')
+                    self:completeAction(actId,actToken,false,'Sarah unavailable on arrival',action.owner,action.npc)
                     return
                 end
                 local nx,ny,nz=math.floor(obsData.npc.x),math.floor(obsData.npc.y),math.floor(obsData.npc.z)
                 if nx==tx and ny==ty and nz==tz then
-                    self:completeAction(actId,actToken,true,string.format('Reached target (%d, %d, %d).',tx,ty,tz))
+                    self:completeAction(actId,actToken,true,string.format('Reached target (%d, %d, %d).',tx,ty,tz),action.owner,action.npc)
                 else
-                    self:completeAction(actId,actToken,false,string.format('Stopped before target at (%d, %d, %d).',nx,ny,nz))
+                    self:completeAction(actId,actToken,false,string.format('Stopped before target at (%d, %d, %d).',nx,ny,nz),action.owner,action.npc)
                 end
             end
             local function onFail(actionObj,reason)
-                self:completeAction(actId,actToken,false,reason or 'Walk failed')
+                self:completeAction(actId,actToken,false,reason or 'Walk failed',action.owner,action.npc)
             end
             local walkOk,walkErr=self:invokeWalk(resolvedTarget,onComplete,onFail,action)
             if not walkOk then
@@ -409,14 +453,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             return result
         end
         if self.active then
-            if data.state~='active' then
-                self:cancelActive(data.state)
-            else
-                local currentOwner=self:getIdentity()
-                if self.active.owner and currentOwner and self.active.owner~=currentOwner then
-                    self:cancelActive('controller replaced')
-                end
-            end
+            self:checkLifecycle()
         end
         result.state='completed'
         if command=='status' then

@@ -47,6 +47,19 @@ end
 state.death=function(player)
     if state.controller and state.controller.npc==player then state.controller.adapter.meta.dead=true end
 end
+state.notify=function(player,message,isBad)
+    state.lastFeedback={message=message,isBad=isBad}
+    print("[SarahFoundation] " .. tostring(message))
+    if HaloTextHelper and player then
+        if isBad and HaloTextHelper.addBadText then
+            HaloTextHelper.addBadText(player,tostring(message))
+        elseif HaloTextHelper.addText then
+            HaloTextHelper.addText(player,tostring(message))
+        end
+    elseif player and player.Say then
+        pcall(player.Say,player,tostring(message))
+    end
+end
 state.menu=function(playerIndex,context,objects,test)
     if test or isClient() or isServer() or playerIndex~=0 or not state.controller then return end
     local controller=state.controller
@@ -54,10 +67,30 @@ state.menu=function(playerIndex,context,objects,test)
     if controller.npc then
         context:addOption("Sarah: save and unload",nil,function() controller:unload() end)
         context:addOption("Sarah: walk here",nil,function()
-            if SarahConsole and SarahConsole.getDispatch then
-                SarahConsole.getDispatch():execute("walk here")
-            elseif ISTimedActionQueue and ISWalkToTimedAction and controller.npc and getSpecificPlayer(0) then
-                ISTimedActionQueue.add(ISWalkToTimedAction:new(controller.npc,getSpecificPlayer(0):getSquare()))
+            local player=getSpecificPlayer(0)
+            if not SarahConsole or not SarahConsole.getDispatch then
+                state.notify(player,"Sarah Console unavailable; cannot walk.",true)
+                return
+            end
+            local dispatch=SarahConsole.getDispatch()
+            if not dispatch then
+                state.notify(player,"Sarah dispatch unavailable; cannot walk.",true)
+                return
+            end
+            local res=dispatch:execute("walk here")
+            if not res then
+                state.notify(player,"Walk request returned no outcome.",true)
+                return
+            end
+            if res.state=="rejected" or res.state=="failed" then
+                local reason=(res.lines and res.lines[1]) or ("Walk " .. res.state)
+                state.notify(player,reason,true)
+            elseif res.state=="completed" then
+                local msg=(res.lines and res.lines[1]) or "Already at target."
+                state.notify(player,msg,false)
+            elseif res.state=="running" then
+                local msg=(res.lines and res.lines[1]) or "Walking to player."
+                state.notify(player,msg,false)
             end
         end)
     end

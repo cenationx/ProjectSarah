@@ -38,6 +38,10 @@ local function stopSarah(reason,action)
         if owner and owner~=controller then
             return false,'stale controller'
         end
+        local actionNpc=action and action.npc
+        if actionNpc and actionNpc~=controller.npc then
+            return false,'stale npc'
+        end
         local ok,err=pcall(controller.adapter.stop,controller.npc)
         if not ok then return false,tostring(err) end
         if err==false then return false,'adapter stop failed' end
@@ -53,6 +57,10 @@ local function walkSarah(target,onComplete,onFail,action)
     local owner=action and (action.owner or action.controller)
     if owner and owner~=controller then
         return false,'stale controller'
+    end
+    local actionNpc=action and action.npc
+    if actionNpc and actionNpc~=controller.npc then
+        return false,'stale npc'
     end
     if not controller.adapter or not controller.adapter.walk then
         return false,'walk adapter unavailable'
@@ -74,7 +82,8 @@ local function getDispatch()
         state.dispatch=Commands.new(function(inventory)
             return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
         end,stopSarah,function()
-            return SarahFoundation and SarahFoundation.controller
+            local ctrl=SarahFoundation and SarahFoundation.controller
+            return ctrl,ctrl and ctrl.npc
         end,walkSarah)
     end
     return state.dispatch
