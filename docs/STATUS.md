@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console slice A in progress. Physical F9 open/close, read-only commands (help, status, inventory), and physical Escape (first-close console, second-open menu) PASSED. Remaining native slice A acceptance OPEN (see `docs/M1-native-checklist.md`).
 External AI: ON HOLD by explicit user instruction.
-Ownership: Released to Codex for native testing. Gemini completed documentation cleanup and checklist preparation; Codex resumes native execution.
+Ownership: Codex owns the checkout after reviewing Gemini documentation checkpoint f22ce71.
 Do not have two agents edit this checkout concurrently.
 
 ## Current local runtime state
@@ -14,7 +14,7 @@ Do not have two agents edit this checkout concurrently.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest backup is `runtime/backups/input-comparison-20261004/After-comparison`. Earlier baseline, appearance, travel, module-cleanup, and native escape backups remain intact.
 - Automated tests: 71 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 12 command + 11 console).
-- Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and drops special keys (F9/Escape); native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
+- Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
@@ -46,7 +46,7 @@ Only after slice A acceptance is complete: proceed to Slice B (stop/cancellation
 - Bounded streamed travel recovery passed; ordinary walking/driving boundaries, abrupt movement, floor transitions, combat, hours-long sessions, multiplayer and full PZNS compatibility remain unverified.
 - Foundation is deliberately restricted to the exact isolated cache path.
 - Reload tests used unchanged source; schema/function hot upgrades and spontaneous or silent native cleanup failures remain unverified. Interrupted cleanup needs full restart in the tested recovery; no automatic in-session repair is promised.
-- Automated desktop keyboard input: Computer Use `press_key` lacks key-down/key-up and hold duration controls, failing to deliver non-character keys (F-keys, Escape) to PZ. Native special-key acceptance requires physical user assistance.
+- Automated desktop keyboard input: Computer Use `press_key` lacks key-down/key-up and hold duration controls, with unsuccessful observed special-key delivery in the tested attempts; exact cause remains unconfirmed. Native special-key acceptance requires physical user assistance.
 
 ---
 
@@ -89,3 +89,4 @@ Only after slice A acceptance is complete: proceed to Slice B (stop/cancellation
 - Separated current state from historical session logs.
 - Created `docs/M1-native-checklist.md` with ordered pending acceptance steps and safeguards.
 - Released checkout ownership to Codex for native testing.
+
