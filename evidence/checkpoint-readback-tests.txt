@@ -1,0 +1,9 @@
+PASS new checkpoint requires readback token and cleans verifier
+PASS overwrite must read the current unique attempt
+PASS swallowed failed overwrite rejects stale file
+PASS swallowed missing write rejects absent binary
+PASS explicit write exception preserves token and player
+PASS read failure still cleans temporary NPC
+PASS cleanup failure pins verifier and blocks further writes
+PASS silent cleanup failure also pins reference and blocks writes
+RESULT 8 checkpoint readback checks passed

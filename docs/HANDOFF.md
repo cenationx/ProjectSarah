@@ -16,7 +16,7 @@ The existing canonical checkout is the easiest handoff on this computer.
 ## What exists only on this computer
 
 Latest runtime state: game closed, only SarahFoundation enabled in the isolated
-default. Continue selects `Rising/SarahTravelCase`, a separate copy of the fresh
+default. Continue selects `Rising/SarahWriteFailureRetest`, a separate copy of SarahTravelCase, itself a copy of the fresh
 rendering case. The original rendering case was copied from the
 new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
 remains empty. Older alive/dead cases are preserved. Appearance model viewer
@@ -26,10 +26,16 @@ Travel suspension/recovery passed real square unloading, full restart while
 away and automatic restoration at the saved position after returning. Temporary
 driver moved only the disposable player, with original god mode restored on
 return. Final travel case saved slot b; its one-shot probe marker is done.
-Next check: safe live checkpoint-write failure. All temporary drivers, including
-travel, are disabled outside the mod. Latest backup group is
-`runtime/backups/travel-before-20261004`: original fresh rendering case and
-selections, Away-before-restart and Returned-final. See `M0-travel-test.md`.
+Locked existing-file write exposed swallowed native errors; fresh UUID readback
+now rejects stale writes. Failed unload retained Sarah/metadata, retry and full
+restart passed, final exit saved b with the cleanup-confirmation guard. Next:
+bounded longer session with repeated verified saves/unload/restores and verifier
+world-list/resource checks. All temporary drivers are disabled outside the mod.
+Latest backup group: `runtime/backups/write-failure-before-20261004`, original
+SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
+and Final-restart. All lock helpers ended/released; completed marker and local
+release signal remain. See `M0-write-failure-test.md`. Prior travel backup keeps
+Away-before-restart and Returned-final; see `M0-travel-test.md`.
 Older rendering backup group is
 `runtime/backups/world-render-before-20261004`, with original appearance world
 and selections, Appearance-before-hook, Appearance-before-production,
@@ -46,7 +52,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. Continue now selects the returned travel case above.
+  world remains dead. Continue now selects the completed write retest above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -63,7 +69,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
 - The original dated world has Sarah dead by design; the alive copy remains
-  independent; Continue selects the returned travel case. Before restoration, close
+  independent; Continue selects the completed write retest. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit
@@ -91,6 +97,8 @@ available Python, with temporary/output directories under the project. This test
 executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
 Also run `tools/test_render.py` with the same Python: 13 engine adapter checks.
+Run `tools/test_checkpoint.py`: 8 actual-adapter readback/cleanup checks;
+48 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -127,6 +135,11 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    controlled player debug travel and a full away-world restart to test real
    streaming. Never redeploy into the completed marker=done case; prepare a new
    independent case and adjust the driver guard before repeating the test.
+   FoundationWriteFailureProbe and hold-checkpoint-lock.ps1 are a matching
+   one-shot fault pair guarded to SarahWriteFailureRetest. The helper refuses a
+   stale signal and releases its exclusive handle within five minutes. Do not
+   rerun against the completed case: make a backed-up new case, inspect latest
+   slot and update both guards/signal together. Done mode only checks restart.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.

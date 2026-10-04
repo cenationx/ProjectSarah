@@ -1,0 +1,8 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED b
+	java.io.FileNotFoundException: G:\Codex\Project Sarah\runtime\isolated\Saves\Rising\SarahWriteFailureCase\SarahFoundation-a.bin (The process cannot access the file because it is being used by another process) at FileOutputStream.open0 (Native Method).
+LOG  : Lua          f:240> [SarahFoundation] SAVED a
+LOG  : Lua          f:240> [SarahWriteFailureProbe] FAIL locked existing-file write falsely succeeded

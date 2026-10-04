@@ -46,7 +46,9 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Define preventive travel suspension and deferred saved-location recovery;
   controlled player travel passed actual square unloading, away restart and
   return. Ordinary walking/driving and abrupt-movement boundaries remain open.
-- [ ] Live safe write-failure test, preserving last good checkpoint.
+- [x] Live locked existing-file failure, safe retention, retry and full restart;
+  fresh-token readback rejects swallowed native write errors. Disk-full/partial
+  writes and exceptional native cleanup remain limitations.
 - [ ] Bounded longer-session test with repeat saves/reloads and no duplication.
 - [ ] Document supported scope, remaining risks and M0 handoff decision.
 

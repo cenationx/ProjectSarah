@@ -121,7 +121,47 @@ function Engine.new()
         return adapter.nearCheckpoint(record) and square ~= nil and square:isFree(false)
     end
     function adapter.snapshot(npc) return {x=npc:getX(),y=npc:getY(),z=npc:getZ()} end
-    function adapter.save(npc,slot) npc:save(file(slot)) end
+    function adapter.save(npc,slot)
+        if adapter.verificationNPC then error("previous checkpoint verifier cleanup incomplete") end
+        local data=npc:getModData()
+        local oldToken=data.SarahCheckpointWriteToken
+        local token=getRandomUUID()
+        local previous=IsoPlayer.getInstance()
+        data.SarahCheckpointWriteToken=token
+        local ok,err=pcall(function()
+            -- Java I/O errors may be logged without failing Lua pcall. A fresh
+            -- UUID read back from the binary rejects missing/stale writes.
+            npc:save(file(slot))
+            local desc=SurvivorFactory.CreateSurvivor(SurvivorFactory.SurvivorType.Neutral,true)
+            local verifier=IsoPlayer.new(getCell(),desc,math.floor(npc:getX()),math.floor(npc:getY()),math.floor(npc:getZ()))
+            assert(verifier,"checkpoint verifier construction failed")
+            adapter.verificationNPC=verifier
+            verifier:setNpc(true)
+            verifier:getModData().SarahFoundationId="CheckpointVerifier"
+            verifier:load(file(slot))
+            assert(verifier:getModData().SarahFoundationId=="Sarah" and
+                verifier:getModData().SarahCheckpointWriteToken==token and not verifier:isDead(),
+                "checkpoint write verification failed; old file is not a new save")
+        end)
+        IsoPlayer.setInstance(previous)
+        local cleaned,cleanupError=pcall(function()
+            if adapter.verificationNPC then
+                adapter.verificationNPC:getModData().SarahFoundationId="CheckpointVerifier"
+                adapter.remove(adapter.verificationNPC)
+                local cell=getCell()
+                assert(adapter.verificationNPC:getCurrentSquare()==nil and
+                    not cell:getAddList():contains(adapter.verificationNPC) and
+                    (not cell:getObjectList():contains(adapter.verificationNPC) or
+                        cell:getRemoveList():contains(adapter.verificationNPC)),
+                    "checkpoint verifier still registered after cleanup")
+                adapter.verificationNPC=nil
+            end
+        end)
+        if not ok or not cleaned then
+            data.SarahCheckpointWriteToken=oldToken
+            error(not cleaned and ("checkpoint verifier cleanup failed: "..tostring(cleanupError)) or err)
+        end
+    end
     return adapter
 end
 return Engine

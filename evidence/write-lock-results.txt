@@ -1,0 +1,5 @@
+Baseline: LOCK_ACTIVE slot=a existing=true noPermissionChanges=true
+Baseline: LOCK_RELEASED probeSignal=True unchanged=True (manual release after demonstrated failure)
+First fixed run: LOCK_RELEASED probeSignal=True unchanged=True (manual release after unsupported signal extension)
+Corrected retest: LOCK_ACTIVE slot=a existing=true noPermissionChanges=true
+Corrected retest: LOCK_RELEASED probeSignal=True unchanged=True (probe released lock)

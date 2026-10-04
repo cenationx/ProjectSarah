@@ -3,14 +3,14 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; bounded travel checkpoint completed by Codex. Antigravity resume prompt
+Active agent: none; bounded checkpoint-write task completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `79cbee1` on `main`, pushed to
+Previous published checkpoint: `c63407f` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The accompanying checkpoint adds travel suspension/recovery and verification below;
+The accompanying checkpoint adds verified checkpoint writes and evidence below;
 use Git history and remote refs to identify its commit rather than this parent ID.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
@@ -20,7 +20,7 @@ use Git history and remote refs to identify its commit rather than this parent I
   clothing items, two-slot saves, unload/restore, full restart restoration,
   recovery from a deliberately truncated latest checkpoint, and saved death
   preventing resurrection after restart.
-- 40 automated checks pass: 27 foundation cases and 13 engine adapter cases.
+- 48 automated checks pass: 27 foundation, 13 engine adapter and 8 checkpoint readback cases.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
   their behavior is covered by simulated events and the live transitions below.
@@ -58,21 +58,27 @@ use Git history and remote refs to identify its commit rather than this parent I
   inventory, preserved player, save and ordinary visibility. NPC was not
   teleported. Manual unload remains dormant in-session; failures retain state
   and block unattended retries. See `M0-travel-test.md` for remaining limits.
+- Real locked existing-file write exposed swallowed native I/O errors and false
+  save success. Adapter now reads a fresh UUID back before accepting a checkpoint.
+  Fixed fault/retry retained the NPC and metadata on failure, unchanged old-file
+  hash, and new contents on successful retry. Full restart restored one Sarah
+  and exit saved successfully with the cleanup-confirmation guard. Temporary
+  verifier cleanup failure is pinned/blocked and covered by simulated tests.
+  See `M0-write-failure-test.md`; disk-full/partial writes remain unverified.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: safe live checkpoint-write failure
+## Next task: bounded longer session and verifier cleanup
 
-1. Inspect Git/runtime state and back up a separate copy of the returned travel case and selections
-   with game closed. Preserve all independent alive/dead/no-mod cases.
-2. Inspect actual engine NPC save failure signaling before designing the fault.
-   An existing target file must not falsely count as a newly successful write.
-3. Use a reversible, project-local disposable failure target; preserve both good
-   slots and metadata. Verify failed save/unload retains the NPC and prior good
-   checkpoint, and succeeds after removing the fault without duplication.
-4. If the engine swallows write errors, fix only the demonstrated adapter gap
-   with meaningful tests. Do not change machine-wide permissions or installed files.
+1. Inspect Git/runtime state; with game closed, back up and create a separate
+   disposable copy of the completed retest case plus selections.
+2. Run repeated verified saves and unload/restores over a bounded longer session.
+   Check exactly one Sarah, current contents, player preservation and temporary
+   verifier references/world-list cleanup after game ticks.
+3. Inspect resource behavior and confirm full restart; preserve any failure
+   before narrowing a fix. Avoid arbitrary stress or machine-wide changes.
+4. Broader module reload/incomplete-cleanup checks remain a subsequent gate.
 5. Close game, disable temporary probes, update docs and commit/push. Keep AI on hold.
 
 ## Open issues
@@ -82,7 +88,9 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
   conservative and deliberately skips unseen/other-floor NPCs.
 - Duplicate room/invalid map metadata errors reproduce with all mods disabled;
   origin not diagnosed. Do not call the runs entirely error-free.
-- Disk-write failures have simulated policy coverage only.
+- Locked existing-file failure/retry passed live; disk-full, arbitrary partial
+  writes and process crashes remain unverified. Readback is not atomic replacement
+  or a full-file checksum. Exceptional verifier cleanup has simulated coverage.
 - Bounded streamed travel recovery passed; ordinary walking/driving boundaries,
   abrupt movement, floor transitions, combat, longer sessions, multiplayer and
   full PZNS compatibility remain unverified.
@@ -91,30 +99,31 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 ## Local runtime state at handoff
 
 Game closed; native window inventory confirmed no Project Zomboid window.
-Only SarahFoundation selected. Continue selects `SarahTravelCase`, a separate
-copy of SarahWorldRenderFresh; original fresh/control cases remain intact. Original control
+Only SarahFoundation selected. Continue selects `SarahWriteFailureRetest`, a separate
+copy of SarahTravelCase; original travel/fresh/control cases remain intact. Original control
 has an empty world mod list; older alive/dead cases remain preserved.
-All temporary drivers, including travel, are outside the mod in
+All temporary drivers, including travel and write failure, are outside the mod in
 `runtime/disabled-probes`. Production Engine/Lifecycle/main deployed to isolated mod.
-Returned travel case saved slot b; probe marker done, original player god mode
-restored through the API. Do not redeploy the one-shot driver into this completed case.
+Retest case saved slot b on exit; write probe marker done. All exclusive file
+handles released; local .txt release signal remains. Do not rerun the one-shot
+fault helper against this completed case/stale signal. Fresh matching guards,
+latest-slot inspection and a backed-up separate case are required.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
-Latest backup group: `runtime/backups/travel-before-20261004`: original fresh
-rendering case/selections, Away-before-restart and Returned-final. Older rendering, appearance and
+Latest backup group: `runtime/backups/write-failure-before-20261004`: original
+SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
+and Final-restart. Prior travel backup retains Away-before-restart and Returned-final. Older rendering, appearance and
 alive/dead backups remain preserved. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-Production travel change and evidence are included in this checkpoint.
+Production checkpoint-readback fix and evidence are included in this checkpoint.
 No unfinished work remains for this bounded task; M0 hardening is still open.
 Check Git status and fresh native window inventory before resuming UI work.
 
 ## Interrupted-session note template
 
 Replace this section when needed; remove stale entries after completing them.
-
-No interrupted work at this checkpoint.
 
 - Work item / owner / date:
 - State: IN PROGRESS / BLOCKED / VERIFIED
