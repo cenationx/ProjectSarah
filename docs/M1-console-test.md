@@ -188,3 +188,21 @@ Gemini addressed the review blockers and review corrections in slice B:
   - `tools/test_console.py`: 15 checks (was 14)
 
 Native acceptance remains pending Codex live verification.
+
+## Codex slice B native checks (2026-10-05)
+Reviewed build 70eee10 deployed only to isolated mod. Native manual smoke checks PASS:
+help includes stop/history; status Sarah active / Action idle; inventory four items;
+stop #4 and repeated stop #5 completed with Sarah stopped; nothing active. No new
+stop exception appeared in the log. History #6 displayed preceding outcomes #1-#5.
+After F9 close/reopen and confirmed normal W movement, history #7 retained #1-#6.
+After Quit/main menu/Continue, history showed No command history and request #1.
+Log corroborates SESSION_RESET, RESTORED a and ACTIVE npc=true worn=3
+localPlayerPreserved=true. Closed normally: SAVED b / GameThread exited; no window.
+Final case/settings/raw log: runtime/backups/slice-b-20261005-014102/Final-native.
+Key file unchanged from pre-test backup (F9, Forward W); no probes deployed.
+94 automated checks previously rerun by Codex passed; this checkpoint changes docs
+and sanitized evidence only. Active-action cancellation, late completion, failure
+injection and replacement handling remain fixture-tested, not live-proven; native
+moving-action cancellation must be checked with slice C before claiming it works.
+Codex owns checkout and all live testing. Next bounded task: slice C design/code,
+then native movement/cancellation verification. External in-game AI remains ON HOLD.

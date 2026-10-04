@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B (stop, cancellation, lifecycle invalidation, bounded history) REVISED and validated with 94 automated checks; native acceptance pending Codex live check.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B has 94 passing automated checks and passed native idle-stop/console/history smoke checks. Active-action cancellation still requires live verification with slice C.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -10,7 +10,7 @@ Do not have two agents edit this checkout concurrently.
 
 - Game is CLOSED (SAVED b, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
-- Production mod source updated in `foundation/SarahFoundation/` with Slice B stop/cancellation and bounded history. (Deployment to `runtime/isolated/mods/SarahFoundation/` to be performed game-closed by Codex).
+- Reviewed slice B source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/codex-resume-20261004-234837/Final-acceptance`. Full pre-Gemini key settings restored with Sarah Console reset to F9; Forward remains W. Original acceptance root key baseline is empty, so it was not used as explicit binding evidence.
 - Automated tests: 94 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 31 command + 15 console).
@@ -253,3 +253,25 @@ Gemini revised slice B to address the review blockers and review corrections ide
    - Full suite: 27 foundation + 13 engine adapter + 8 checkpoint readback + 31 command + 15 console = 94 checks.
 
 Checkout ownership is RELEASED to Codex. Native acceptance remains pending Codex live verification.
+
+Codex slice B native checks IN PROGRESS (2026-10-05). Reviewed checkpoint 70eee10; 94 checks passed. Game-closed backup: runtime\backups\slice-b-20261005-014102 (case/settings/log and Previous-mod). Restore only game-closed after preserving final state. Reviewed Commands/Console/Observations deployed to isolated mod; no probes. Codex owns checkout. Native results pending.
+
+Slice B native progress (2026-10-05): direct console observations confirm help lists stop/history; status Sarah active / Action idle; inventory four items; repeated idle stop commands #4/#5 completed with Sarah stopped; nothing active. History #6 lists outcomes #1-#5; after user-operated F9 close/reopen, history #7 retains #1-#6. Movement confirmation pending (world framing changed). Session-reset history cleanup and final preservation/shutdown still pending. Active cancellation/late completion remain fixture-tested only; no tracked movement action exists yet. Game running, Codex owns checkout.
+
+## Codex slice B native checks (2026-10-05)
+Reviewed build 70eee10 deployed only to isolated mod. Native manual smoke checks PASS:
+help includes stop/history; status Sarah active / Action idle; inventory four items;
+stop #4 and repeated stop #5 completed with Sarah stopped; nothing active. No new
+stop exception appeared in the log. History #6 displayed preceding outcomes #1-#5.
+After F9 close/reopen and confirmed normal W movement, history #7 retained #1-#6.
+After Quit/main menu/Continue, history showed No command history and request #1.
+Log corroborates SESSION_RESET, RESTORED a and ACTIVE npc=true worn=3
+localPlayerPreserved=true. Closed normally: SAVED b / GameThread exited; no window.
+Final case/settings/raw log: runtime/backups/slice-b-20261005-014102/Final-native.
+Key file unchanged from pre-test backup (F9, Forward W); no probes deployed.
+94 automated checks previously rerun by Codex passed; this checkpoint changes docs
+and sanitized evidence only. Active-action cancellation, late completion, failure
+injection and replacement handling remain fixture-tested, not live-proven; native
+moving-action cancellation must be checked with slice C before claiming it works.
+Codex owns checkout and all live testing. Next bounded task: slice C design/code,
+then native movement/cancellation verification. External in-game AI remains ON HOLD.
