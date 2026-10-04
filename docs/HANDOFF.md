@@ -218,3 +218,11 @@ Final NativeCase backup: console-native-20261004/After-escape-check under runtim
 Claude should fix/automatically test input handling, without launching the game,
 then commit/push and release checkout to Codex for native retesting. No gate pass
 or stop/walk/AI authorization. See STATUS and updated CLAUDE-RESUME first.
+
+## Escape fix released to Codex (2026-10-04)
+
+Claude edited only `Console.lua`, `tools/test_console.py` and docs. The fix is native-
+unverified and not deployed to the isolated mod. Codex owns the checkout again: back up
+game-closed, deploy production source, retest physical Escape. Antigravity has no
+desktop-control tool and no `git` on PATH (use the Codex runtime git `cmd` directory).
+Stop/walk and external AI remain on hold. See STATUS and `M1-console-test.md`.

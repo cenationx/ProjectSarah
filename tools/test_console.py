@@ -85,5 +85,31 @@ test('module reload closes old UI and retains one callback per event',function()
     for _,name in ipairs({'OnTick','OnGameStart','OnMainMenuEnter','OnFillWorldObjectContextMenu'}) do assert(#Events[name].callbacks==1) end
     assert(#Events.OnKeyPressed.callbacks==0)
 end)
+local function fire(key) for _,cb in ipairs({table.unpack(Events.OnKeyPressed.callbacks)}) do cb(key) end end
+test('Escape-closing the console cannot open the pause menu; later Escape still can',function()
+    menuOpened=0; ToggleEscapeMenu=function(k) if k==1 then menuOpened=menuOpened+1 end end
+    Events.OnKeyPressed.Add(ToggleEscapeMenu); s=reload()
+    assert(#Events.OnKeyPressed.callbacks==1 and Events.OnKeyPressed.callbacks[1]==s.guard)
+    s.open(); raw[1]=true; s.tick(); assert(not s.panel and s.swallow)
+    raw={}; fire(1); s.tick(); assert(menuOpened==0 and not s.swallow)   -- release swallowed once
+    fire(1); assert(menuOpened==1)                                       -- next real Escape works
+end)
+test('unused swallow expires after Escape is up; other keys and idle Escape pass through',function()
+    s.open(); raw[1]=true; s.tick(); assert(s.swallow)
+    for i=1,10 do s.tick() end raw={}                                    -- held, then released
+    for i=1,5 do s.tick() end assert(not s.swallow)
+    menuOpened=0; fire(1); assert(menuOpened==1)
+    s.swallow=true; fire(67); assert(s.swallow); s.reset(); assert(not s.swallow)
+end)
+test('reload restores vanilla handler without stacking guards; missing handler is safe',function()
+    local original=s.menuOriginal; s=reload()
+    assert(#Events.OnKeyPressed.callbacks==1 and Events.OnKeyPressed.callbacks[1]==s.guard and s.menuOriginal==original)
+    s=reload(); assert(#Events.OnKeyPressed.callbacks==1)
+    menuOpened=0; fire(1); assert(menuOpened==1)
+    Events.OnKeyPressed.Remove(s.guard); Events.OnKeyPressed.Add(original)
+    local keep=SarahConsole; SarahConsole=nil; ToggleEscapeMenu=nil; s=reload()
+    assert(s.guard==nil and s.menuOriginal==nil and #Events.OnKeyPressed.callbacks==1)
+    ToggleEscapeMenu=original; SarahConsole=nil; s=reload()
+end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

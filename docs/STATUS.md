@@ -1,30 +1,39 @@
 # Current project state
 
 Updated: 2026-10-04 (Europe/Helsinki).
-State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
+State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; Escape fix awaiting native retest; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex has released the checkout for a user-started Claude coding session. No agent should edit until that handoff starts.
-Do not have both agents edit this checkout concurrently.
+Ownership: Claude finished the Escape code fix and RELEASES the checkout to Codex for
+native retesting. Do not have both agents edit this checkout concurrently.
 
-Claude session 2026-10-04 17:10 (verification only, no code changes):
-- Git: clean tree, `main` == `origin/main` at `705cec2`; `git push --dry-run origin main`
-  succeeded (GitHub access OK). `git` is not on PATH in Antigravity's shell; use
+Escape fix (Claude, 2026-10-04; code + API inspection + automated tests only; game NOT launched):
+- Bug (user-reported, native): with Sarah Console open, first Escape opened the pause
+  menu; second Escape closed the console. Expected: first Escape closes the console only.
+- Inspection of the local decompiled engine and installed game Lua: the pause menu is the
+  global `ToggleEscapeMenu` (MainScreen.lua), registered on `OnKeyPressed`. The engine
+  raises `OnKeyPressed` on key RELEASE, and skips it only if `GameKeyboard.eatKeyPress`
+  marked the key, a UI element consumes the release, or native text entry is active.
+  The previous fix relied only on `eatKeyPress` from `OnTick`. The exact native ordering
+  that defeated it is UNVERIFIED (no probe ran in Codex's failed run, so there is no log).
+- Change (`Console.lua`): an Escape edge with the panel open still eats the key and closes,
+  and now also arms a one-shot `swallow`. `ToggleEscapeMenu` is replaced on `OnKeyPressed`
+  by `SarahConsole.guard`, which drops exactly that one Escape release and otherwise calls
+  the original. The swallow expires 5 ticks after Escape is up. Reload restores the vanilla
+  handler before re-wrapping; if the handler is not found nothing is wrapped.
+- Automated: all five suites pass, 71 total = 27 foundation + 13 adapter + 8 checkpoint
+  + 12 command + 11 console (3 new simulated cases: swallow once then a real Escape works,
+  expiry/pass-through, reload without stacking/missing handler). Simulation only.
+- NATIVE-UNVERIFIED. The fixed file is in `foundation/` and is NOT yet deployed to
+  `runtime/isolated/mods` (deployment left to Codex with its game-closed backup routine).
+- Next (Codex, native): back up game-closed, deploy production source, retest physical
+  Escape; also record whether `ToggleEscapeMenu` was wrapped (`SarahConsole.guard~=nil`).
+  If it still fails, add a temporary probe logging raw ESC state, `OnKeyPressed` calls and
+  tick order. Still pending: hold-repeat, rebind/conflict persistence, English Options
+  labels, movement restoration, same-process teardown. Stop/walk and AI stay on hold.
+- Git helper: `git` is not on PATH in Antigravity; use
   `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd`.
-- Automated (simulated Lua, not native input): 68/68 pass (27+13+8+12+8).
-- No Project Zomboid process running. No live test, backup or save change this session.
-- STILL UNVERIFIED (need physical keyboard by the user; the game cannot fake them):
-  hold-repeat, Escape, rebind/conflict persistence, English Options labels,
-  movement input restored after close, same-process menu/world teardown.
-  Physical F9 open/close remains the only native keyboard evidence.
-- Desktop-control check (17:15): Claude/Antigravity has no desktop-control tool
-  (no screenshot, no verified key injection). PowerShell reports an interactive
-  session but `CopyFromScreen` fails with "The handle is invalid", so the agent
-  cannot see the game. Blind SendKeys could not be verified, and earlier notes
-  show function-key injection was missed even by the vanilla rebind dialog.
-  Missing capability: screen capture/observation of the user's desktop plus
-  reliable key delivery. Native checks therefore stay PENDING (not simulated).
-- Next: back up a new disposable case game-closed, then the user runs these
-  checks; slice A can be accepted only after they pass.
+- Antigravity has no desktop-control/screenshot tool (`CopyFromScreen` fails), so native
+  checks need Codex or the user.
 
 ## Last verified work
 
@@ -40,8 +49,7 @@ documentation checkpoint prepares Claude's handoff; identify it using Git histor
   clothing items, two-slot saves, unload/restore, full restart restoration,
   recovery from a deliberately truncated latest checkpoint, and saved death
   preventing resurrection after restart.
-- 68 automated checks pass: 27 foundation, 13 engine adapter, 8 checkpoint
-  readback, 12 read-only command and 8 simulated console UI/key/session cases.
+- 71 automated checks pass (after the Escape fix): 27 foundation, 13 engine adapter, 8 checkpoint\n  readback, 12 read-only command and 11 simulated console UI/key/session cases.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
   their behavior is covered by simulated events and the live transitions below.

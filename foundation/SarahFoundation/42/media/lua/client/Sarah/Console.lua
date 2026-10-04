@@ -12,16 +12,24 @@ if not registered then
     table.insert(keyBinding,{value=binding,key=Keyboard.KEY_F9})
 end
 local old=SarahConsole
+-- Vanilla opens the pause menu from OnKeyPressed (engine raises it on key release).
+-- Keep the original handler so reloads never stack or lose it.
+local menuOriginal=old and old.menuOriginal or ToggleEscapeMenu
 if old then
     old.close()
     if old.key then Events.OnKeyPressed.Remove(old.key) end
     if old.tick then Events.OnTick.Remove(old.tick) end
+    if old.guard then
+        Events.OnKeyPressed.Remove(old.guard)
+        if menuOriginal then Events.OnKeyPressed.Add(menuOriginal) end
+    end
     Events.OnGameStart.Remove(old.reset)
     Events.OnMainMenuEnter.Remove(old.reset)
     Events.OnFillWorldObjectContextMenu.Remove(old.menu)
 end
 SarahConsole={}
 local state=SarahConsole
+state.menuOriginal=menuOriginal
 local Panel=ISPanel:derive('SarahConsolePanel')
 local function allowed()
     local root=Core.getMyDocumentFolder():gsub('\\','/'):gsub('/$','')
@@ -103,21 +111,42 @@ state.tick=function()
     for _,candidate in ipairs({key,alt}) do
         if candidate>0 and candidate<10000 and GameKeyboard.isKeyDownRaw(candidate) and getCore():isKey(binding,candidate) then pressed=candidate; break end
     end
-    local escape=state.panel and GameKeyboard.isKeyDownRaw(Keyboard.KEY_ESCAPE) or false
+    local escape=GameKeyboard.isKeyDownRaw(Keyboard.KEY_ESCAPE) or false
+    local escapeEdge=state.panel and escape and not state.escapeHeld
     local edge=pressed~=0 and not state.held
-    local escapeEdge=escape and not state.escapeHeld
     state.held=pressed~=0; state.escapeHeld=escape
-    if escapeEdge then GameKeyboard.eatKeyPress(Keyboard.KEY_ESCAPE); state.close()
+    -- Expire an unused swallow shortly after Escape is released (engine raises
+    -- the release event on the same or next frame) so a later real Escape works.
+    if state.swallow then
+        if escape then state.swallowUp=0 else state.swallowUp=(state.swallowUp or 0)+1 end
+        if state.swallowUp>=5 then state.swallow=false end
+    end
+    if escapeEdge then
+        GameKeyboard.eatKeyPress(Keyboard.KEY_ESCAPE)
+        state.swallow=true; state.swallowUp=0
+        state.close()
     elseif edge and not state.conflict(pressed) then
         if state.panel then GameKeyboard.eatKeyPress(pressed); state.close()
         elseif GameKeyboard.isKeyDown(pressed) then GameKeyboard.eatKeyPress(pressed); state.open() end
     end
 end
-state.reset=function() state.close(); state.held=false; state.escapeHeld=false end
+-- Belt and braces for the pause menu: the Escape that closed the console must not
+-- also reach the vanilla ToggleEscapeMenu handler, whatever order the engine used.
+state.guard=function(key)
+    if state.swallow and key==Keyboard.KEY_ESCAPE then state.swallow=false; return end
+    if state.menuOriginal then return state.menuOriginal(key) end
+end
+state.reset=function() state.close(); state.held=false; state.escapeHeld=false; state.swallow=false end
 state.menu=function(playerIndex,context,objects,test)
     if not test and playerIndex==0 and allowed() then context:addOption('Sarah: console',nil,state.open) end
 end
 Events.OnTick.Add(state.tick)
+if state.menuOriginal then
+    Events.OnKeyPressed.Remove(state.menuOriginal)
+    Events.OnKeyPressed.Add(state.guard)
+else
+    state.guard=nil -- vanilla handler not found: keep previous behavior, never guess
+end
 Events.OnGameStart.Add(state.reset)
 Events.OnMainMenuEnter.Add(state.reset)
 Events.OnFillWorldObjectContextMenu.Add(state.menu)

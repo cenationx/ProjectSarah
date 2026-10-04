@@ -84,3 +84,20 @@ then closed game normally: SAVED a / GameThread exited. NativeCase preserved in
 runtime/backups/console-native-20261004/After-escape-check. No teardown acceptance
 is inferred from closing the whole process. Rebind/conflict/labels/movement,
 hold-repeat and same-process world/menu cleanup remain pending.
+
+## Escape fix attempt: Claude session 2026-10-04 (NATIVE-UNVERIFIED)
+
+Code, engine/API inspection and automated tests only; the game was not launched and no
+save, backup, setting or deployed mod was touched. Inspection: the pause menu is the
+vanilla global `ToggleEscapeMenu` (installed MainScreen.lua) on `OnKeyPressed`, which
+the engine raises on key release unless `eatKeyPress`, a consuming UI element or native
+text entry stops it. The earlier `eatKeyPress`-only fix did not hold natively; the exact
+engine ordering is not established. `Console.lua` now also arms a one-shot swallow when
+Escape closes the console and routes `OnKeyPressed` through `SarahConsole.guard`, which
+drops that single Escape release and otherwise calls the original handler. Expiry is 5
+ticks after Escape is up; reload restores the original handler; nothing is wrapped if it
+is missing. Automated: 71 checks (27+13+8+12+11) pass; 3 new simulated console cases.
+These do NOT prove native behavior. Native retest by Codex/user is required: deploy
+production source game-closed after backup, press Escape once with the console open, and
+confirm the console closes and the pause menu does not appear. If it fails, capture raw
+ESC state, OnKeyPressed calls and tick order with a temporary probe.
