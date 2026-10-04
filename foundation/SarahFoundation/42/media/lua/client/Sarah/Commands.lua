@@ -4,6 +4,7 @@ local Commands={}
 function Commands.new(observe,stopCallback)
     local self={
         sequence=0,
+        session=1,
         active=nil,
         token=0,
         history={},
@@ -32,18 +33,18 @@ function Commands.new(observe,stopCallback)
         end
         return copy
     end
-    function self:beginAction(name,details)
-        if self.active then return false,'busy' end
-        local ok,data=pcall(self.observe,false)
-        if not ok or type(data)~='table' or data.state~='active' then
-            return false,(type(data)=='table' and data.state) or 'unavailable'
+    function self:invokeStop(reason,action)
+        if not self.stopCallback then return true end
+        local ok,ret,err=pcall(self.stopCallback,reason or 'cancelled',action)
+        if not ok then
+            local clean=tostring(ret):match(':%d+: (.*)') or tostring(ret)
+            return false,clean:sub(1,60)
         end
-        self.sequence=self.sequence+1
-        self.token=self.token+1
-        local action={id=self.sequence,command=name,state='running',token=self.token,details=details or {}}
-        self.active=action
-        addHistory({id=action.id,command=action.command,state='running',summary='Started '..name})
-        return true,action
+        if ret==false then
+            local clean=tostring(err or 'stop failed')
+            return false,clean:sub(1,60)
+        end
+        return true
     end
     function self:cancelActive(reason)
         if not self.active then return false,'nothing active' end
@@ -53,11 +54,70 @@ function Commands.new(observe,stopCallback)
         action.summary=reason or 'cancelled'
         self.lastAction={id=action.id,command=action.command,state='cancelled',reason=action.summary}
         self:updateHistory(action.id,'cancelled',action.summary)
-        if self.stopCallback then pcall(self.stopCallback,reason or 'cancelled',action) end
-        return true,action
+        local stopOk,stopErr=self:invokeStop(reason or 'cancelled',{
+            id=action.id,
+            command=action.command,
+            state=action.state,
+            controller=action.controller,
+            session=action.session
+        })
+        return true,{id=action.id,command=action.command,state=action.state,summary=action.summary},stopOk,stopErr
     end
-    function self:completeAction(id,token,success,message)
+    function self:checkLifecycle()
+        if not self.active then return true end
+        local ok,data=pcall(self.observe,false)
+        if not ok or type(data)~='table' then
+            local errReason='observation error'
+            self:cancelActive(errReason)
+            return false,errReason
+        end
+        if data.state~='active' then
+            self:cancelActive(data.state)
+            return false,data.state
+        end
+        if self.active.controller and data.controller and self.active.controller~=data.controller then
+            self:cancelActive('controller replaced')
+            return false,'controller replaced'
+        end
+        return true,data
+    end
+    function self:tick()
+        return self:checkLifecycle()
+    end
+    function self:beginAction(name,details)
+        if self.active then return false,'busy' end
+        local ok,data=pcall(self.observe,false)
+        if not ok or type(data)~='table' or data.state~='active' then
+            return false,(type(data)=='table' and data.state) or 'unavailable'
+        end
+        self.sequence=self.sequence+1
+        self.token=self.token+1
+        local detailsCopy={}
+        if type(details)=='table' then
+            for k,v in pairs(details) do detailsCopy[k]=v end
+        end
+        local action={
+            id=self.sequence,
+            session=self.session,
+            command=name,
+            state='running',
+            token=self.token,
+            controller=data.controller,
+            details=detailsCopy
+        }
+        self.active=action
+        addHistory({id=action.id,command=action.command,state='running',summary='Started '..name})
+        return true,{id=action.id,command=action.command,state=action.state,token=action.token}
+    end
+    function self:completeAction(id,token,success,message,controller)
         if not self.active or self.active.id~=id or self.active.token~=token then
+            return false,'stale or cancelled'
+        end
+        if controller and self.active.controller and controller~=self.active.controller then
+            return false,'stale or cancelled'
+        end
+        local valid,reason=self:checkLifecycle()
+        if not valid then
             return false,'stale or cancelled'
         end
         local action=self.active
@@ -73,6 +133,7 @@ function Commands.new(observe,stopCallback)
         self.active=nil
         self.lastAction=nil
         self.token=0
+        self.session=self.session+1
         self.history={}
     end
     function self:execute(input)
@@ -120,44 +181,72 @@ function Commands.new(observe,stopCallback)
             return result
         end
         if command=='stop' then
-            result.state='completed'
             if self.active then
                 local cancelledId=self.active.id
                 local cancelledCmd=self.active.command
-                self:cancelActive('stopped by user')
+                local ok,actionCopy,stopOk,stopErr=self:cancelActive('stopped by user')
+                if not stopOk then
+                    result.state='failed'
+                    result.lines={'Cancelled #'..cancelledId..' ('..cancelledCmd..').','Engine stop failed: '..stopErr..'.'}
+                    addHistory({id=result.id,command=command,state='failed',summary='Stop failed: '..stopErr})
+                    return result
+                end
+                result.state='completed'
                 result.lines={'Cancelled #'..cancelledId..' ('..cancelledCmd..').','Sarah stopped.'}
-                addHistory({id=result.id,command=command,state=result.state,summary='Cancelled #'..cancelledId})
+                addHistory({id=result.id,command=command,state='completed',summary='Cancelled #'..cancelledId})
                 return result
             end
             local ok,data=pcall(self.observe,false)
             if not ok or type(data)~='table' then
-                if self.stopCallback then pcall(self.stopCallback,'stop_no_active') end
+                local stopOk,stopErr=self:invokeStop('stop_no_active')
+                if not stopOk then
+                    result.state='failed'
+                    result.lines={'Engine stop failed: '..stopErr..'.'}
+                    addHistory({id=result.id,command=command,state='failed',summary='Stop failed: '..stopErr})
+                    return result
+                end
+                result.state='completed'
                 result.lines={'Sarah stopped; nothing active.'}
-                addHistory({id=result.id,command=command,state=result.state,summary='Nothing active'})
+                addHistory({id=result.id,command=command,state='completed',summary='Nothing active'})
                 return result
             end
             if data.state=='dead' then
+                result.state='completed'
                 result.lines={'Sarah is dead; nothing active to stop.'}
-                addHistory({id=result.id,command=command,state=result.state,summary='Sarah dead'})
+                addHistory({id=result.id,command=command,state='completed',summary='Sarah dead'})
                 return result
             end
             if data.state=='unloaded' or data.state=='absent' or data.state=='deferred' then
+                result.state='completed'
                 result.lines={'Sarah is '..data.state..'; nothing active to stop.'}
-                addHistory({id=result.id,command=command,state=result.state,summary='Sarah '..data.state})
+                addHistory({id=result.id,command=command,state='completed',summary='Sarah '..data.state})
                 return result
             end
-            if self.stopCallback then pcall(self.stopCallback,'stop_no_active') end
+            local stopOk,stopErr=self:invokeStop('stop_no_active')
+            if not stopOk then
+                result.state='failed'
+                result.lines={'Engine stop failed: '..stopErr..'.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Stop failed: '..stopErr})
+                return result
+            end
+            result.state='completed'
             result.lines={'Sarah stopped; nothing active.'}
-            addHistory({id=result.id,command=command,state=result.state,summary='Nothing active'})
+            addHistory({id=result.id,command=command,state='completed',summary='Nothing active'})
             return result
         end
         local ok,data=pcall(self.observe,command=='inventory')
         if not ok or type(data)~='table' then
             result.state='failed'; result.lines={'Observation failed; no action taken.'}
-            addHistory({id=result.id,command=command,state=result.state,summary=result.lines[1]})
+            addHistory({id=result.id,command=command,state='failed',summary=result.lines[1]})
             return result
         end
-        if self.active and data.state~='active' then self:cancelActive(data.state) end
+        if self.active then
+            if data.state~='active' then
+                self:cancelActive(data.state)
+            elseif self.active.controller and data.controller and self.active.controller~=data.controller then
+                self:cancelActive('controller replaced')
+            end
+        end
         result.state='completed'
         if command=='status' then
             result.lines={'Sarah: '..data.state}

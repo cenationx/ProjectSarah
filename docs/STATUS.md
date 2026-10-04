@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B (stop, cancellation, bounded history) IMPLEMENTED and validated with 84 automated checks; native acceptance pending Codex live check.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B (stop, cancellation, lifecycle invalidation, bounded history) REVISED and validated with 92 automated checks; native acceptance pending Codex live check.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,18 +13,18 @@ Do not have two agents edit this checkout concurrently.
 - Production mod source updated in `foundation/SarahFoundation/` with Slice B stop/cancellation and bounded history. (Deployment to `runtime/isolated/mods/SarahFoundation/` to be performed game-closed by Codex).
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/codex-resume-20261004-234837/Final-acceptance`. Full pre-Gemini key settings restored with Sarah Console reset to F9; Forward remains W. Original acceptance root key baseline is empty, so it was not used as explicit binding evidence.
-- Automated tests: 84 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 22 command + 14 console).
+- Automated tests: 92 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 29 command + 15 console).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 84 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 22 command parser/dispatch/cancellation, 14 simulated console UI/key/session cases).
+- **Automated policy checks**: 92 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 29 command parser/dispatch/cancellation, 15 simulated console UI/key/session cases).
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands**: Native execution of `help`, `status`, and `inventory` commands passed; local player and NPC preserved; scrolling list box and native font metrics verified.
 - **M1 slice A physical F9**: Physical F9 open, command entry, and F9 close verified natively by user; corroborated by probe samples.
 - **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
-- **M1 slice B stop, cancellation, and history**: Implemented `stop` command, action lifecycle tokens preventing stale/late completion, bounded queryable history (capped at 30 records, no mutable engine handles exposed), and console panel integration. 10 new unit tests and 3 new console simulation tests passed. Native acceptance pending Codex live check.
+- **M1 slice B stop, cancellation, and history**: Implemented `stop` command with engine error propagation, action lifecycle tokens and independent lifecycle invalidation (death, unload, controller replacement, closed-console tick), immutable action API records, bounded queryable history (capped at 30 records, no mutable engine handles exposed), and console panel integration. 17 command unit tests and 4 console simulation tests added (92 automated checks total). Native acceptance pending Codex live check.
 - **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
 ## Completed: M1 slice A native acceptance
@@ -228,3 +228,24 @@ When ready for native testing:
 10. Quit to Desktop / save cleanly.
 
 Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.
+## M1 slice B revision: stop error propagation, independent lifecycle invalidation, and immutable records (2026-10-05)
+
+Gemini revised slice B to address the two review blockers identified by Codex:
+1. **Stop failure propagation & return contract**:
+   - `Commands.lua` now distinguishes invalidating a request from successfully stopping engine work.
+   - `invokeStop(reason, action)` inspects the adapter callback's actual return contract: catches exceptions and checks for supported `false, err` return values.
+   - If engine stop fails, the active request is still cancelled/invalidated, but `result.state = 'failed'`, failure explanation is returned in `result.lines`, and recorded in history as `failed` with summary.
+   - Idle stop failures similarly report `failed` with structured error output and history.
+2. **Independent lifecycle invalidation & controller scoping**:
+   - `completeAction` revalidates observation state and controller match before accepting success (`checkLifecycle()`). If Sarah died or unloaded before completion without an intervening `status` query, completion is rejected as `'stale or cancelled'` and the action is marked `'cancelled'`.
+   - `Console.tick()` calls `state.dispatch:tick()` on every game frame even while the console panel is closed, ensuring background lifecycle events (unload, death, controller replacement) invalidate active work immediately.
+   - `Observations.read` attaches `controller` to observation data. If controller replacement occurs, active actions are invalidated with reason `'controller replaced'`, and stale callbacks targeting a replacement controller are rejected.
+   - Scoped request identity and generation tokens to originating session (`self.session`).
+3. **Immutable action API**:
+   - `beginAction`, `cancelActive`, `getHistory`, and callbacks now return copies/snapshots of action records. Callers cannot tamper with internal `self.active` or command state.
+4. **Automated test suite (92 passing checks)**:
+   - `tools/test_commands.py`: 29 checks total (added tests for stop callback exception, stop callback `false, reason` return, idle stop failure, death/unload before completion without status query, controller replacement rejection, stale callback rejection, and action API record immutability).
+   - `tools/test_console.py`: 15 checks total (added test for closed-console tick lifecycle invalidation).
+   - Full suite: 27 foundation + 13 engine adapter + 8 checkpoint readback + 29 command + 15 console = 92 checks.
+
+Checkout ownership is RELEASED to Codex. Native acceptance remains pending Codex live verification.

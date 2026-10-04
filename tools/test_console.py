@@ -45,7 +45,8 @@ local root='G:/Codex/Project Sarah/runtime/isolated'; local client=false
 Core={getMyDocumentFolder=function() return root end}
 isClient=function() return client end; isServer=function() return false end
 getSpecificPlayer=function() return {} end; getKeyName=function() return 'F9' end
-require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function() return {state='active'} end} end end
+local obsState='active'
+require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function() return {state=obsState or 'active'} end} end end
 local function reload() return assert(load(ConsoleSource))() end
 local s=reload()
 local function release() raw={}; s.tick() end
@@ -140,6 +141,19 @@ test('session reset clears console dispatch and resets action tracking',function
     assert(ok and s.panel.dispatch.active)
     s.reset()
     assert(not s.panel and s.dispatch.active==nil and #s.dispatch:getHistory()==0)
+end)
+test('lifecycle monitoring invalidates active action while console is closed',function()
+    s.open()
+    local ok,action=s.panel.dispatch:beginAction('walk here')
+    assert(ok and s.panel.dispatch.active)
+    s.close()
+    assert(not s.panel)
+    obsState='dead'
+    s.tick()
+    assert(s.dispatch.active==nil)
+    local h=s.dispatch:getHistory()
+    assert(h[#h].state=='cancelled' and h[#h].summary=='dead')
+    obsState='active'
 end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

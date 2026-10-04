@@ -24,9 +24,9 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-84 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 22 command,
-14 console). Slice A native acceptance passed. Slice B (stop, cancellation, history)
-implemented and unit tested; native acceptance pending Codex live check.
+92 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 29 command,
+15 console). Slice A native acceptance passed. Slice B (stop, cancellation, history)
+revised and unit tested; native acceptance pending Codex live check.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user.
 Keep external AI on hold; movement commands (slice C) deferred.
 
@@ -89,9 +89,9 @@ executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
 Also run `tools/test_render.py`: 13 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 22 command parser/cancellation checks.
-Run `tools/test_console.py`: 14 simulated console UI/key/session checks.
-84 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Run `tools/test_commands.py`: 29 command parser/cancellation checks.
+Run `tools/test_console.py`: 15 simulated console UI/key/session checks.
+92 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -325,4 +325,18 @@ Gemini completed M1 slice B implementation and automated validation (offline onl
   - Step 3: Open console (F9) and test commands: `help`, `status`, `inventory`, `stop`, `history`.
   - Step 4: Verify character movement restored after closing console (Escape / mouse Close).
   - Step 5: Clean shutdown and save.
+- External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.
+## M1 slice B revision handoff (2026-10-05)
+
+Gemini completed offline revision of slice B:
+- Propagated engine stop failures (exceptions and `false, reason` returns) into structured `failed` outcomes and history, while cleanly invalidating the command.
+- Added independent lifecycle invalidation: `completeAction` revalidates state and controller before accepting success, and `Console.lua` game-thread tick runs lifecycle checks while console is closed.
+- Scoped actions to originating controller and session; rejected stale callbacks targeting replacement controllers.
+- Hardened action API to return immutable copies.
+- Automated tests: 92 passing checks across all 5 test suites.
+- Live gameplay testing: Handed off to Codex. Game is CLOSED.
+  - Step 1: Deploy `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation`.
+  - Step 2: Launch `SarahConsoleNativeCase`.
+  - Step 3: Test console commands (`help`, `status`, `inventory`, `stop`, `history`) and character movement.
+  - Step 4: Clean shutdown and save.
 - External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.

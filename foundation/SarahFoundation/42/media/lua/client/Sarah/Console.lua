@@ -31,10 +31,18 @@ SarahConsole={}
 local state=SarahConsole
 state.menuOriginal=menuOriginal
 state.dispatch=old and old.dispatch or nil
-local function stopSarah(reason)
+local function stopSarah(reason,action)
     if SarahFoundation and SarahFoundation.controller and SarahFoundation.controller.npc then
-        SarahFoundation.controller.adapter.stop(SarahFoundation.controller.npc)
+        local controller=SarahFoundation.controller
+        if action and action.controller and action.controller~=controller then
+            return false,'stale controller'
+        end
+        local ok,err=pcall(controller.adapter.stop,controller.npc)
+        if not ok then return false,tostring(err) end
+        if err==false then return false,'adapter stop failed' end
+        return true
     end
+    return true
 end
 local function getDispatch()
     if not state.dispatch then
@@ -117,6 +125,7 @@ end
 -- Eat the release to avoid opening the pause menu after closing with Escape.
 state.tick=function()
     if not allowed() then state.close(); return end
+    if state.dispatch then state.dispatch:tick() end
     local key=getCore():getKey(binding)
     local alt=getCore():getAltKey(binding)
     local pressed=0
