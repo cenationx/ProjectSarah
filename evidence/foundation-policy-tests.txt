@@ -1,0 +1,16 @@
+PASS repeated ensure adopts exactly one NPC
+PASS duplicate objects block creation
+PASS failed operation releases lock
+PASS nested operations are rejected
+PASS alternating slots retain previous checkpoint
+PASS failed save retains metadata and active NPC
+PASS missing write is not published
+PASS cleanup failure retains reference and blocks replacement
+PASS corrupt current checkpoint falls back after clean removal
+PASS corrupt checkpoints never create fresh replacement
+PASS missing checkpoints preserve recovery metadata
+PASS unloaded saved square defers without older fallback
+PASS partial restore cleanup failure blocks fallback
+PASS death survives unload and prevents resurrection
+PASS successful unload restores same checkpoint
+RESULT 15 lifecycle tests passed

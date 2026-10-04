@@ -1,0 +1,4 @@
+name=Project Sarah - NPC foundation M0
+id=SarahFoundation
+description=Experimental single-player NPC foundation. No external AI. Isolated testing only.
+versionMin=42.21
