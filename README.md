@@ -18,6 +18,14 @@ M0 is the NPC framework compatibility gate. The AI layer has not been created or
 - `evidence`: test results from the installed game.
 - `docs`: findings and M0 acceptance criteria.
 
+## License
+
+Project Sarah's original code and documentation are offered under the [PolyForm Noncommercial License 1.0.0](LICENSE), with the [required copyright notice](NOTICE). Noncommercial use, modification and redistribution are permitted under its terms; commercial uses outside those permissions require separate permission from cenationx. This project is source available.
+
+This licensing change applies from the commit introducing it. The earlier published MIT versions, including commit `e70019c2cf9aedfa007d4a312626a1dd72a92be6`, retain their MIT permissions. Changing this repository's license does not revoke those permissions or prevent commercial reuse of those earlier versions.
+
+Third-party material retains its own license. PZNS by shadowhunter100 remains MIT licensed; its original notice is preserved in [the PZNS license copy](docs/PZNS-MIT-LICENSE.txt) and in the local upstream checkout. Project Sarah's noncommercial terms do not restrict rights independently granted for PZNS. Project Zomboid game files are not covered by this license and are not distributed here.
+
 ## M0 acceptance criteria
 
 1. Confirm game version from a launch log or UI. PASS: 42.21.0, revision 4a0e9546ec, confirmed from the normal profile's version/log and isolated game UI.
