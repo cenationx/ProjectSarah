@@ -1,0 +1,8 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED b
+LOG  : Lua          f:240> [SarahFoundation] SAVED a
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=SarahSessionAlive dead=nil tagged=1 playerPreserved=true
+LOG  : Lua          f:4245> [SarahFoundation] SAVED b

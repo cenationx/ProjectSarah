@@ -1,0 +1,4 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=2026-10-04_04-21-54 dead=true tagged=0 playerPreserved=true

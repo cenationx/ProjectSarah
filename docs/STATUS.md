@@ -3,8 +3,8 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none after this documentation checkpoint; next agent claims the
-next task here before making changes. No background task or game is left running.
+Active agent: none after the session-test checkpoint. Antigravity resume prompt
+remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
@@ -24,16 +24,19 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
   their behavior is covered with simulated events, not live world switching.
+- Two independent disposable worlds passed the new live session probe across
+  full process restarts: alive case restored exactly one Sarah and saved;
+  death case retained its tombstone and zero live Sarahs. Player instance was
+  preserved in both. See `M0-session-test.md` for the narrower test boundary.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
 ## Next task: live session transitions
 
-1. Inspect current files and running processes. Read HANDOFF's disposable-save
-   warning: Sarah is intentionally dead in the latest test world.
-2. Preserve that death-test world and prepare an alive-NPC test using the
-   pre-recovery backup, with the game closed. Retain both cases independently.
+1. Inspect files/processes and back up both worlds described in HANDOFF.
+2. The alive copy already exists as `SarahSessionAlive`; the original dated
+   world remains the independent death case. Do not overwrite either case.
 3. Verify quitting to the main menu and continuing the same world leaves exactly
    one Sarah, correct metadata, and the original player character.
 4. Verify switching between two independently disposable worlds does not transfer
@@ -56,8 +59,11 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 ## Local runtime state at handoff
 
 Game closed. Only SarahFoundation selected in the isolated profile. Temporary
-live/death/tombstone probe scripts moved out of the mod into
-`runtime/disabled-probes`. Current disposable save retains Sarah's death flag.
+live/death/tombstone/session probe scripts moved out of the mod into
+`runtime/disabled-probes`. Continue selects the original dated death-test world;
+`SarahSessionAlive` is a separate alive copy. Automated Escape input did not
+open the pause menu during this run, so same-process menu/world-switch and live
+Lua reload checks remain open. Full process restarts were used instead.
 Runtime files and backups exist locally but are excluded from Git.
 No known tracked code changes are unfinished. Check Git status before work.
 

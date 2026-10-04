@@ -18,6 +18,13 @@ The existing canonical checkout is the easiest handoff on this computer.
 - Installed game: `G:\Games\ProjectZomboid`, read-only.
 - Isolated profile: `runtime/isolated` under the canonical project.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
+- Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
+  from the pre-recovery backup and live-tested on 2026-10-04. The original dated
+  world remains dead. `latestSave.ini` currently selects the dated death case.
+- Session-test backup: `runtime/backups/sessions-before-20261004` contains the
+  original death world before these runs. Restore only with the game closed:
+  first preserve the current target, then copy the desired backup into a new
+  disposable case under the isolated Saves/Rising directory.
 - Backups: `runtime/backups/foundation-before-20261004-045750` and
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
@@ -63,7 +70,8 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    `common` directory. Enable only SarahFoundation, with SarahM0 disabled, in
    isolated profile and save mod selections. Never edit the normal selections.
 4. Temporary probe drivers are in `tools`: FoundationLiveProbe, FoundationDeathProbe
-   and FoundationTombstoneProbe. Deploy only the driver(s) required by the test
+   and FoundationTombstoneProbe; FoundationSessionProbe checks the two named
+   alive/dead worlds and marks world-specific metadata. Deploy only the driver(s) required by the test
    before game launch. The death probe kills Sarah; the tombstone probe assumes
    she was already killed and saved. They are not production mod features.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional

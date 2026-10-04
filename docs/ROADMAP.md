@@ -30,6 +30,8 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Live corrupted latest-checkpoint recovery without fresh replacement.
 - [x] Live death tombstone and no resurrection after full restart.
 - [x] Automated callback reload/session-reset checks.
+- [x] Independent alive/dead disposable worlds pass session assertions across
+  full process restarts (not same-process world switching).
 - [ ] Live menu return, continuing and switching disposable worlds.
 - [ ] Live Lua reload and cleanup/reference checks.
 - [ ] Clear visual clothing/appearance inspection.
