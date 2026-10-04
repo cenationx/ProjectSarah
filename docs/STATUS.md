@@ -3,14 +3,14 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; bounded checkpoint-write task completed. Antigravity resume prompt
+Active agent: none; bounded longer session completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `c63407f` on `main`, pushed to
+Previous published checkpoint: `1d42d78` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The accompanying checkpoint adds verified checkpoint writes and evidence below;
+The accompanying checkpoint adds repeated-session evidence below;
 use Git history and remote refs to identify its commit rather than this parent ID.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
@@ -65,20 +65,27 @@ use Git history and remote refs to identify its commit rather than this parent I
   and exit saved successfully with the cleanup-confirmation guard. Temporary
   verifier cleanup failure is pinned/blocked and covered by simulated tests.
   See `M0-write-failure-test.md`; disk-full/partial writes remain unverified.
+- Six-minute idle-room session passed 12 unload/restores and 25 verified saves.
+  All 25 save verifiers released the adapter reference and cleared world lists
+  after subsequent ticks; removed Sarah objects also cleared those lists. One
+  Sarah, current cycle contents, clothes and player instance were retained.
+  Full restart loaded cycle 12 and exit saved successfully. No production changes
+  needed. This does not prove JVM/native resource reclamation or hours of play.
+  See `M0-long-session-test.md`.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: bounded longer session and verifier cleanup
+## Next task: broader module reload and incomplete-cleanup references
 
 1. Inspect Git/runtime state; with game closed, back up and create a separate
-   disposable copy of the completed retest case plus selections.
-2. Run repeated verified saves and unload/restores over a bounded longer session.
-   Check exactly one Sarah, current contents, player preservation and temporary
-   verifier references/world-list cleanup after game ticks.
-3. Inspect resource behavior and confirm full restart; preserve any failure
-   before narrowing a fix. Avoid arbitrary stress or machine-wide changes.
-4. Broader module reload/incomplete-cleanup checks remain a subsequent gate.
+   disposable copy of the completed long-session case plus selections.
+2. Inspect module reload behavior; reload Engine/Lifecycle/main through actual
+   game Lua reload and verify controller/NPC retention, one tick and save callback.
+3. Use a bounded reversible adapter cleanup fault around a real test NPC to
+   verify its retained reference survives reload and prevents replacement.
+   Label injected adapter failures separately from native engine failures.
+4. Preserve failures before fixing any demonstrated gap; then retest/restart.
 5. Close game, disable temporary probes, update docs and commit/push. Keep AI on hold.
 
 ## Open issues
@@ -92,32 +99,34 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
   writes and process crashes remain unverified. Readback is not atomic replacement
   or a full-file checksum. Exceptional verifier cleanup has simulated coverage.
 - Bounded streamed travel recovery passed; ordinary walking/driving boundaries,
-  abrupt movement, floor transitions, combat, longer sessions, multiplayer and
+  abrupt movement, floor transitions, combat, hours-long sessions, multiplayer and
   full PZNS compatibility remain unverified.
 - Foundation is deliberately restricted to the exact isolated cache path.
 
 ## Local runtime state at handoff
 
 Game closed; native window inventory confirmed no Project Zomboid window.
-Only SarahFoundation selected. Continue selects `SarahWriteFailureRetest`, a separate
-copy of SarahTravelCase; original travel/fresh/control cases remain intact. Original control
+Only SarahFoundation selected. Continue selects `SarahLongSessionCase`, a separate
+copy of SarahWriteFailureRetest; original retest/travel/fresh/control cases remain intact. Original control
 has an empty world mod list; older alive/dead cases remain preserved.
-All temporary drivers, including travel and write failure, are outside the mod in
+All temporary drivers, including long-session, travel and write failure, are outside the mod in
 `runtime/disabled-probes`. Production Engine/Lifecycle/main deployed to isolated mod.
-Retest case saved slot b on exit; write probe marker done. All exclusive file
+Long-session case saved slot a on final exit; LongSessionDone=true, cycle=12.
+Original retest saved b; write probe marker done. All exclusive file
 handles released; local .txt release signal remains. Do not rerun the one-shot
 fault helper against this completed case/stale signal. Fresh matching guards,
 latest-slot inspection and a backed-up separate case are required.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
-Latest backup group: `runtime/backups/write-failure-before-20261004`: original
-SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
-and Final-restart. Prior travel backup retains Away-before-restart and Returned-final. Older rendering, appearance and
+Latest backup group: `runtime/backups/long-session-before-20261004`: Original-retest,
+Completed-before-restart, Final-restart and selections. Prior write-failure group
+retains Failed-baseline, Harness-failure and fixed results. Prior travel backup
+retains Away-before-restart and Returned-final. Older rendering, appearance and
 alive/dead backups remain preserved. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-Production checkpoint-readback fix and evidence are included in this checkpoint.
+Long-session probe, evidence and handoff updates are included in this checkpoint.
 No unfinished work remains for this bounded task; M0 hardening is still open.
 Check Git status and fresh native window inventory before resuming UI work.
 

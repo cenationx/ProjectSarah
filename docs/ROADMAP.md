@@ -49,7 +49,9 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Live locked existing-file failure, safe retention, retry and full restart;
   fresh-token readback rejects swallowed native write errors. Disk-full/partial
   writes and exceptional native cleanup remain limitations.
-- [ ] Bounded longer-session test with repeat saves/reloads and no duplication.
+- [x] Six-minute idle-room session: 12 unload/restores, 25 verified saves,
+  verifier/world-list cleanup after ticks and full restart without duplication.
+  Hours-long play and complete native resource reclamation remain unverified.
 - [ ] Document supported scope, remaining risks and M0 handoff decision.
 
 Gate: mark hardening complete only when the relevant checks have direct evidence

@@ -16,7 +16,7 @@ The existing canonical checkout is the easiest handoff on this computer.
 ## What exists only on this computer
 
 Latest runtime state: game closed, only SarahFoundation enabled in the isolated
-default. Continue selects `Rising/SarahWriteFailureRetest`, a separate copy of SarahTravelCase, itself a copy of the fresh
+default. Continue selects `Rising/SarahLongSessionCase`, a separate copy of SarahWriteFailureRetest and SarahTravelCase, ultimately from the fresh
 rendering case. The original rendering case was copied from the
 new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
 remains empty. Older alive/dead cases are preserved. Appearance model viewer
@@ -28,10 +28,15 @@ driver moved only the disposable player, with original god mode restored on
 return. Final travel case saved slot b; its one-shot probe marker is done.
 Locked existing-file write exposed swallowed native errors; fresh UUID readback
 now rejects stale writes. Failed unload retained Sarah/metadata, retry and full
-restart passed, final exit saved b with the cleanup-confirmation guard. Next:
-bounded longer session with repeated verified saves/unload/restores and verifier
-world-list/resource checks. All temporary drivers are disabled outside the mod.
-Latest backup group: `runtime/backups/write-failure-before-20261004`, original
+restart passed, retest exit saved b with the cleanup-confirmation guard.
+Subsequent long-session case passed 12 unload/restores, 25 verified saves and
+25 verifier/world-list cleanups over 365000 ms, then full restart loaded cycle12.
+Final exit saved a; LongSessionDone=true. No production change needed. This does
+not prove hours-long reliability or complete native resource reclamation.
+Next: broader module reload and injected incomplete-cleanup reference checks.
+All temporary drivers are disabled outside the mod. Latest backup group:
+`runtime/backups/long-session-before-20261004`, Original-retest, Completed-before-restart,
+Final-restart and selections. Prior `runtime/backups/write-failure-before-20261004`, original
 SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
 and Final-restart. All lock helpers ended/released; completed marker and local
 release signal remain. See `M0-write-failure-test.md`. Prior travel backup keeps
@@ -52,7 +57,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. Continue now selects the completed write retest above.
+  world remains dead. Continue now selects the completed long-session case above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -69,7 +74,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
 - The original dated world has Sarah dead by design; the alive copy remains
-  independent; Continue selects the completed write retest. Before restoration, close
+  independent; Continue selects the completed long-session case. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit
@@ -140,6 +145,11 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    stale signal and releases its exclusive handle within five minutes. Do not
    rerun against the completed case: make a backed-up new case, inspect latest
    slot and update both guards/signal together. Done mode only checks restart.
+   FoundationLongSessionProbe is guarded to SarahLongSessionCase: six-minute
+   one-shot 12-cycle run and completed-marker restart mode. It temporarily wraps
+   adapter.remove only to observe objects, then checks and releases references
+   after ticks. Do not redeploy to repeat cycles in the completed case; prepare
+   a separate backed-up matching case and inspect/reset only its probe metadata.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.

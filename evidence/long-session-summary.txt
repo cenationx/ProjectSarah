@@ -1,0 +1,69 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED b
+LOG  : Lua          f:240> [SarahLongSessionProbe] START durationMs=360000 cycles=12 intervalMs=30000
+LOG  : Lua          f:2040> [SarahFoundation] SAVED a
+LOG  : Lua          f:2040> [SarahFoundation] SAVED b
+LOG  : Lua          f:2040> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:2040> [SarahFoundation] RESTORED b
+LOG  : Lua          f:2040> [SarahLongSessionProbe] PASS CYCLE 1 elapsedMs=30000 verifiersCreated=2 tagged=1 contentsPreserved=true
+LOG  : Lua          f:3900> [SarahFoundation] SAVED a
+LOG  : Lua          f:3900> [SarahFoundation] SAVED b
+LOG  : Lua          f:3900> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:3900> [SarahFoundation] RESTORED b
+LOG  : Lua          f:3900> [SarahLongSessionProbe] PASS CYCLE 2 elapsedMs=60999 verifiersCreated=4 tagged=1 contentsPreserved=true
+LOG  : Lua          f:5700> [SarahFoundation] SAVED a
+LOG  : Lua          f:5700> [SarahFoundation] SAVED b
+LOG  : Lua          f:5700> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:5700> [SarahFoundation] RESTORED b
+LOG  : Lua          f:5700> [SarahLongSessionProbe] PASS CYCLE 3 elapsedMs=90999 verifiersCreated=6 tagged=1 contentsPreserved=true
+LOG  : Lua          f:7500> [SarahFoundation] SAVED a
+LOG  : Lua          f:7500> [SarahFoundation] SAVED b
+LOG  : Lua          f:7500> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:7500> [SarahFoundation] RESTORED b
+LOG  : Lua          f:7500> [SarahLongSessionProbe] PASS CYCLE 4 elapsedMs=121000 verifiersCreated=8 tagged=1 contentsPreserved=true
+LOG  : Lua          f:9300> [SarahFoundation] SAVED a
+LOG  : Lua          f:9300> [SarahFoundation] SAVED b
+LOG  : Lua          f:9300> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:9300> [SarahFoundation] RESTORED b
+LOG  : Lua          f:9300> [SarahLongSessionProbe] PASS CYCLE 5 elapsedMs=151000 verifiersCreated=10 tagged=1 contentsPreserved=true
+LOG  : Lua          f:11160> [SarahFoundation] SAVED a
+LOG  : Lua          f:11160> [SarahFoundation] SAVED b
+LOG  : Lua          f:11160> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:11160> [SarahFoundation] RESTORED b
+LOG  : Lua          f:11160> [SarahLongSessionProbe] PASS CYCLE 6 elapsedMs=181999 verifiersCreated=12 tagged=1 contentsPreserved=true
+LOG  : Lua          f:12960> [SarahFoundation] SAVED a
+LOG  : Lua          f:12960> [SarahFoundation] SAVED b
+LOG  : Lua          f:12960> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:12960> [SarahFoundation] RESTORED b
+LOG  : Lua          f:12960> [SarahLongSessionProbe] PASS CYCLE 7 elapsedMs=211999 verifiersCreated=14 tagged=1 contentsPreserved=true
+LOG  : Lua          f:14760> [SarahFoundation] SAVED a
+LOG  : Lua          f:14760> [SarahFoundation] SAVED b
+LOG  : Lua          f:14760> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:14760> [SarahFoundation] RESTORED b
+LOG  : Lua          f:14760> [SarahLongSessionProbe] PASS CYCLE 8 elapsedMs=241999 verifiersCreated=16 tagged=1 contentsPreserved=true
+LOG  : Lua          f:16560> [SarahFoundation] SAVED a
+LOG  : Lua          f:16560> [SarahFoundation] SAVED b
+LOG  : Lua          f:16560> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:16560> [SarahFoundation] RESTORED b
+LOG  : Lua          f:16560> [SarahLongSessionProbe] PASS CYCLE 9 elapsedMs=272000 verifiersCreated=18 tagged=1 contentsPreserved=true
+LOG  : Lua          f:18420> [SarahFoundation] SAVED a
+LOG  : Lua          f:18420> [SarahFoundation] SAVED b
+LOG  : Lua          f:18420> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:18420> [SarahFoundation] RESTORED b
+LOG  : Lua          f:18420> [SarahLongSessionProbe] PASS CYCLE 10 elapsedMs=303000 verifiersCreated=20 tagged=1 contentsPreserved=true
+LOG  : Lua          f:20280> [SarahFoundation] SAVED a
+LOG  : Lua          f:20280> [SarahFoundation] SAVED b
+LOG  : Lua          f:20280> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:20280> [SarahFoundation] RESTORED b
+LOG  : Lua          f:20280> [SarahLongSessionProbe] PASS CYCLE 11 elapsedMs=333999 verifiersCreated=22 tagged=1 contentsPreserved=true
+LOG  : Lua          f:22080> [SarahFoundation] SAVED a
+LOG  : Lua          f:22080> [SarahFoundation] SAVED b
+LOG  : Lua          f:22080> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:22080> [SarahFoundation] RESTORED b
+LOG  : Lua          f:22080> [SarahLongSessionProbe] PASS CYCLE 12 elapsedMs=364000 verifiersCreated=24 tagged=1 contentsPreserved=true
+LOG  : Lua          f:22080> [SarahFoundation] SAVED a
+LOG  : Lua          f:22140> [SarahLongSessionProbe] PASS COMPLETE cycles=12 verifiedSaves=25 verifiersRemoved=25 elapsedMs=365000 tagged=1 playerPreserved=true
+LOG  : Lua          f:24150> [SarahFoundation] SAVED b
