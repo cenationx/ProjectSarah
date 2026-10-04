@@ -72,3 +72,15 @@ confirmation. Hold duration/repeat and absence of a pause menu after closing
 were not explicitly reported, so those details remain pending. Rebind/conflict
 persistence, English Options labels, movement restoration and same-process
 console teardown remain open. No production code changes from this result.
+
+### Correction: native Escape failure
+
+The user's subsequent precise report supersedes "Escape works" above: first
+Escape opens the game menu; second Escape closes the console. Slice A Escape
+acceptance FAILS. Expected first Escape close without pause-menu activation.
+Underlying cause is unverified. Existing simulated test does not cover the native
+ordering/state that produced this result. Codex observed console absent afterward,
+then closed game normally: SAVED a / GameThread exited. NativeCase preserved in
+runtime/backups/console-native-20261004/After-escape-check. No teardown acceptance
+is inferred from closing the whole process. Rebind/conflict/labels/movement,
+hold-repeat and same-process world/menu cleanup remain pending.

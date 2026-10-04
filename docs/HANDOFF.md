@@ -210,3 +210,11 @@ For restoration, close game, preserve latest NativeCase into a new backup first,
 then copy saved settings to their original isolated paths. Do not erase cases.
 Codex Windows Computer Use captures this game and clicks successfully; F9 and
 Escape injection had no observed effect. Physical key checks remain user-assisted.
+
+Latest handoff: native Escape gate FAILED by user's precise report (first Escape
+opens pause menu, second closes Sarah Console). Codex released checkout for
+user-started Claude coding work, with game CLOSED, SAVED a and no native window.
+Final NativeCase backup: console-native-20261004/After-escape-check under runtime/backups.
+Claude should fix/automatically test input handling, without launching the game,
+then commit/push and release checkout to Codex for native retesting. No gate pass
+or stop/walk/AI authorization. See STATUS and updated CLAUDE-RESUME first.

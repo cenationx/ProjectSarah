@@ -1,3 +1,25 @@
+# Immediate coding handoff: Escape failure (2026-10-04)
+
+This task supersedes the older resume prompt below. Codex has released the
+checkout. The user will start Claude; do not assume a background agent exists.
+Read AGENTS.md, CLAUDE.md, STATUS, ROADMAP, HANDOFF and M1-console-test first.
+Check Git and preserve other work. Game is closed; saves backed up.
+
+Fix M1 slice A Escape handling: user reports first Escape opens the pause menu
+while Sarah Console is open; second Escape closes the console. Expected first
+Escape closes the focused console without opening the game menu. Inspect actual
+Build 42.21.0 input ordering/focus/paused callbacks and use a narrow supported fix.
+Do not assume root cause; existing simulated Escape test passes but misses this
+native result. Add meaningful regression coverage for the actual ordering found;
+run all five suites. Do coding, read-only API inspection and automated tests only.
+Do not launch/control the game or modify isolated saves, settings or deployed mod.
+Keep external AI on hold and do not add stop/walk until slice A accepted.
+Update shared notes, commit/push checkpoint, verify remote and release checkout
+for Codex to deploy into a backed-up isolated case and retest native behavior.
+Label the fix native-unverified until Codex/user confirms it. Report changed files,
+tests, checkpoint and the exact native retest required.
+
+---
 # Claude resume guide: 2026-10-04
 
 Open the existing Antigravity Project Sarah project, local execution, canonical
@@ -69,3 +91,4 @@ started through Claude to test approval behavior.
 Broad capability does not change Sarah's work scope: keep project outputs under
 the canonical checkout, preserve normal saves and installed game files, and do
 not start the external AI layer. App permissions do not travel with this repo.
+

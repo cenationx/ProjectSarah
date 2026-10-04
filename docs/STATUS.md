@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex took over on 2026-10-04 after the user confirmed Claude idle.
+Ownership: Codex has released the checkout for a user-started Claude coding session. No agent should edit until that handoff starts.
 Do not have both agents edit this checkout concurrently.
 
 Claude session 2026-10-04 17:10 (verification only, no code changes):
@@ -200,3 +200,23 @@ User follow-up: physical F9 opens the console and Escape works. User-operated
 open/close confirmed; no held-key duration or pause-menu release detail reported.
 Hold-repeat, rebind/conflicts, English Options labels, movement restoration and
 same-process teardown remain pending. Codex retains checkout ownership.
+
+## Latest result and coding handoff: Escape gate FAILED
+
+The user's more precise report supersedes the earlier broad "Escape works"
+confirmation: with console open, first Escape opens the game menu, second Escape
+closes the console. Expected: first Escape closes console with no pause menu.
+Physical F9 opens; hold-repeat still not independently established. This is
+user-operated native failure evidence, not an automated reproduction. No root
+cause confirmed; inspect native input ordering, focus and paused tick behavior.
+All other remaining slice A gates stay open; do not proceed to stop/walk or AI.
+
+Game now CLOSED via normal window Close; native window inventory confirms absent.
+Log records SAVED a and GameThread exited. New disposable case preserved at
+runtime/backups/console-native-20261004/After-escape-check; original console case
+and pre-test isolated settings remain in the same backup group. Raw log retained
+as runtime/console-native-escape-20261004.txt. Continue selects SarahConsoleNativeCase.
+No production edits or temporary probe deployments. 68 automated checks passed
+before the manual report; existing simulated Escape pass misses this native issue.
+Codex stops editing after this documentation checkpoint. Next owner: Claude,
+started by the user, coding/automated tests only. Read docs/CLAUDE-RESUME.md.
