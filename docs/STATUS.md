@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; Escape fix awaiting native retest; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex owns coding and native testing after Claude released checkpoint 88fbafc.
+Ownership: Codex released the clean checkout for a user-started Gemini documentation task; native testing resumes with Codex afterward.
 Do not have two agents edit this checkout concurrently.
 
 Escape fix (Claude, 2026-10-04; code + API inspection + automated tests only; game NOT launched):
@@ -291,3 +291,4 @@ Both observation probes disabled; fixed production Console.lua remains deployed.
 Codex owns checkout. Next: finish hold-repeat, rebind/conflicts, English Options
 labels, restored movement and same-process console teardown with physical-key
 assistance as needed. Escape first-close/later-menu behavior already passed.
+

@@ -244,3 +244,16 @@ in docs/desktop-input-diagnostic.md and evidence/input-comparison-summary.txt.
 No tool repair established; use physical special-key/hold checks where required.
 Codex owns coding/testing; do not start Claude. Remaining slice A gate unchanged
 except successful physical Escape acceptance recorded in M1-console-test.md.
+
+## Gemini bounded documentation handoff (2026-10-04)
+
+Codex released this clean checkout for a user-started Gemini task. Scope: reconcile
+current summaries/ownership and prepare one concise remaining slice A native
+checklist from existing evidence. Allowed edits: docs/STATUS.md, docs/HANDOFF.md,
+docs/CLAUDE-RESUME.md, docs/ROADMAP.md, docs/M1-console-test.md and a new
+ docs/M1-native-checklist.md. Preserve historical evidence and all limitations.
+No source/tests/runtime/save/settings changes, no game launch or desktop control.
+Escape retest PASS is already documented; the top STATUS summary is stale.
+71 automated checks last passed in Codex. All other native gates remain pending.
+Gemini commits/pushes documentation and releases ownership to Codex. User forwards
+prompt/results; no external agent was started by Codex. AI remains on hold.
