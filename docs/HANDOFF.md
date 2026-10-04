@@ -15,6 +15,19 @@ The existing canonical checkout is the easiest handoff on this computer.
 
 ## What exists only on this computer
 
+Current override (appearance/control task IN PROGRESS): both mods disabled;
+Continue selects the fresh mod-free `Rising/2026-10-04_06-16-14` control. Game
+PID 41052 was left minimized at its main menu after UI input/activation was
+rejected by the computer-use helper. Refresh window/process state before work.
+The first control run reproduced the duplicate RoomDef error without any Sarah
+log entries. Reload and appearance checks are pending; see STATUS and
+`M0-appearance-control-test.md`. Prepared appearance probe is not deployed.
+Backup `runtime/backups/appearance-before-20261004` preserves both older worlds,
+original default/key/latest-save files, and `FreshControl-before-reload`.
+Restore only game-closed after preserving the current case into a new directory.
+After completing this task, restore the isolated default selection from that
+backup and record which world Continue selects. Never alter normal selections.
+
 - Installed game: `G:\Games\ProjectZomboid`, read-only.
 - Isolated profile: `runtime/isolated` under the canonical project.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.

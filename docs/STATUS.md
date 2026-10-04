@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; menu/world transition checkpoint completed. Antigravity resume prompt
+Active agent: Codex, appearance and fresh-world comparison. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
@@ -66,9 +66,12 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 
 ## Local runtime state at handoff
 
-Game closed. Only SarahFoundation selected in the isolated profile. Temporary
-live/death/tombstone/session/reload/menu probe scripts moved out of the mod into
-`runtime/disabled-probes`. Continue selects the alive `SarahSessionAlive` world;
+Appearance/control work IN PROGRESS. Isolated game PID 41052 is at the main menu
+and minimized; UI input stopped after the helper reported user input and refused
+window activation. Both mods are currently disabled. Continue selects the new
+mod-free `2026-10-04_06-16-14` control. Temporary live/death/tombstone/session/reload/menu
+drivers remain outside the mod in `runtime/disabled-probes`; appearance driver
+is only prepared in tools. Existing alive/dead cases remain preserved.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
@@ -76,11 +79,27 @@ Latest live-test backup: `runtime/backups/menu-before-20261004`, both worlds
 plus isolated key file and latest-save selection. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-No known tracked code changes are unfinished. Check Git status before work.
+Pending new probe/report are recorded below; no production code change. Check
+Git status and fresh native window inventory before resuming UI work.
 
 ## Interrupted-session note template
 
 Replace this section when needed; remove stale entries after completing them.
+
+IN PROGRESS: appearance/fresh control, 2026-10-04. Native window inventory
+confirmed game closed. Both existing Rising worlds and isolated default mod,
+latest-save and key files backed up to `runtime/backups/appearance-before-20261004`.
+Restore only game-closed, after preserving the current case; copy into a new
+disposable directory rather than overwriting either independent case. Autosaves
+affect only the newly created isolated world. Mod-free fresh control created as
+`Rising/2026-10-04_06-16-14`: duplicate RoomDef error reproduced without Sarah;
+first run had zero invalid-room errors and zero Sarah log entries. Fresh case
+backed up as `FreshControl-before-reload`. Relaunched control PID 41052, currently
+at main menu/minimized; user input interrupted the UI check. A question about
+bringing the game forward is pending. Prepared `FoundationAppearanceProbe.lua`
+(not yet deployed/live-tested) and `M0-appearance-control-test.md`. Next: Continue
+mod-free case, inspect saved-map errors, close game, preserve control, then use
+a separate copy with SarahFoundation for appearance. Production code unchanged.
 
 - Work item / owner / date:
 - State: IN PROGRESS / BLOCKED / VERIFIED
