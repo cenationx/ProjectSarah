@@ -1,35 +1,28 @@
 # Superseding workflow note (2026-10-04)
 
-The Escape coding task below was completed at 88fbafc and released to Codex.
-Do not rerun it as a new handoff. The user now prefers Codex for sustained coding
-and native testing, with Gemini assistance when useful. Claude is only used on
-explicit request. Read STATUS/HANDOFF for the current owner and task. Escape fix
-still needs native acceptance; external in-game AI remains on hold.
+The Escape coding fix was completed at `88fbafc`, deployed to the isolated mod,
+and verified natively by the user as PASS (first Escape closes console without pause menu;
+subsequent Escape opens normal pause menu). Corroborated by probe samples (`guard=true`,
+swallow armed and expired).
+
+The user now uses Codex for sustained coding and native testing, with Gemini assisting
+on bounded tasks. Claude is reserved only for explicit user requests. Read `docs/STATUS.md`,
+`docs/HANDOFF.md`, and `docs/M1-native-checklist.md` for current owner and remaining acceptance gates.
+External in-game AI remains on hold.
 
 ---
-# Immediate coding handoff: Escape failure (2026-10-04)
+# Historical: Escape failure coding handoff (2026-10-04, completed)
 
-This task supersedes the older resume prompt below. Codex has released the
-checkout. The user will start Claude; do not assume a background agent exists.
-Read AGENTS.md, CLAUDE.md, STATUS, ROADMAP, HANDOFF and M1-console-test first.
-Check Git and preserve other work. Game is closed; saves backed up.
+*Status: COMPLETED at `88fbafc` and natively verified.*
 
-Fix M1 slice A Escape handling: user reports first Escape opens the pause menu
-while Sarah Console is open; second Escape closes the console. Expected first
-Escape closes the focused console without opening the game menu. Inspect actual
-Build 42.21.0 input ordering/focus/paused callbacks and use a narrow supported fix.
-Do not assume root cause; existing simulated Escape test passes but misses this
-native result. Add meaningful regression coverage for the actual ordering found;
-run all five suites. Do coding, read-only API inspection and automated tests only.
-Do not launch/control the game or modify isolated saves, settings or deployed mod.
-Keep external AI on hold and do not add stop/walk until slice A accepted.
-Update shared notes, commit/push checkpoint, verify remote and release checkout
-for Codex to deploy into a backed-up isolated case and retest native behavior.
-Label the fix native-unverified until Codex/user confirms it. Report changed files,
-tests, checkpoint and the exact native retest required.
+This task requested a narrow fix for the first-Escape pause menu bug:
+Inspect actual Build 42.21.0 input ordering (`ToggleEscapeMenu` on `OnKeyPressed`).
+`Console.lua` was modified to arm a one-shot swallow on Escape close and wrap
+`ToggleEscapeMenu` with `SarahConsole.guard` to consume that single release.
+All 71 automated checks passed (3 new console cases). Natively verified by user.
 
 ---
-# Claude resume guide: 2026-10-04
+# Historical: Claude initial resume guide (2026-10-04)
 
 Open the existing Antigravity Project Sarah project, local execution, canonical
 folder `G:\Codex\Project Sarah`. Claude Sonnet 5.5 Medium was visible in the model
@@ -55,12 +48,11 @@ within this scope and ask only for missing information or actions that need it.
 ## Immediate local state
 
 - Game closed at the previous checkpoint; recheck native window/process state.
-- Continue selects isolated `Rising/SarahConsoleCase`, only SarahFoundation enabled.
-- Final exit saved b; one Sarah restored from a before the final checks.
+- Continue selects isolated `Rising/SarahConsoleNativeCase`, only SarahFoundation enabled.
+- Final exit saved a; one Sarah restored before checks.
 - Temporary console probe disabled under runtime/disabled-probes; production
   console/modules/English UI.json deployed to the isolated mod.
-- Latest backup group: runtime/backups/console-before-20261004, including original
-  module-cleanup case/selections/keys, First-live-before-repair and Final-console.
+- Latest backup group: runtime/backups/input-comparison-20261004/After-comparison.
 - GitHub: https://github.com/cenationx/ProjectSarah, branch main. Git author already
   configured. Authentication in this separate app still needs a harmless check.
 - Saves/logs/backups/dependencies are local and ignored, not included in GitHub.
@@ -80,7 +72,7 @@ $sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\depen
 & $sarahPython tools/test_console.py
 ```
 
-Expected totals: 27 + 13 + 8 + 12 + 8 = 68. These execute actual Lua with simulated
+Expected totals: 27 + 13 + 8 + 12 + 11 = 71. These execute actual Lua with simulated
 engine/UI fixtures. They do not establish native game compatibility or input.
 For backed-up live tests, use tools/launch-isolated.ps1 -NoDebug and the exact
 isolated profile in HANDOFF. Bulk Unicode typing and automated function keys were
@@ -100,5 +92,3 @@ started through Claude to test approval behavior.
 Broad capability does not change Sarah's work scope: keep project outputs under
 the canonical checkout, preserve normal saves and installed game files, and do
 not start the external AI layer. App permissions do not travel with this repo.
-
-

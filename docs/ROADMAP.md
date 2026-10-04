@@ -67,8 +67,9 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
 - [x] Plan the user's key-toggle console and staged commands in `M1-console-plan.md`.
 - [x] Slice A implementation: shared parser/observations and help/status/inventory panel; read-only
   commands must not implicitly spawn, restore, save or repair Sarah.
-- [x] Twelve command and eight simulated UI/key/session checks; live menu open,
-  typed commands, Enter/Run and mouse close. See `M1-console-test.md` for limits.
+- [x] Twelve command and eleven simulated console checks (71 automated total); live menu open,
+  typed commands, Enter/Run, mouse close, and physical Escape fix verified (first Escape closes
+  console without menu; subsequent Escape opens menu). See `M1-console-test.md`.
 - [x] User-operated physical F9 open/status/close, corroborated by probe samples;
   full restart with one Sarah/local player and final native scrolling output.
 - [ ] Configurable unused binding: provisional F9, conflict checks and actual

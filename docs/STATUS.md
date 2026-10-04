@@ -1,294 +1,91 @@
 # Current project state
 
 Updated: 2026-10-04 (Europe/Helsinki).
-State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; Escape fix awaiting native retest; broader keyboard acceptance open.
+State: M0 broader hardening open. M1 read-only console slice A in progress. Physical F9 open/close, read-only commands (help, status, inventory), and physical Escape (first-close console, second-open menu) PASSED. Remaining native slice A acceptance OPEN (see `docs/M1-native-checklist.md`).
 External AI: ON HOLD by explicit user instruction.
-Ownership: Codex released the clean checkout for a user-started Gemini documentation task; native testing resumes with Codex afterward.
+Ownership: Released to Codex for native testing. Gemini completed documentation cleanup and checklist preparation; Codex resumes native execution.
 Do not have two agents edit this checkout concurrently.
 
-Escape fix (Claude, 2026-10-04; code + API inspection + automated tests only; game NOT launched):
-- Bug (user-reported, native): with Sarah Console open, first Escape opened the pause
-  menu; second Escape closed the console. Expected: first Escape closes the console only.
-- Inspection of the local decompiled engine and installed game Lua: the pause menu is the
-  global `ToggleEscapeMenu` (MainScreen.lua), registered on `OnKeyPressed`. The engine
-  raises `OnKeyPressed` on key RELEASE, and skips it only if `GameKeyboard.eatKeyPress`
-  marked the key, a UI element consumes the release, or native text entry is active.
-  The previous fix relied only on `eatKeyPress` from `OnTick`. The exact native ordering
-  that defeated it is UNVERIFIED (no probe ran in Codex's failed run, so there is no log).
-- Change (`Console.lua`): an Escape edge with the panel open still eats the key and closes,
-  and now also arms a one-shot `swallow`. `ToggleEscapeMenu` is replaced on `OnKeyPressed`
-  by `SarahConsole.guard`, which drops exactly that one Escape release and otherwise calls
-  the original. The swallow expires 5 ticks after Escape is up. Reload restores the vanilla
-  handler before re-wrapping; if the handler is not found nothing is wrapped.
-- Automated: all five suites pass, 71 total = 27 foundation + 13 adapter + 8 checkpoint
-  + 12 command + 11 console (3 new simulated cases: swallow once then a real Escape works,
-  expiry/pass-through, reload without stacking/missing handler). Simulation only.
-- NATIVE-UNVERIFIED. The fixed file is in `foundation/` and is NOT yet deployed to
-  `runtime/isolated/mods` (deployment left to Codex with its game-closed backup routine).
-- Next (Codex, native): back up game-closed, deploy production source, retest physical
-  Escape; also record whether `ToggleEscapeMenu` was wrapped (`SarahConsole.guard~=nil`).
-  If it still fails, add a temporary probe logging raw ESC state, `OnKeyPressed` calls and
-  tick order. Still pending: hold-repeat, rebind/conflict persistence, English Options
-  labels, movement restoration, same-process teardown. Stop/walk and AI stay on hold.
-- Git helper: `git` is not on PATH in Antigravity; use
-  `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd`.
-- Antigravity has no desktop-control/screenshot tool (`CopyFromScreen` fails), so native
-  checks need Codex or the user.
+## Current local runtime state
 
-## Last verified work
+- Game is CLOSED (SAVED a, GameThread exited, no native window).
+- Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
+- Production mod deployed at `runtime/isolated/mods/SarahFoundation/` with verified `Console.lua` (Escape pause-menu guard included) and English `UI.json`.
+- All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
+- Backups: Latest backup is `runtime/backups/input-comparison-20261004/After-comparison`. Earlier baseline, appearance, travel, module-cleanup, and native escape backups remain intact.
+- Automated tests: 71 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 12 command + 11 console).
+- Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and drops special keys (F9/Escape); native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
-Latest verified implementation checkpoint: `8f4f882` on `main`, pushed to
-https://github.com/cenationx/ProjectSarah.
-This implements the read-only console and records its test boundaries. The next
-documentation checkpoint prepares Claude's handoff; identify it using Git history.
+## Summary of verified outcomes
 
-- Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
-- Independent SarahM0 probe demonstrated NPC spawn, walking, inventory transfer,
-  death/removal and full process restart restoration.
-- SarahFoundation demonstrated spawn, duplicate prevention, three equipped
-  clothing items, two-slot saves, unload/restore, full restart restoration,
-  recovery from a deliberately truncated latest checkpoint, and saved death
-  preventing resurrection after restart.
-- 71 automated checks pass (after the Escape fix): 27 foundation, 13 engine adapter, 8 checkpoint\n  readback, 12 read-only command and 11 simulated console UI/key/session cases.
-- Latest fix promotes the good fallback slot before subsequent saves and refuses
-  adoption of partial constructions. Session callbacks reset controller state;
-  their behavior is covered by simulated events and the live transitions below.
-- Two independent disposable worlds passed the new live session probe across
-  full process restarts: alive case restored exactly one Sarah and saved;
-  death case retained its tombstone and zero live Sarahs. Player instance was
-  preserved in both. See `M0-session-test.md` for the narrower test boundary.
-- Live main-script reload passed twice: same controller/NPC, one tagged Sarah,
-  one current tick per frame, one real OnSave adapter call and player preserved.
-  Earlier counter-based probe FAILs were false positives caused by B42 forwarding
-  old state tables. No production code change was needed. See `M0-reload-test.md`.
-- Live menu return, same-world Continue and alive/dead/alive switching passed
-  within one unchanged Java process. Each menu reset left controller nil;
-  alive cases had exactly one Sarah, death case zero, and player preserved.
-  Temporary mouse entrypoint used the real menu handler; physical Escape input
-  remains unverified. See `M0-menu-transition-test.md` and its sanitized evidence.
-- A newly generated no-mod Rising control reproduced duplicate RoomDef metadata
-  during generation and the same four invalid room IDs on full-restart reload.
-  Sarah is not required to trigger these errors on this installation; root cause
-  remains unknown. Both no-mod and foundation-enabled copies reached gameplay.
-- Actual Sarah model viewer visually confirmed T-shirt, trousers and trainers
-  before/after full restart, one NPC and player preserved. World opacity=1,
-  target opacity=1 and culling=false at ticks 600/1800, but ordinary world-scene
-  visibility was not confirmed. See `M0-appearance-control-test.md`.
-- Subsequent world-render diagnosis found the B42 FBO player-pass omission.
-  Foundation now draws its actual visible same-floor NPC through the world
-  event. Ordinary scene screenshots passed for restored and newly spawned
-  Sarah; local player preserved in probe samples and exactly one tagged NPC.
-  Fresh spawn's hidden square produced zero draws; walking into view showed her.
-  See `M0-world-render-test.md` for the tested boundaries and recovery steps.
-- Preventive travel suspension now saves/unloads beyond 32 tiles or another
-  floor; return within 16 tiles on the saved floor restores at the saved square
-  when loaded/free. Controlled player travel passed real square unloading,
-  full-process away restart and return: one Sarah, persisted token, clothes and
-  inventory, preserved player, save and ordinary visibility. NPC was not
-  teleported. Manual unload remains dormant in-session; failures retain state
-  and block unattended retries. See `M0-travel-test.md` for remaining limits.
-- Real locked existing-file write exposed swallowed native I/O errors and false
-  save success. Adapter now reads a fresh UUID back before accepting a checkpoint.
-  Fixed fault/retry retained the NPC and metadata on failure, unchanged old-file
-  hash, and new contents on successful retry. Full restart restored one Sarah
-  and exit saved successfully with the cleanup-confirmation guard. Temporary
-  verifier cleanup failure is pinned/blocked and covered by simulated tests.
-  See `M0-write-failure-test.md`; disk-full/partial writes remain unverified.
-- Six-minute idle-room session passed 12 unload/restores and 25 verified saves.
-  All 25 save verifiers released the adapter reference and cleared world lists
-  after subsequent ticks; removed Sarah objects also cleared those lists. One
-  Sarah, current cycle contents, clothes and player instance were retained.
-  Full restart loaded cycle 12 and exit saved successfully. No production changes
-  needed. This does not prove JVM/native resource reclamation or hours of play.
-  See `M0-long-session-test.md`.
-- Engine/Lifecycle/main reload twice passed retained controller/NPC, one tick
-  and real OnSave callback. A deliberate Lua interruption after native Sarah
-  removeFromWorld retained the unfinished real-object reference across another
-  module reload and later ticks. Replacement and nonresident writes were refused;
-  full restart restored the last good checkpoint with current contents/one Sarah,
-  then saved successfully. No production changes. This tests unchanged-source
-  reload and an injected fault, not hot upgrades or spontaneous native failures.
-  See `M0-module-cleanup-test.md`.
+- **Automated policy checks**: 71 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 12 read-only command parser/dispatch, 11 simulated console UI/key/session cases).
+- **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
+- **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
+- **M1 slice A read-only commands**: Native execution of `help`, `status`, and `inventory` commands passed; local player and NPC preserved; scrolling list box and native font metrics verified.
+- **M1 slice A physical F9**: Physical F9 open, command entry, and F9 close verified natively by user; corroborated by probe samples.
+- **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
+- **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
-Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
-`M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
+## Next task: finish M1 slice A native acceptance
 
-## Next task: finish M1 slice A keyboard/UI acceptance
+Follow the ordered checklist in `docs/M1-native-checklist.md`:
+1. Hold-repeat behavior (F9).
+2. Restored movement input after closing.
+3. English Options key-binding labels.
+4. Key rebinding and persistence across restart.
+5. Conflict refusal and context menu fallback.
+6. Same-process menu return and world cleanup.
 
-Commands/Observations/Console and English binding labels are implemented.
-Twelve read-only command and eight simulated UI/key/session checks passed;
-all 48 existing foundation checks were rerun successfully (68 total).
-Live menu open, typed status/help/inventory, Enter/Run and mouse close passed.
-See `M1-console-test.md` for exact evidence and pending checks.
+Only after slice A acceptance is complete: proceed to Slice B (stop/cancellation). External AI and stop/walk remain on hold.
 
-Physical F9 open/close check completed by user and corroborated by probe samples.
-Final inventory/font/scroll output and full restart passed; one Sarah/player preserved.
+## Open issues and known boundaries
 
-1. Finish native hold repeat, Escape, rebind/conflicts and gameplay
-   input restoration. Automated function-key delivery is unreliable even in the
-   vanilla rebind dialog; do not substitute simulation or menu use for keyboard pass.
-2. Verify English key labels in Options and same-process menu/world cleanup.
-3. Back up a new disposable case game-closed before continuing live checks.
-4. Only after slice A acceptance, add stop/cancellation, then bounded walk here.
-   No external AI, arbitrary Lua or bypass of lifecycle guards.
-
-Broad M0 hardening/release acceptance remains open; no limitations accepted on
-user's behalf. Controlled model-free development stays inside the tested envelope.
-
-## Open issues
-
-- Ordinary same-floor world rendering passed in the tested room. Broad cutaway,
-  multi-floor and cursor-state correctness remain unverified; adapter scope is
-  conservative and deliberately skips unseen/other-floor NPCs.
-- Duplicate room/invalid map metadata errors reproduce with all mods disabled;
-  origin not diagnosed. Do not call the runs entirely error-free.
-- Locked existing-file failure/retry passed live; disk-full, arbitrary partial
-  writes and process crashes remain unverified. Readback is not atomic replacement
-  or a full-file checksum. Exceptional verifier cleanup has simulated coverage.
-- Bounded streamed travel recovery passed; ordinary walking/driving boundaries,
-  abrupt movement, floor transitions, combat, hours-long sessions, multiplayer and
-  full PZNS compatibility remain unverified.
+- Ordinary same-floor world rendering passed in the tested room. Broad cutaway, multi-floor and cursor-state correctness remain unverified; adapter scope is conservative and deliberately skips unseen/other-floor NPCs.
+- Duplicate room/invalid map metadata errors reproduce with all mods disabled; origin not diagnosed. Do not call the runs entirely error-free.
+- Locked existing-file failure/retry passed live; disk-full, arbitrary partial writes and process crashes remain unverified. Readback is not atomic replacement or a full-file checksum. Exceptional verifier cleanup has simulated coverage.
+- Bounded streamed travel recovery passed; ordinary walking/driving boundaries, abrupt movement, floor transitions, combat, hours-long sessions, multiplayer and full PZNS compatibility remain unverified.
 - Foundation is deliberately restricted to the exact isolated cache path.
-- Reload tests used unchanged source; schema/function hot upgrades and spontaneous
-  or silent native cleanup failures remain unverified. Interrupted cleanup needs
-  full restart in the tested recovery; no automatic in-session repair is promised.
+- Reload tests used unchanged source; schema/function hot upgrades and spontaneous or silent native cleanup failures remain unverified. Interrupted cleanup needs full restart in the tested recovery; no automatic in-session repair is promised.
+- Automated desktop keyboard input: Computer Use `press_key` lacks key-down/key-up and hold duration controls, failing to deliver non-character keys (F-keys, Escape) to PZ. Native special-key acceptance requires physical user assistance.
 
-## Local runtime state at handoff
+---
 
-Game closed; native window inventory confirmed no Project Zomboid window.
-Continue selects SarahConsoleCase, only SarahFoundation enabled; no AI.
-Final production source/English UI.json deployed. ZZSarahConsoleProbe disabled
-outside the mod; no temporary driver remains active. Final case saved b on exit,
-one Sarah restored from a before the user's F9 check and final native output check.
-Physical F9 open/close completed; native hold/rebind/Escape/menu checks remain open.
+## Historical session logs
 
-Game-closed original SarahModuleCleanupCase, latestSave/default/key files backed
-up to runtime/backups/console-before-20261004. First-live-before-repair preserves
-initial test state; Final-console preserves final game-closed state. Raw logs
-are runtime/console-first-console.txt and runtime/console-final-console.txt.
-Older backup groups/cases remain preserved; do not rerun completed fault probes.
-Normal profile console remains 18675 bytes, last modified 2026-10-04 04:03:05.
-Installed game files read-only. Preserve current case before any restoration,
-always game-closed, into a new disposable directory. Runtime excluded from Git.
+### M0 Foundation and hardening evidence
+- Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
+- Independent SarahM0 probe demonstrated NPC spawn, walking, inventory transfer, death/removal and full process restart restoration.
+- SarahFoundation demonstrated spawn, duplicate prevention, three equipped clothing items, two-slot saves, unload/restore, full restart restoration, recovery from a deliberately truncated latest checkpoint, and saved death preventing resurrection after restart.
+- Live session probe, main-script reload, menu transitions, appearance viewer, world render FBO hook, travel suspension, locked write retry, 6-minute idle session, and module cleanup fault tests completed. See `M0-session-test.md`, `M0-reload-test.md`, `M0-menu-transition-test.md`, `M0-appearance-control-test.md`, `M0-world-render-test.md`, `M0-travel-test.md`, `M0-write-failure-test.md`, `M0-long-session-test.md`, `M0-module-cleanup-test.md`, and `M0-supported-scope.md`.
 
-## Interrupted-session note template
+### M1 Slice A initial console and physical F9 check
+- Commands/Observations/Console and English binding labels implemented. Read-only commands (help, status, inventory) and simulated UI checks passed.
+- Live menu open, typed commands, Enter/Run, and mouse close passed in isolated profile.
+- Physical F9 open/close check completed by user and corroborated by probe samples. Final inventory/font/scroll output and full restart passed; one Sarah/player preserved.
 
-Replace this section when needed; remove stale entries after completing them.
+### Native Escape failure (Codex session, 2026-10-04)
+- User reported native Escape failure: with console open, first Escape opened the game pause menu; second Escape closed the console. Expected: first Escape closes console without pause menu.
+- Slice A Escape acceptance marked FAIL. Game closed normally (SAVED a). NativeCase preserved at `runtime/backups/console-native-20261004/After-escape-check`. Raw log: `runtime/console-native-escape-20261004.txt`.
 
-- Work item / owner / date:
-- State: IN PROGRESS / BLOCKED / VERIFIED
-- Modified files and local-only outputs:
-- Checks passed, failed or not yet run:
-- Running processes and safe stop method:
-- Backup and restoration plan:
-- Exact next action:
-- Latest local commit / remote pushed or pending:
+### Claude Escape fix coding session (2026-10-04)
+- Coding, engine inspection, and automated tests only (game not launched).
+- Inspection: Pause menu is `ToggleEscapeMenu` on `OnKeyPressed` (raised on key release).
+- Change (`Console.lua`): Armed a one-shot swallow on Escape close and wrapped `ToggleEscapeMenu` with `SarahConsole.guard` to consume that single Escape release while preserving subsequent Escapes and reload safety.
+- Automated tests increased to 71 (3 new console cases: swallow once, expiry/pass-through, reload safety). Released at `88fbafc` as native-unverified.
 
-## Codex native acceptance session (IN PROGRESS)
+### Escape fix native retest PASS (Codex / user, 2026-10-04)
+- Deployed production `Console.lua` and observation-only `ZZSarahEscapeProbe`.
+- User retested physically: first Escape closed Sarah Console with no pause menu; subsequent Escape opened normal pause menu. Probe corroborated panel close, armed/expired swallow, and `guard=true`. Native Escape check PASSED.
+- Raw log: `runtime/escape-fix-pass-console.txt`; summary: `evidence/escape-fix-native-summary.txt`.
 
-User confirmed Claude idle; Codex owns this checkout for live checks.
-Git clean at 0534e61 before takeover. Windows Computer Use initialized; no game window.
-Game-closed backup: runtime/backups/console-native-20261004 (SarahConsoleCase,
-latestSave/options/key settings). New disposable copy: SarahConsoleNativeCase.
-Restore only game-closed after preserving this new case: copy backed-up settings
-back to their original isolated paths; original SarahConsoleCase stays preserved.
-Next: launch isolated profile; check native input/Options/teardown. Hold duration
-is not exposed by the supported desktop API; no hold-repeat pass claimed.
+### Desktop key-delivery diagnostic (Codex, 2026-10-04)
+- Investigated automated input delivery: `press_key('i')` toggled inventory, but automated `F9` and `Escape` produced no response.
+- Raw-key probe (`FoundationInputProbe.lua`) scanning codes 1..255 confirmed physical held `I` registered transitions across 73–94 ticks, while automated key sequences produced no sampled transitions.
+- Supported Computer Use API has no hold duration or key-down/key-up controls. Physical key assistance retained for native acceptance. See `docs/desktop-input-diagnostic.md`.
+- Game closed normally (SAVED a). Case preserved at `runtime/backups/input-comparison-20261004/After-comparison`. Probes disabled.
 
-
-Session progress: isolated Java process 40024 launched outside sandbox; Continue
-entered SarahConsoleNativeCase. Mouse/screenshot capture work. Injected F9 did
-not open console; injected Escape did not open vanilla pause menu. This is a
-key-delivery limitation, not evidence of a Sarah defect. User-assisted hold/Escape
-check requested; result pending. No production code changed. All 68 automated
-checks rerun successfully. Live log reports ACTIVE/RESTORED b, worn=3 and local
-player preserved. Game running while awaiting physical checks; no teardown pass.
-
-User follow-up: physical F9 opens the console and Escape works. User-operated
-open/close confirmed; no held-key duration or pause-menu release detail reported.
-Hold-repeat, rebind/conflicts, English Options labels, movement restoration and
-same-process teardown remain pending. Codex retains checkout ownership.
-
-## Latest result and coding handoff: Escape gate FAILED
-
-The user's more precise report supersedes the earlier broad "Escape works"
-confirmation: with console open, first Escape opens the game menu, second Escape
-closes the console. Expected: first Escape closes console with no pause menu.
-Physical F9 opens; hold-repeat still not independently established. This is
-user-operated native failure evidence, not an automated reproduction. No root
-cause confirmed; inspect native input ordering, focus and paused tick behavior.
-All other remaining slice A gates stay open; do not proceed to stop/walk or AI.
-
-Game now CLOSED via normal window Close; native window inventory confirms absent.
-Log records SAVED a and GameThread exited. New disposable case preserved at
-runtime/backups/console-native-20261004/After-escape-check; original console case
-and pre-test isolated settings remain in the same backup group. Raw log retained
-as runtime/console-native-escape-20261004.txt. Continue selects SarahConsoleNativeCase.
-No production edits or temporary probe deployments. 68 automated checks passed
-before the manual report; existing simulated Escape pass misses this native issue.
-Codex stops editing after this documentation checkpoint. Next owner: Claude,
-started by the user, coding/automated tests only. Read docs/CLAUDE-RESUME.md.
-
-## Ongoing agent workflow (user decision, 2026-10-04)
-
-Codex handles sustained coding, automated checks and native game testing. Gemini
-may assist with bounded coding/review work when the user starts it, with explicit
-checkout ownership or a separate authorized workspace. Claude is no longer the
-routine coding handoff target because of the user's weekly usage budget; only
-use Claude when explicitly requested. The user forwards any external-agent prompt.
-Codex has read Claude's completed Escape fix report and checked a clean checkout
-at 88fbafc. The reported 71 passing checks are Claude's verification; Codex has not
-rerun them yet. Fix remains native-unverified and not deployed. Next: review fix,
-back up game-closed, deploy and retest in isolated NativeCase. AI remains on hold.
-
-## Escape fix native retest: IN PROGRESS (Codex)
-
-All 71 automated checks rerun successfully. Native window inventory confirms game
-closed before deployment. Backup: runtime/backups/escape-fix-before-20261004,
-NativeCase/settings and prior deployed Console.lua. Deployed 88fbafc Console.lua
-plus observation-only ZZSarahEscapeProbe, scoped to SarahConsoleNativeCase.
-Probe logs raw Escape/panel/swallow/guard/menu changes and release callbacks; it
-injects no keys or commands. Restore only game-closed after preserving current
-case; original backups stay intact. Next: isolated launch and physical Escape.
-
-Retest runtime: game running in SarahConsoleNativeCase, restored a; production
-fix active and probe reports guard=true. Physical F9/Escape retest requested;
-result pending. All acceptance boxes remain unchanged. Probe remains deployed
-until game-closed cleanup. Codex retains sole ownership.
-
-## Latest native result and desktop diagnostic
-
-Escape fix PASS in user-operated retest: first Escape closes console only;
-subsequent Escape opens normal game menu. Probe corroborates raw Escape close,
-armed/expired swallow and guard=true. Supersedes awaiting-Escape-retest notes.
-All other slice A checks remain pending. Desktop diagnosis: injected i works,
-F9/Escape do not with confirmed focus; F9 also tested unpaused. Supported API
-has no held-key/timing control. Exact tool failure cause unconfirmed; no helper
-patch attempted. See docs/desktop-input-diagnostic.md. Game running and paused,
-NativeCase active, ZZSarahEscapeProbe still deployed. Codex owns checkout.
-
-## Input comparison IN PROGRESS (Codex)
-
-User authorized continued bounded desktop diagnosis; no Claude task running.
-Closed isolated game normally, no native window; prior native Escape evidence
-saved as evidence/escape-fix-native-summary.txt and raw runtime/escape-fix-pass-console.txt.
-Fresh game-closed backup: runtime/backups/input-comparison-20261004 (NativeCase
-and settings). Replaced Escape observation probe with bounded read-only raw-key
-probe scanning codes 1..255 plus native release events; no key injection in Lua.
-Production code unchanged. Next: launch same isolated case and compare keys.
-Restore only game-closed after preserving the latest case. AI remains on hold.
-
-## Input comparison completed; helper remains unresolved
-
-Physical I validated probe (down 5094/up 5168). Later I sequence logged 5529/5624;
-automated F9/F1/Escape produced no matching raw transitions or desired behavior.
-Initial automated I/Tab/Return also lacked logged transitions. No conclusive
-mapping-versus-timing diagnosis; see desktop-input-diagnostic.md for attribution
-limits. No production changes. Sanitized evidence: input-comparison-summary.txt.
-Game now CLOSED, SAVED a, no native window. Current NativeCase preserved as
-runtime/backups/input-comparison-20261004/After-comparison. Raw log retained.
-Both observation probes disabled; fixed production Console.lua remains deployed.
-Codex owns checkout. Next: finish hold-repeat, rebind/conflicts, English Options
-labels, restored movement and same-process console teardown with physical-key
-assistance as needed. Escape first-close/later-menu behavior already passed.
-
+### Documentation cleanup and checklist preparation (Gemini, 2026-10-04)
+- Reconciled top status with native Escape PASS; cleaned up stale "awaiting retest" text.
+- Separated current state from historical session logs.
+- Created `docs/M1-native-checklist.md` with ordered pending acceptance steps and safeguards.
+- Released checkout ownership to Codex for native testing.

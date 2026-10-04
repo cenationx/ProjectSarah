@@ -3,7 +3,7 @@
 IN PROGRESS: read-only slice A implemented; physical F9 check completed, broader
 keyboard acceptance still open. Commands/Observations/Console implement help, status and inventory only;
 no external AI or movement commands. Twelve automated actual-Lua command checks,
-eight simulated UI/key/session checks and all 48 existing M0 checks passed.
+eleven simulated UI/key/session checks and all 48 existing M0 checks passed (71 total).
 Existing M0 source is unchanged. Automated tests do not establish native input.
 
 Game-closed SarahModuleCleanupCase, selections and keysB42.ini backed up to
@@ -52,8 +52,7 @@ with one Sarah and unchanged local player/position. This is a user-operated chec
 no screenshot of the user's status submission was captured. Full restart restored
 one Sarah from a, and the console started closed before that check.
 
-Still open: native hold-repeat, Escape, rebind/conflict persistence, English labels
-in Options, restored movement input and same-process menu/world teardown. These
+Physical Escape fix has since passed native retesting (first Escape closes console without menu; subsequent Escape opens menu; see below). Still open: native hold-repeat, rebind/conflict persistence, English labels in Options, restored movement input, and same-process menu/world teardown. See ordered checklist in docs/M1-native-checklist.md. These
 have simulated coverage where applicable, not complete native acceptance.
 Do not add stop/walk or claim M1 complete before this gate is resolved. AI stays
 on hold. Temporary probe's `Console test: inventory` is explicitly a harness

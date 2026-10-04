@@ -15,20 +15,19 @@ The existing canonical checkout is the easiest handoff on this computer.
 
 ## What exists only on this computer
 
-Current runtime: game closed after M1 read-only console checks. Continue selects
-Rising/SarahConsoleCase; only SarahFoundation enabled. One Sarah restored from a
-on full restart, local player preserved; final exit saved b. Production source
-and English key labels deployed. ZZSarahConsoleProbe is disabled outside the mod;
-no temporary driver active. User completed physical F9 open/status/close check,
-with probe corroboration of opening/focus/closing and player preservation.
+Current runtime: game closed (SAVED a, GameThread exited, no native window).
+Continue selects Rising/SarahConsoleNativeCase; only SarahFoundation enabled.
+One Sarah restored from a; local player preserved. Production source with Escape
+guard and English key labels deployed. All temporary probes disabled outside mod;
+no temporary driver active. User completed physical F9 open/close and physical
+Escape checks (first Escape closes console without menu; second Escape opens menu),
+corroborated by probe samples.
 
-Read `M1-console-test.md` and STATUS for current checks. Twelve command and eight
-simulated UI/key/session checks passed; all 48 M0 checks were rerun successfully.
-Live menu open, typed commands, Enter/Run and mouse Close passed in the first build.
-Final inventory/scroll display passed, including typed help/Enter after restart.
-Physical F9 passed the user check; native hold/rebind/Escape/menu teardown and
-English Options labels still need acceptance. Automated function keys were missed
-even by vanilla rebind UI.
+Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
+71 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 12 command,
+11 console). Native hold-repeat, rebind/persistence, conflicts, English Options labels,
+movement restoration, and same-process teardown remain open on the checklist.
+Automated special-key delivery remains limited by Computer Use; physical keys need the user.
 Keep external AI on hold and finish slice A before stop/walk.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
@@ -88,9 +87,11 @@ Lupa 2.8; on a fresh setup install it into that project-local directory using an
 available Python, with temporary/output directories under the project. This test
 executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
-Also run `tools/test_render.py` with the same Python: 13 engine adapter checks.
-Run `tools/test_checkpoint.py`: 8 actual-adapter readback/cleanup checks;
-48 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Also run `tools/test_render.py`: 13 engine adapter checks.
+Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
+Run `tools/test_commands.py`: 12 read-only command checks.
+Run `tools/test_console.py`: 11 simulated console UI/key/session checks.
+71 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -257,3 +258,12 @@ Escape retest PASS is already documented; the top STATUS summary is stale.
 71 automated checks last passed in Codex. All other native gates remain pending.
 Gemini commits/pushes documentation and releases ownership to Codex. User forwards
 prompt/results; no external agent was started by Codex. AI remains on hold.
+
+## Documentation cleanup and checklist handoff to Codex (2026-10-04)
+
+Gemini completed documentation reconciliation and created `docs/M1-native-checklist.md`.
+Status summary, roadmap, handoff, and resume notes were updated to reflect the verified physical
+Escape fix PASS (first Escape closes console without menu; subsequent Escape opens menu)
+and 71 passing automated checks. No code, tests, saves, or settings were modified.
+Checkout ownership is RELEASED to Codex for native slice A acceptance following the
+ordered checklist. External in-game AI remains on hold.
