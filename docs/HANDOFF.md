@@ -91,3 +91,19 @@ or whether a pass came from fake engine tests or live gameplay.
 GitHub stores shared files, not chats, local saves, backups or tool permissions.
 No automatic agent switching or background quota monitor is configured. The user
 can switch tools/models and ask the next agent to continue using these files.
+
+## Antigravity setup verified on 2026-10-04
+
+Project Sarah was added in the Antigravity desktop app from the canonical folder.
+The project customization breakdown explicitly listed
+`g:\Codex\Project Sarah\AGENTS.md` as a loaded rule. The new-conversation screen
+showed local execution and Claude Sonnet 5.5 Medium selected. A resume prompt was
+prepared in the composer but not submitted; no Antigravity agent was started.
+Re-check selection and draft availability when returning to the app.
+
+Security and plan-review presets were inherited from global settings; they were
+inspected without changes. No permission rules or GitHub app authentication were
+configured or tested. Git uses the existing local repository and remote.
+The app warned that its bundled customization/skills token budget was exceeded;
+Sarah's AGENTS.md was nevertheless shown in the loaded rules breakdown. Unrelated
+global skills/settings were left unchanged.
