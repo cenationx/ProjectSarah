@@ -15,61 +15,36 @@ The existing canonical checkout is the easiest handoff on this computer.
 
 ## What exists only on this computer
 
-Latest runtime state: game closed, only SarahFoundation enabled in the isolated
-default. Continue selects `Rising/SarahModuleCleanupCase`, a copy of SarahLongSessionCase, SarahWriteFailureRetest and SarahTravelCase, ultimately from the fresh
-rendering case. The original rendering case was copied from the
-new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
-remains empty. Older alive/dead cases are preserved. Appearance model viewer
-passed before/after restart. Ordinary world rendering now passed for restored
-and newly spawned NPCs using the bounded production FBO world event hook.
-Travel suspension/recovery passed real square unloading, full restart while
-away and automatic restoration at the saved position after returning. Temporary
-driver moved only the disposable player, with original god mode restored on
-return. Final travel case saved slot b; its one-shot probe marker is done.
-Locked existing-file write exposed swallowed native errors; fresh UUID readback
-now rejects stale writes. Failed unload retained Sarah/metadata, retry and full
-restart passed, retest exit saved b with the cleanup-confirmation guard.
-Subsequent long-session case passed 12 unload/restores, 25 verified saves and
-25 verifier/world-list cleanups over 365000 ms, then full restart loaded cycle12.
-Final exit saved a; LongSessionDone=true. No production change needed. This does
-not prove hours-long reliability or complete native resource reclamation.
-Module reload/cleanup case then passed Engine/Lifecycle/main reloads, one tick/save
-callback, and reference retention after injected partial native removal across
-reload/later ticks. Replacement and unsafe saves refused. Full restart recovered
-one Sarah from a with current contents/clothes/player; final exit saved b.
-ModuleCleanupDone=true. No production change; unchanged-source/injected-fault limits
-are in `M0-module-cleanup-test.md`.
-Scope review is now consolidated in `M0-supported-scope.md`; broad hardening
-acceptance remains open. The user's manual key-toggle console proposal is planned
-in `M1-console-plan.md`. Next implementation slice: read-only help/status/inventory,
-shared validated command boundary and configurable binding/focus checks. F9 is
-provisional; no console code, key changes or AI integration exist yet.
-All temporary drivers are disabled outside the mod. Latest backup group:
-`runtime/backups/module-cleanup-before-20261004`, Original-long-session,
-Interrupted-before-restart, Recovered-final and selections. Prior
-`runtime/backups/long-session-before-20261004`, Original-retest, Completed-before-restart,
-Final-restart and selections. Prior `runtime/backups/write-failure-before-20261004`, original
-SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
-and Final-restart. All lock helpers ended/released; completed marker and local
-release signal remain. See `M0-write-failure-test.md`. Prior travel backup keeps
-Away-before-restart and Returned-final; see `M0-travel-test.md`.
-Older rendering backup group is
-`runtime/backups/world-render-before-20261004`, with original appearance world
-and selections, Appearance-before-hook, Appearance-before-production,
-Appearance-production-final and Fresh-spawn-final. The older fresh rendering case saved
-slot a. See `M0-world-render-test.md` for limits, screenshots and restore steps.
-Backup `runtime/backups/appearance-before-20261004` preserves both older worlds,
-original default/key/latest-save files, `FreshControl-before-reload`,
-`FreshControl-after-reload`, `Appearance-before-restart` and `Appearance-final`.
-Restore only game-closed after preserving the current case into a new directory.
-See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
+Current runtime: game closed after M1 read-only console checks. Continue selects
+Rising/SarahConsoleCase; only SarahFoundation enabled. One Sarah restored from a
+on full restart, local player preserved; final exit saved b. Production source
+and English key labels deployed. ZZSarahConsoleProbe is disabled outside the mod;
+no temporary driver active. User completed physical F9 open/status/close check,
+with probe corroboration of opening/focus/closing and player preservation.
+
+Read `M1-console-test.md` and STATUS for current checks. Twelve command and eight
+simulated UI/key/session checks passed; all 48 M0 checks were rerun successfully.
+Live menu open, typed commands, Enter/Run and mouse Close passed in the first build.
+Final inventory/scroll display passed, including typed help/Enter after restart.
+Physical F9 passed the user check; native hold/rebind/Escape/menu teardown and
+English Options labels still need acceptance. Automated function keys were missed
+even by vanilla rebind UI.
+Keep external AI on hold and finish slice A before stop/walk.
+
+Latest backup group runtime/backups/console-before-20261004 preserves original
+module-cleanup case/selections/keys, First-live-before-repair and Final-console.
+Raw logs are runtime/console-first-console.txt and runtime/console-final-console.txt. Prior module-cleanup/long-session/write-fault/
+travel/rendering/appearance and alive/dead backup cases remain intact. Restore
+only game-closed after preserving the current case into a new directory.
+All completed fault drivers stay disabled; never rerun them against stale markers.
+See earlier dated M0 reports for their evidence and recovery boundaries.
 
 - Installed game: `G:\Games\ProjectZomboid`, read-only.
 - Isolated profile: `runtime/isolated` under the canonical project.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. Continue now selects the recovered module-cleanup case above.
+  world remains dead. Continue now selects SarahConsoleCase above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -86,7 +61,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
 - The original dated world has Sarah dead by design; the alive copy remains
-  independent; Continue selects the recovered module-cleanup case. Before restoration, close
+  independent; Continue selects SarahConsoleCase. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit

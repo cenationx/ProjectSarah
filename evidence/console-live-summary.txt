@@ -1,0 +1,25 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:840> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:1440> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:2040> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:2640> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:3240> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:3840> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:4440> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:5040> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:5640> [SarahConsoleProbe] SAMPLE key=67 panel=false focused=false tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:5954> [SarahConsoleProbe] HARNESS inventory rows=9 sameNPC=true samePlayer=true still=true
+LOG  : Lua          f:6240> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:6840> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:7440> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:8040> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:8640> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:9240> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:9840> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:10440> [SarahConsoleProbe] SAMPLE key=67 panel=true focused=true tagged=1 playerPreserved=true x=10768 y=10271
+LOG  : Lua          f:10907> [SarahFoundation] SAVED b

@@ -20,10 +20,12 @@ results, injected faults and 48 automated checks. Bounded development can contin
 in the isolated profile; normal-play/release readiness and broader hardening
 remain open. Earlier reports describe their historical test boundaries.
 
-Next planned milestone: a [manual in-game Sarah console](docs/M1-console-plan.md)
-with a configurable key, help/status/inventory, then stop and bounded walk here.
-This tests a shared command interface before external AI. No console code or AI
-integration has started.
+A [read-only Sarah console](docs/M1-console-test.md) now supports help, status
+and inventory in the isolated developer profile. Menu opening, typed commands,
+Enter/Run and mouse close passed live; the user completed physical F9 open/close.
+Native rebind/Escape/menu checks remain open. Twenty new automated checks cover commands and simulated UI/key/session
+behavior. Stop and bounded walk here come after the keyboard gate. External AI
+remains on hold.
 
 ## Contents
 
@@ -32,7 +34,7 @@ integration has started.
 - `evidence`: test results from the installed game.
 - `docs`: findings and M0 acceptance criteria.
 - `foundation/SarahFoundation`: experimental lifecycle/render/travel candidate;
-  48 automated checks and bounded isolated live tests. See
+  68 automated checks and bounded isolated live tests. See
   [candidate status](foundation/SarahFoundation/README.md).
 
 ## License

@@ -1,0 +1,13 @@
+PASS unknown/injection/control/oversized commands never observe
+PASS help works without a controller or observation
+PASS request IDs advance even on rejected input
+PASS active status is read-only and contains copied positions
+PASS inventory aggregates items without returning mutable handles
+PASS inventory scan and output stay bounded
+PASS absent/unloaded/deferred do not restore or create
+PASS dead state never exposes a living inventory
+PASS blocked cleanup and duplicate states do not expose inventory
+PASS nonresident or incomplete NPC is blocked
+PASS busy and missing-controller observations remain harmless
+PASS observation errors return failure without evaluating input
+RESULT 12 read-only command checks passed

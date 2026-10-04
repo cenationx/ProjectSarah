@@ -34,7 +34,11 @@ preserved the real reference through reload and refused unsafe replacement/save;
 full restart recovered the good checkpoint. Spontaneous native cleanup failures
 and complete resource reclamation remain unproven.
 
-Broad M0 hardening/release acceptance remains open. Next planned development:
-[manual console and validated commands](../../docs/M1-console-plan.md), starting
-with read-only help/status/inventory. All existing safeguards stay in force;
+The read-only console adds 12 command and 8 simulated UI/key/session checks.
+Menu opening, actual typed status/help/inventory, Enter/Run and mouse close
+passed in the isolated game. Physical F9 passed the user check; native
+rebind/Escape/menu acceptance remains open;
+see [console evidence](../../docs/M1-console-test.md). Next, finish that gate
+before stop or walk here. Broad M0 hardening/release acceptance remains open.
+All existing safeguards stay in force;
 AI integration requires a separate explicit instruction.

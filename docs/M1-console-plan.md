@@ -2,7 +2,9 @@
 
 Planned 2026-10-04 from the user's proposal: an in-game panel opened by an unused,
 configurable key, with basic NPC commands before more complex AI work.
-No console implementation or external AI has started in this checkpoint.
+Slice A now has a read-only implementation and bounded live command evidence;
+keyboard acceptance is still open. See `M1-console-test.md`. External AI remains
+on hold, and slices B-D are still proposals.
 
 ## First experience
 
@@ -94,6 +96,6 @@ Do not claim success merely because a Lua call returned without an exception.
 5. Consider optional lifecycle commands only from demonstrated debugging needs.
 
 All slices inherit [M0's envelope and stop rules](M0-supported-scope.md). The
-initial target is the isolated single-player developer profile. M1 is planned,
-not live-verified or a release. M0 broad hardening stays open; the console work
+initial target is the isolated single-player developer profile. M1 is in progress,
+with slice A command tests only; it is not a release. M0 broad hardening stays open; the console work
 does not imply acceptance of its remaining limits or authorization for M2 AI.

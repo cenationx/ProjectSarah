@@ -1,17 +1,17 @@
 # Current project state
 
 Updated: 2026-10-04 (Europe/Helsinki).
-State: M0 evidence/scope review complete; broader hardening open. M1 console planned.
+State: M0 broader hardening open. M1 read-only console implemented; F9 check passed; broader keyboard acceptance open.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; M0 scope and M1 console planning completed. Antigravity resume prompt
+Active agent: Codex, M1 read-only console implementation/test. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `8884306` on `main`, pushed to
+Previous published checkpoint: `1e1a4f3` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The accompanying checkpoint consolidates scope and the manual-console plan;
-use Git history and remote refs to identify its commit rather than this parent ID.
+This checkpoint implements the read-only console and records its test boundaries.
+Use Git history and remote refs to identify the new checkpoint commit.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
 - Independent SarahM0 probe demonstrated NPC spawn, walking, inventory transfer,
@@ -84,24 +84,27 @@ use Git history and remote refs to identify its commit rather than this parent I
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: M1 slice A, read-only console and command observations
+## Next task: finish M1 slice A keyboard/UI acceptance
 
-1. Read `M0-supported-scope.md` and `M1-console-plan.md`. User proposed a custom
-   key-toggle console to test basic commands before complex AI; this checkpoint
-   plans it, with no implementation or new gameplay tests.
-2. Inspect installed keyboard/UI APIs and runtime binding conflicts. F9 is only
-   a provisional default, absent from inspected default bindings; actual delivery
-   and conflicts need live checks. Register a configurable binding, not a global override.
-3. Implement the small validated parser/observation boundary and read-only panel:
-   help, status and inventory. No implicit spawn/repair or action side effects.
-4. Back up a new disposable case game-closed; test focus, key toggle/rebind,
-   unavailable states and menu transitions, then checkpoint. Keep AI on hold.
-5. Stop and bounded walk here are later slices with their own action tests;
-   do not expose arbitrary Lua or bypass any lifecycle guard.
+Commands/Observations/Console and English binding labels are implemented.
+Twelve read-only command and eight simulated UI/key/session checks passed;
+all 48 existing foundation checks were rerun successfully (68 total).
+Live menu open, typed status/help/inventory, Enter/Run and mouse close passed.
+See `M1-console-test.md` for exact evidence and pending checks.
 
-Scope decision: controlled model-free development can proceed inside the tested
-envelope. Broad M0 hardening/release acceptance is still open; no limitations
-were accepted on the user's behalf. See the consolidated evidence matrix.
+Physical F9 open/close check completed by user and corroborated by probe samples.
+Final inventory/font/scroll output and full restart passed; one Sarah/player preserved.
+
+1. Finish native hold repeat, Escape, rebind/conflicts and gameplay
+   input restoration. Automated function-key delivery is unreliable even in the
+   vanilla rebind dialog; do not substitute simulation or menu use for keyboard pass.
+2. Verify English key labels in Options and same-process menu/world cleanup.
+3. Back up a new disposable case game-closed before continuing live checks.
+4. Only after slice A acceptance, add stop/cancellation, then bounded walk here.
+   No external AI, arbitrary Lua or bypass of lifecycle guards.
+
+Broad M0 hardening/release acceptance remains open; no limitations accepted on
+user's behalf. Controlled model-free development stays inside the tested envelope.
 
 ## Open issues
 
@@ -124,33 +127,20 @@ were accepted on the user's behalf. See the consolidated evidence matrix.
 ## Local runtime state at handoff
 
 Game closed; native window inventory confirmed no Project Zomboid window.
-Only SarahFoundation selected. Continue selects `SarahModuleCleanupCase`, a separate
-copy of SarahLongSessionCase; original long-session/retest/travel/control cases remain intact. Original control
-has an empty world mod list; older alive/dead cases remain preserved.
-All temporary drivers, including module-cleanup and long-session, are outside the mod in
-`runtime/disabled-probes`. Production Engine/Lifecycle/main deployed to isolated mod.
-Module-cleanup case recovered from a and saved b on final exit; ModuleCleanupDone=true.
-Long-session case saved slot a on final exit; LongSessionDone=true, cycle=12.
-Original retest saved b; write probe marker done. All exclusive file
-handles released; local .txt release signal remains. Do not rerun the one-shot
-fault helper against this completed case/stale signal. Fresh matching guards,
-latest-slot inspection and a backed-up separate case are required.
-`SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
-the temporary mouse menu entrypoint; automated Escape input remains unresolved.
-Main-script reload passed in the alive world; the dated world remains dead.
-Latest backup group: `runtime/backups/module-cleanup-before-20261004`:
-Original-long-session, Interrupted-before-restart, Recovered-final and selections.
-Prior long-session group retains Original-retest, Completed-before-restart and
-Final-restart. Prior write-failure group
-retains Failed-baseline, Harness-failure and fixed results. Prior travel backup
-retains Away-before-restart and Returned-final. Older rendering, appearance and
-alive/dead backups remain preserved. Restore only game-closed,
-after preserving the current case, into a new disposable directory.
-Runtime files and backups exist locally but are excluded from Git.
-This planning checkpoint changes documentation only; runtime unchanged from the
-last verified live handoff. No unfinished work remains for scope/console planning;
-M0 broader hardening is still open and no console code exists yet.
-Check Git status and fresh native window inventory before resuming UI work.
+Continue selects SarahConsoleCase, only SarahFoundation enabled; no AI.
+Final production source/English UI.json deployed. ZZSarahConsoleProbe disabled
+outside the mod; no temporary driver remains active. Final case saved b on exit,
+one Sarah restored from a before the user's F9 check and final native output check.
+Physical F9 open/close completed; native hold/rebind/Escape/menu checks remain open.
+
+Game-closed original SarahModuleCleanupCase, latestSave/default/key files backed
+up to runtime/backups/console-before-20261004. First-live-before-repair preserves
+initial test state; Final-console preserves final game-closed state. Raw logs
+are runtime/console-first-console.txt and runtime/console-final-console.txt.
+Older backup groups/cases remain preserved; do not rerun completed fault probes.
+Normal profile console remains 18675 bytes, last modified 2026-10-04 04:03:05.
+Installed game files read-only. Preserve current case before any restoration,
+always game-closed, into a new disposable directory. Runtime excluded from Git.
 
 ## Interrupted-session note template
 

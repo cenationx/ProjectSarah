@@ -1,0 +1,9 @@
+PASS key edge opens once; holding does not toggle repeatedly
+PASS Escape closes focused input and eats its game release
+PASS primary and runtime alternate conflicts refuse keyboard opening
+PASS rebound primary and alternate keys follow current runtime values
+PASS unbound, F8 and mouse binding are refused with menu fallback
+PASS other text entry never opens the console; exact profile and multiplayer gates
+PASS history stays bounded and reset unfocuses/removes the panel
+PASS module reload closes old UI and retains one callback per event
+RESULT 8 simulated console checks passed
