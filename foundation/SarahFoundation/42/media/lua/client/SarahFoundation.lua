@@ -54,7 +54,11 @@ state.menu=function(playerIndex,context,objects,test)
     if controller.npc then
         context:addOption("Sarah: save and unload",nil,function() controller:unload() end)
         context:addOption("Sarah: walk here",nil,function()
-            ISTimedActionQueue.add(ISWalkToTimedAction:new(controller.npc,getSpecificPlayer(0):getSquare()))
+            if SarahConsole and SarahConsole.getDispatch then
+                SarahConsole.getDispatch():execute("walk here")
+            elseif ISTimedActionQueue and ISWalkToTimedAction and controller.npc and getSpecificPlayer(0) then
+                ISTimedActionQueue.add(ISWalkToTimedAction:new(controller.npc,getSpecificPlayer(0):getSquare()))
+            end
         end)
     end
 end

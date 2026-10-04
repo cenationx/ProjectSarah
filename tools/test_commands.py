@@ -21,7 +21,7 @@ local function fixture()
 end
 test('unknown/injection/control/oversized commands never observe',function()
     local d=Commands.new(function() error('must not observe') end)
-    for _,v in ipairs({'walk here','status; unload','print(1)','status\n',string.rep('a',129)}) do
+    for _,v in ipairs({'jump','status; unload','print(1)','status\n',string.rep('a',129)}) do
         assert(d:execute(v).state=='rejected')
     end
 end)
@@ -300,6 +300,189 @@ test('bounded request/result history retention and query',function()
     local histRes=d:execute('history')
     assert(histRes.state=='completed' and histRes.lines[1]:find('Recent commands'))
     assert(#histRes.lines>=10)
+end)
+test('walk here starts tracked action when valid and defaults to player position',function()
+    local npcPos={x=10,y=20,z=0}
+    local playerPos={x=12,y=20,z=0}
+    local walkTarget,walkAction=nil,nil
+    local d=Commands.new(function()
+        return {state='active',npc=npcPos,player=playerPos}
+    end,function() return true end,function() return 'ctrl1' end,function(target,onComp,onFail,action)
+        walkTarget=target; walkAction=action; return true
+    end)
+    local res=d:execute('walk here')
+    assert(res.state=='running')
+    assert(res.lines[1]=='Walking to (12, 20, 0).')
+    assert(d.active and d.active.command=='walk here' and d.active.id==res.id)
+    assert(walkTarget and walkTarget.x==12 and walkTarget.y==20 and walkTarget.z==0)
+    assert(walkAction and walkAction.id==res.id)
+    local h=d:getHistory()
+    assert(h[#h].id==res.id and h[#h].state=='running')
+end)
+test('walk here reports already at target when NPC is already at target coordinates',function()
+    local pos={x=10,y=20,z=0}
+    local walked=false
+    local d=Commands.new(function()
+        return {state='active',npc=pos,player=pos}
+    end,function() return true end,nil,function() walked=true; return true end)
+    local res=d:execute('walk here')
+    assert(res.state=='completed')
+    assert(res.lines[1]=='Already at target (10, 20, 0).')
+    assert(d.active==nil and not walked)
+    local h=d:getHistory()
+    assert(h[#h].state=='completed' and h[#h].summary:find('Already at'))
+end)
+test('walk here is rejected when another action is running (busy)',function()
+    local pos={x=10,y=20,z=0}
+    local d=Commands.new(function()
+        return {state='active',npc=pos,player={x=12,y=20,z=0}}
+    end,function() return true end,nil,function() return true end)
+    local r1=d:execute('walk here')
+    assert(r1.state=='running')
+    local r2=d:execute('walk here')
+    assert(r2.state=='rejected')
+    assert(r2.lines[1]:find('Sarah is busy'))
+end)
+test('walk here is rejected when Sarah is dead, unloaded, or unavailable',function()
+    for _,st in ipairs({'dead','unloaded','absent','deferred','unavailable'}) do
+        local d=Commands.new(function()
+            return {state=st,npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+        end)
+        local res=d:execute('walk here')
+        assert(res.state=='rejected' and res.lines[1]:find(st))
+    end
+end)
+test('walk here is rejected on invalid coordinates or different floor',function()
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,nil,nil,function() return true end)
+    local rFloor=d:execute('walk here',{x=12,y=20,z=1})
+    assert(rFloor.state=='rejected' and rFloor.lines[1]=='Target is on a different floor.')
+    local rNan=d:execute('walk here',{x=0/0,y=20,z=0})
+    assert(rNan.state=='rejected' and rNan.lines[1]=='Invalid target coordinates.')
+    local rInf=d:execute('walk here',{x=math.huge,y=20,z=0})
+    assert(rInf.state=='rejected' and rInf.lines[1]=='Invalid target coordinates.')
+end)
+test('walk here is rejected when target is too far (> 8 tiles)',function()
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=25,y=20,z=0}}
+    end,nil,nil,function() return true end)
+    local res=d:execute('walk here')
+    assert(res.state=='rejected' and res.lines[1]=='Target is too far (maximum 8 tiles).')
+end)
+test('walk here start failure propagates failed outcome and clears active',function()
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,nil,nil,function() return false,'path engine offline' end)
+    local res=d:execute('walk here')
+    assert(res.state=='failed')
+    assert(res.lines[1]=='Walk failed to start: path engine offline.')
+    assert(d.active==nil)
+    local h=d:getHistory()
+    assert(h[#h].state=='failed')
+end)
+test('walk here arrival completes action only when NPC position matches target',function()
+    local npcPos={x=10,y=20,z=0}
+    local compCb=nil
+    local d=Commands.new(function()
+        return {state='active',npc=npcPos,player={x=12,y=20,z=0}}
+    end,function() return true end,nil,function(target,onComp)
+        compCb=onComp; return true
+    end)
+    local res=d:execute('walk here')
+    assert(res.state=='running' and compCb)
+    -- NPC moved to target
+    npcPos.x=12.5; npcPos.y=20.2
+    compCb()
+    assert(d.active==nil and d.lastAction.state=='completed')
+    assert(d.lastAction.reason:find('Reached target'))
+    local statusRes=d:execute('status')
+    assert(statusRes.lines[2]=='Action: idle (last: #'..res.id..' completed)')
+end)
+test('walk here arrival stopped before target fails action',function()
+    local npcPos={x=10,y=20,z=0}
+    local compCb=nil
+    local d=Commands.new(function()
+        return {state='active',npc=npcPos,player={x=12,y=20,z=0}}
+    end,function() return true end,nil,function(target,onComp)
+        compCb=onComp; return true
+    end)
+    local res=d:execute('walk here')
+    assert(res.state=='running' and compCb)
+    -- NPC stopped early
+    npcPos.x=10.8; npcPos.y=20.1
+    compCb()
+    assert(d.active==nil and d.lastAction.state=='failed')
+    assert(d.lastAction.reason:find('Stopped before target'))
+end)
+test('walk here engine path failure callback sets failed action state',function()
+    local failCb=nil
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,function() return true end,nil,function(target,onComp,onFail)
+        failCb=onFail; return true
+    end)
+    local res=d:execute('walk here')
+    assert(res.state=='running' and failCb)
+    failCb(nil,'path blocked')
+    assert(d.active==nil and d.lastAction.state=='failed')
+    assert(d.lastAction.reason=='path blocked')
+end)
+test('walk here is cancelled by stop command and halts engine timed action',function()
+    local stopReason=nil
+    local compCb=nil
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,function(reason) stopReason=reason; return true end,nil,function(target,onComp)
+        compCb=onComp; return true
+    end)
+    local rWalk=d:execute('walk here')
+    assert(rWalk.state=='running')
+    local rStop=d:execute('stop')
+    assert(rStop.state=='completed')
+    assert(rStop.lines[1]=='Cancelled #'..rWalk.id..' (walk here).')
+    assert(rStop.lines[2]=='Sarah stopped.')
+    assert(stopReason=='stopped by user')
+    assert(d.active==nil and d.lastAction.state=='cancelled')
+    -- Late completion from cancelled engine walk is safely rejected
+    compCb()
+    assert(d.lastAction.state=='cancelled')
+end)
+test('walk here timeout after maxTicks cancels action and invokes stop',function()
+    local stopReason=nil
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,function(reason) stopReason=reason; return true end,nil,function() return true end)
+    local rWalk=d:execute('walk here')
+    assert(rWalk.state=='running')
+    for i=1,599 do assert(d:tick()==true) end
+    assert(d.active~=nil)
+    -- Tick 600 triggers timeout
+    local valid,reason=d:tick()
+    assert(not valid and reason=='timeout')
+    assert(d.active==nil and d.lastAction.state=='cancelled')
+    assert(stopReason=='timeout')
+end)
+test('walk here is invalidated by controller replacement',function()
+    local currentCtrl='ctrl1'
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,function() return true end,function() return currentCtrl end,function() return true end)
+    local rWalk=d:execute('walk here')
+    assert(rWalk.state=='running')
+    currentCtrl='ctrl2'
+    local valid,reason=d:tick()
+    assert(not valid and reason=='controller replaced')
+    assert(d.active==nil and d.lastAction.state=='cancelled')
+end)
+test('requestWalk convenience method routes directly to walk here',function()
+    local walkTarget=nil
+    local d=Commands.new(function()
+        return {state='active',npc={x=10,y=20,z=0},player={x=12,y=20,z=0}}
+    end,function() return true end,nil,function(target) walkTarget=target; return true end)
+    local res=d:requestWalk({x=14,y=20,z=0})
+    assert(res.state=='running' and res.lines[1]=='Walking to (14, 20, 0).')
+    assert(walkTarget and walkTarget.x==14)
 end)
 print('RESULT '..count..' command checks passed')
 ''')

@@ -45,16 +45,41 @@ local function stopSarah(reason,action)
     end
     return true
 end
+local function walkSarah(target,onComplete,onFail,action)
+    if not SarahFoundation or not SarahFoundation.controller or not SarahFoundation.controller.npc then
+        return false,'Sarah controller or NPC unavailable'
+    end
+    local controller=SarahFoundation.controller
+    local owner=action and (action.owner or action.controller)
+    if owner and owner~=controller then
+        return false,'stale controller'
+    end
+    if not controller.adapter or not controller.adapter.walk then
+        return false,'walk adapter unavailable'
+    end
+    local validSq=target
+    if controller.adapter.validateTarget then
+        local valid,sqOrErr=controller.adapter.validateTarget(controller.npc,target)
+        if not valid then
+            return false,sqOrErr
+        end
+        validSq=sqOrErr
+    end
+    local ok,ret=controller.adapter.walk(controller.npc,validSq,onComplete,onFail)
+    if not ok then return false,tostring(ret) end
+    return true,ret
+end
 local function getDispatch()
     if not state.dispatch then
         state.dispatch=Commands.new(function(inventory)
             return Observations.read(SarahFoundation and SarahFoundation.controller,getSpecificPlayer(0),inventory)
         end,stopSarah,function()
             return SarahFoundation and SarahFoundation.controller
-        end)
+        end,walkSarah)
     end
     return state.dispatch
 end
+state.getDispatch=getDispatch
 local Panel=ISPanel:derive('SarahConsolePanel')
 local function allowed()
     local root=Core.getMyDocumentFolder():gsub('\\','/'):gsub('/$','')
@@ -91,7 +116,7 @@ function Panel:initialise()
     local close=ISButton:new(self.width-80,10,68,24,'Close',nil,state.close)
     close:initialise(); self:addChild(close)
     self.dispatch=getDispatch()
-    self:append('Commands: help, status, inventory, stop, history. Enter submits.')
+    self:append('Commands: help, status, inventory, walk here, stop, history. Enter submits.')
     local conflict=state.conflict(getCore():getKey(binding))
     self:append(conflict or 'Toggle: '..getKeyName(getCore():getKey(binding))..' (Options > Key bindings)')
 end

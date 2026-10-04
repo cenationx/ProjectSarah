@@ -46,7 +46,9 @@ Core={getMyDocumentFolder=function() return root end}
 isClient=function() return client end; isServer=function() return false end
 getSpecificPlayer=function() return {} end; getKeyName=function() return 'F9' end
 local obsState='active'
-require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function() return {state=obsState or 'active'} end} end end
+local obsNpc={x=10,y=20,z=0}
+local obsPlayer={x=12,y=20,z=0}
+require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function() return {state=obsState or 'active',npc=obsNpc,player=obsPlayer} end} end end
 local function reload() return assert(load(ConsoleSource))() end
 local s=reload()
 local function release() raw={}; s.tick() end
@@ -154,6 +156,39 @@ test('lifecycle monitoring invalidates active action while console is closed',fu
     local h=s.dispatch:getHistory()
     assert(h[#h].state=='cancelled' and h[#h].summary=='dead')
     obsState='active'
+end)
+test('walk here command executed from console panel reports running and appends outcome',function()
+    SarahFoundation={
+        controller={
+            npc={},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        }
+    }
+    s.open()
+    s.panel.entry:setText('walk here')
+    s.panel:submit()
+    local foundCmd,foundResult=false,false
+    for _,item in ipairs(s.panel.history.items) do
+        if item.text=='> walk here' then foundCmd=true end
+        if item.text:find('Walking to %(12, 20, 0%)') then foundResult=true end
+    end
+    assert(foundCmd and foundResult)
+    s.close()
+end)
+test('state.getDispatch export is available and context menu walk here routes through it',function()
+    assert(s.getDispatch and type(s.getDispatch)=='function')
+    local dispatch=s.getDispatch()
+    assert(dispatch)
+    -- Reset dispatch to clear earlier walk
+    dispatch:reset()
+    local res=dispatch:execute('walk here')
+    assert(res.state=='running')
+    assert(dispatch.active and dispatch.active.command=='walk here')
+    dispatch:reset()
 end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

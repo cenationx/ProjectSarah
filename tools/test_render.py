@@ -99,5 +99,62 @@ test('restore requires a nearby loaded free saved square',function()
     f.loaded=true; f.free=false; assert(not f.adapter.canRestore(r))
     f.free=true; f.player.x=50; assert(not f.adapter.canRestore(r))
 end)
+test('validateTarget checks coordinates, floor, distance, square status and target equality',function()
+    local f=fixture()
+    local ok,err=f.adapter.validateTarget(f.npc,nil)
+    assert(not ok and err=='Invalid target coordinates.')
+    ok,err=f.adapter.validateTarget(f.npc,{x='bad',y=20,z=0})
+    assert(not ok and err=='Invalid target coordinates.')
+    ok,err=f.adapter.validateTarget(f.npc,{x=0/0,y=20,z=0})
+    assert(not ok and err=='Invalid target coordinates.')
+    ok,err=f.adapter.validateTarget(f.npc,{x=math.huge,y=20,z=0})
+    assert(not ok and err=='Invalid target coordinates.')
+    ok,err=f.adapter.validateTarget(f.npc,{x=12,y=20,z=1})
+    assert(not ok and err=='Target is on a different floor.')
+    ok,err=f.adapter.validateTarget(f.npc,{x=25,y=20,z=0})
+    assert(not ok and err=='Target is too far (maximum 8 tiles).')
+    ok,err=f.adapter.validateTarget(f.npc,{x=10,y=20,z=0})
+    assert(not ok and err:find('Already at target'))
+    f.loaded=false
+    ok,err=f.adapter.validateTarget(f.npc,{x=12,y=20,z=0})
+    assert(not ok and err=='Target square is not loaded.')
+    f.loaded=true
+    f.free=false
+    ok,err=f.adapter.validateTarget(f.npc,{x=12,y=20,z=0})
+    assert(not ok and err=='Target square is occupied or blocked.')
+    f.free=true
+    local sq
+    ok,sq=f.adapter.validateTarget(f.npc,{x=12,y=20,z=0})
+    assert(ok and sq)
+end)
+test('adapter walk queues walk action with callbacks',function()
+    local f=fixture()
+    local queuedAction=nil
+    ISTimedActionQueue={add=function(act) queuedAction=act end}
+    ISWalkToTimedAction={
+        new=function(self,char,sq)
+            local o={character=char,location=sq}
+            setmetatable(o,self)
+            return o
+        end,
+        derive=function(self,name)
+            local cls={}
+            cls.__index=cls
+            setmetatable(cls,{__index=self})
+            return cls
+        end,
+        perform=function(self) end,
+        stop=function(self) end
+    }
+    local successCalled,failCalled=false,false
+    local ok,act=f.adapter.walk(f.npc,f.npc.square,function() successCalled=true end,function() failCalled=true end)
+    assert(ok and act and queuedAction==act)
+    act:perform()
+    assert(successCalled and not failCalled)
+    local ok2,act2=f.adapter.walk(f.npc,f.npc.square,function() end,function(_,reason) failCalled=reason end)
+    assert(ok2 and act2)
+    act2:stop()
+    assert(failCalled=='stopped')
+end)
 print('RESULT '..count..' total engine adapter checks passed')
 ''')

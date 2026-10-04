@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B has 94 passing automated checks and passed native idle-stop/console/history smoke checks. Active-action cancellation still requires live verification with slice C.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B verified natively. M1 slice C implemented and validated offline with 112 passing automated checks (27 foundation + 15 engine adapter + 8 checkpoint readback + 45 command + 17 console). Native movement and cancellation acceptance pending Codex live check.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -10,21 +10,22 @@ Do not have two agents edit this checkout concurrently.
 
 - Game is CLOSED (SAVED b, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
-- Reviewed slice B source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
+- Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
-- Backups: Latest final case/settings/logs: `runtime/backups/codex-resume-20261004-234837/Final-acceptance`. Full pre-Gemini key settings restored with Sarah Console reset to F9; Forward remains W. Original acceptance root key baseline is empty, so it was not used as explicit binding evidence.
-- Automated tests: 94 automated checks passing (27 foundation + 13 engine adapter + 8 checkpoint readback + 31 command + 15 console).
+- Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
+- Automated tests: 112 automated checks passing (27 foundation + 15 engine adapter + 8 checkpoint readback + 45 command + 17 console).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 94 automated checks pass (27 foundation lifecycle, 13 engine adapter/render, 8 checkpoint readback/cleanup, 31 command parser/dispatch/cancellation, 15 simulated console UI/key/session cases).
+- **Automated policy checks**: 112 automated checks pass (27 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 45 command parser/dispatch/cancellation, 17 simulated console UI/key/session cases).
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands**: Native execution of `help`, `status`, and `inventory` commands passed; local player and NPC preserved; scrolling list box and native font metrics verified.
 - **M1 slice A physical F9**: Physical F9 open, command entry, and F9 close verified natively by user; corroborated by probe samples.
 - **M1 slice A physical Escape**: Physical Escape fix verified natively by user: first Escape closes console without opening pause menu; subsequent Escape opens vanilla pause menu. Corroborated by probe samples (`guard=true`, swallow armed and expired).
 - **M1 slice B stop, cancellation, and history**: Implemented `stop` command with engine error propagation, action lifecycle tokens and independent lifecycle invalidation (death, unload, controller replacement, closed-console tick), shallow-copied action API records protecting internal state, bounded queryable history (capped at 30 records, no mutable engine handles exposed), handle-free public observations (`Observations.read()` returns strictly copied data with no controller/NPC/adapter handles), private action identity provider, and console panel integration. 19 command unit tests and 4 console simulation tests added (94 automated checks total). Native acceptance pending Codex live check.
+- **M1 slice C bounded movement ("walk here"), tracking, and cancellation**: Implemented `walk here` console command and `requestWalk(target)` dispatch. Target validated to 8 tiles on same floor, rejects invalid/NaN/infinite coordinates, different floor, distant tiles, and occupied/blocked or unloaded squares. Returns immediate `completed` when already at target. Rejects concurrent requests while busy. Cancels active walk immediately if Sarah dies, unloads, or controller is replaced. True arrival verification: checks Sarah's observed position against target square before marking completed; reports failure (`Stopped before target`) if stopped early. Integrates with user `stop` command and 600-tick timeout to halt engine timed actions. Context menu `"Sarah: walk here"` rerouted through console dispatch. 18 new automated tests (112 total). Native acceptance pending Codex live check.
 - **Isolation safeguards**: Mod and settings remain strictly isolated to `runtime/isolated`; installed game files and normal profile are read-only and untouched.
 
 ## Completed: M1 slice A native acceptance
@@ -275,3 +276,54 @@ injection and replacement handling remain fixture-tested, not live-proven; nativ
 moving-action cancellation must be checked with slice C before claiming it works.
 Codex owns checkout and all live testing. Next bounded task: slice C design/code,
 then native movement/cancellation verification. External in-game AI remains ON HOLD.
+
+## M1 slice C bounded movement, tracking, and cancellation implementation (2026-10-05)
+
+Gemini completed M1 slice C implementation and automated test coverage (offline only; no game launches or desktop control):
+- **`Engine.lua`**:
+  - `SarahWalkAction`: Derived from `ISWalkToTimedAction` via lazy/dynamic `getWalkActionClass()`. Hooks `perform()` to invoke success callback and `stop()` to detect `BehaviorResult.Failed` (or manual stop) and invoke failure callback with reason (`path failed` or `stopped`).
+  - `adapter.validateTarget(npc, target)`: Verifies finite numeric coordinates, same floor (`math.floor(sz) == tz`), distance within 8 tiles (`dx*dx + dy*dy <= 64`), already at target (`math.floor(sx) == tx and math.floor(sy) == ty`), loaded square (`cell:getGridSquare(tx, ty, tz)`), and free square (`sq:isFree(false)`). Returns `true, square`.
+  - `adapter.walk(npc, square, onSuccess, onFail)`: Instantiates `SarahWalkAction` and queues via `ISTimedActionQueue.add`.
+- **`Commands.lua`**:
+  - `walk here` command: Accepts typed `walk here` (defaults to observed player coordinates) or explicit target `{x, y, z}`.
+  - Rejection gates: Rejects while busy (`Sarah is busy (#<id> is running).`), when Sarah is non-active (`Sarah is dead/unloaded/etc.`), when position is unavailable, on invalid/NaN/inf coordinates, different floor, distance > 8 tiles, or unfree/unloaded target squares.
+  - Already-at-target detection: If Sarah is already at target square, immediately returns `completed` without starting a redundant timed action.
+  - Action lifecycle & tracking: Registers active action with request `id` and session `token`. Returns `result.state = 'running'` with destination coordinates.
+  - True arrival verification: `onComplete` callback inspects observed NPC coordinates. If matching target, completes with `Reached target (<x>, <y>, <z>).`; if stopped short, marks `failed` with `Stopped before target at (<x>, <y>, <z>).`.
+  - Path failure propagation: `onFail` callback marks action `failed` with failure reason (`path failed` / obstacle).
+  - Stop integration: `stop` command cancels active walking, transitions to `cancelled`, and invokes engine stop (`adapter.stop(npc)`) on the game thread. Late completion callbacks from cancelled actions are safely rejected as `stale or cancelled`.
+  - Timeout: `dispatch:tick()` increments action ticks and triggers `cancelActive('timeout')` at 600 ticks (~10s at 60 fps).
+  - Lifecycle invalidation: Background unload, death, or controller replacement invalidates active walk immediately.
+  - `requestWalk(target)` convenience method: Exposes direct programmatic dispatch routing.
+  - Updated `help` text to document `walk here`.
+- **`Console.lua`**:
+  - Added `walkSarah` callback connecting console dispatch to `controller.adapter.validateTarget` and `controller.adapter.walk` on the game thread, verifying controller ownership against `action.owner`.
+  - Exposes `state.getDispatch = getDispatch` to share action dispatch across callers.
+  - Updated prompt line: `Commands: help, status, inventory, walk here, stop, history. Enter submits.`
+- **`SarahFoundation.lua`**:
+  - Rerouted world context menu option `"Sarah: walk here"` through `SarahConsole.getDispatch():execute('walk here')`, ensuring menu-triggered walks share identical tracking, distance limits, timeout, and cancellation.
+- **Automated test suite (112 passing checks)**:
+  - `tools/test_render.py`: 2 new unit tests (15 total), covering `validateTarget` coordinates/floor/distance/equality/square-status and `adapter.walk` queueing/callbacks.
+  - `tools/test_commands.py`: 14 new unit tests (45 total), covering valid start, already-at-target, busy rejection, non-active rejection, invalid coordinates/different floor rejection, distance limit rejection, start failure, true arrival verification, stopped-before-target failure, path failure, stop command cancellation, timeout cancellation, controller replacement invalidation, and `requestWalk`.
+  - `tools/test_console.py`: 2 new unit tests (17 total), covering console panel `walk here` execution and `state.getDispatch` context menu routing.
+  - All 5 suites pass: 27 foundation + 15 engine adapter + 8 checkpoint readback + 45 command + 17 console = 112 checks.
+
+### Codex native test checklist for Slice C
+When ready for native testing:
+1. Ensure game is CLOSED.
+2. Deploy updated `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation`.
+3. Launch isolated test game (`SarahConsoleNativeCase`).
+4. Press F9 to open Sarah Console. Verify prompt line: `Commands: help, status, inventory, walk here, stop, history. Enter submits.`
+5. Type `help` + Enter -> Verify `walk here` is listed with description `walk to player square (max 8 tiles, same floor)`.
+6. Position player a few tiles away from Sarah (within 8 tiles on same floor).
+7. Type `walk here` + Enter -> Verify output: `Walking to (<tx>, <ty>, <tz>).` and `#<id> running`.
+8. Type `status` + Enter while Sarah is walking -> Verify `Action: #<id> walk here (running)`.
+9. Observe Sarah walk to player's square. Once reached, type `status` + Enter -> Verify `Action: idle (last: #<id> completed)`.
+10. Type `history` + Enter -> Verify history lists `#<id> walk here: completed (Reached target ...)`.
+11. While standing right next to Sarah, type `walk here` + Enter -> Verify output: `Already at target (...)` and `#<id> completed` without redundant movement.
+12. Walk a few tiles away, type `walk here` + Enter, and immediately type `stop` + Enter -> Verify Sarah halts, output reports `Cancelled #<id> (walk here). Sarah stopped.`, and status reports `Action: idle (last: #<id> cancelled)`.
+13. Test context menu: Right-click Sarah -> `Sarah: walk here` -> Verify Sarah walks to player and is tracked in console status and history.
+14. Close console via Escape / mouse Close; verify character movement fine.
+15. Clean Quit to Desktop / save.
+
+Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.

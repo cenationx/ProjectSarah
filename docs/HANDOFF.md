@@ -24,11 +24,11 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, and `M1-native-checklist.md` for current checks.
-94 automated checks passed (27 foundation, 13 engine adapter, 8 checkpoint, 31 command,
-15 console). Slice A native acceptance passed. Slice B (stop, cancellation, history)
-revised with handle-free observations and private identity provider; native acceptance pending Codex live check.
-Automated special-key delivery remains limited by Computer Use; physical keys need the user.
-Keep external AI on hold; movement commands (slice C) deferred.
+112 automated checks passed (27 foundation, 15 engine adapter, 8 checkpoint, 45 command,
+17 console). Slice A native acceptance passed. Slice B verified natively. Slice C (walk here,
+completion tracking, stop cancellation, timeout, lifecycle invalidation) implemented and validated offline;
+native acceptance pending Codex live check. Automated special-key delivery remains limited by Computer Use;
+physical keys need the user. Keep external AI on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
 module-cleanup case/selections/keys, First-live-before-repair and Final-console.
@@ -89,9 +89,10 @@ executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 27 foundation checks.
 Also run `tools/test_render.py`: 13 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 31 command parser/cancellation checks.
-Run `tools/test_console.py`: 15 simulated console UI/key/session checks.
-94 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Run `tools/test_render.py`: 15 engine adapter checks.
+Run `tools/test_commands.py`: 45 command parser/cancellation/movement checks.
+Run `tools/test_console.py`: 17 simulated console UI/key/session checks.
+112 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -360,3 +361,24 @@ injection and replacement handling remain fixture-tested, not live-proven; nativ
 moving-action cancellation must be checked with slice C before claiming it works.
 Codex owns checkout and all live testing. Next bounded task: slice C design/code,
 then native movement/cancellation verification. External in-game AI remains ON HOLD.
+
+## M1 slice C bounded movement ("walk here") handoff (2026-10-05)
+
+Gemini completed M1 slice C implementation and automated validation (offline only; no game launches or desktop control).
+- Changed source files:
+  - `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua` (walk here command, requestWalk, target validation, already-at-target detection, true arrival verification, path failure propagation, timeout tracking, busy check, help update).
+  - `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` (walkSarah callback verifying controller owner, state.getDispatch export, prompt line update).
+  - `foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua` (SarahWalkAction derivation via getWalkActionClass, adapter.validateTarget for finite coordinates/floor/distance/square-status, adapter.walk).
+  - `foundation/SarahFoundation/42/media/lua/client/SarahFoundation.lua` (rerouted context menu option "Sarah: walk here" through SarahConsole.getDispatch():execute('walk here')).
+  - `tools/test_render.py` (2 new unit tests, 15 total: validateTarget and adapter.walk).
+  - `tools/test_commands.py` (14 new unit tests, 45 total: start, already-at-target, busy, non-active, invalid coords, floor, distance, start failure, arrival verification, stopped-short failure, path failure, stop cancellation, timeout, replacement, requestWalk).
+  - `tools/test_console.py` (2 new unit tests, 17 total: console panel walk here submission and getDispatch context menu routing).
+- Automated test results: 112 passing checks across all 5 test suites (27 foundation + 15 engine adapter + 8 checkpoint readback + 45 command + 17 console).
+- Live gameplay testing: Handed off to Codex following the checklist in `docs/STATUS.md`.
+  - Game is CLOSED.
+  - Step 1: Deploy `foundation/SarahFoundation` to `runtime/isolated/mods/SarahFoundation`.
+  - Step 2: Launch `SarahConsoleNativeCase`.
+  - Step 3: Open console (F9) and test commands: `help`, `status`, `walk here`, `stop`, `history`.
+  - Step 4: Verify Sarah walks to player square, reports arrival in status and history, halts cleanly on `stop`, rejects movement when busy or already at target, and context menu routes cleanly.
+  - Step 5: Clean shutdown and save.
+- External AI remains strictly ON HOLD. Checkout ownership is RELEASED to Codex.

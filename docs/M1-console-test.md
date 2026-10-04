@@ -1,9 +1,10 @@
 # M1 read-only console slice A: 2026-10-04
 
-IN PROGRESS: slice A native acceptance PASSED; slice B (stop, cancellation, history)
-REVISED and automated suite increased to 94 passing checks (31 command, 15 console).
-Native acceptance of slice B pending Codex live check. Commands/Observations/Console implement
-help, status, inventory, stop, and history. No external AI or movement commands (slice C deferred).
+IN PROGRESS: slice A native acceptance PASSED; slice B verified natively.
+Slice C (bounded "walk here", completion tracking, stop cancellation, timeout) IMPLEMENTED
+and automated suite increased to 112 passing checks (15 engine adapter, 45 command, 17 console).
+Native acceptance of slice C pending Codex live check. Commands/Observations/Console implement
+help, status, inventory, walk here, stop, and history. External AI remains strictly on hold.
 Automated tests do not establish native input.
 
 Game-closed SarahModuleCleanupCase, selections and keysB42.ini backed up to
@@ -206,3 +207,34 @@ injection and replacement handling remain fixture-tested, not live-proven; nativ
 moving-action cancellation must be checked with slice C before claiming it works.
 Codex owns checkout and all live testing. Next bounded task: slice C design/code,
 then native movement/cancellation verification. External in-game AI remains ON HOLD.
+
+## M1 slice C automated validation (2026-10-05)
+
+Gemini implemented and validated slice C bounded movement ("walk here"), completion tracking, and cancellation:
+- `Commands.lua`:
+  - `walk here`: Parses command, validates observation state, resolves player or specified target coordinates, verifies finite numbers, same floor, max 8-tile distance, and free square.
+  - Already-at-target: If Sarah is already at target, returns immediate `completed` without starting a redundant action.
+  - Busy check: Refuses second action if an action is currently active.
+  - Active tracking: Registers action with request ID and session token; status command reflects `Action: #<id> walk here (running)`.
+  - True arrival verification: `onComplete` verifies Sarah's observed position against target square before marking completed; reports failure (`Stopped before target`) if stopped early.
+  - Stop integration: `stop` command cancels active walking and invokes engine stop (`adapter.stop(npc)`) on game thread. Stale callbacks from cancelled actions are safely rejected.
+  - Timeout: 600-tick timeout cancels active walk and invokes engine stop.
+  - Lifecycle invalidation: Background unload, death, or controller replacement invalidates active walk immediately.
+  - `requestWalk(target)`: Exposes direct programmatic dispatch.
+- `Console.lua`:
+  - `walkSarah` callback connects dispatch to `controller.adapter.validateTarget` and `controller.adapter.walk`.
+  - Exposes `state.getDispatch = getDispatch`.
+  - Updated prompt line to include `walk here`.
+- `SarahFoundation.lua`:
+  - World context menu `"Sarah: walk here"` rerouted through `SarahConsole.getDispatch():execute('walk here')`.
+- `Engine.lua`:
+  - `SarahWalkAction` derived from `ISWalkToTimedAction` via `getWalkActionClass()`, hooking `perform()` and `stop()`.
+  - `adapter.validateTarget(npc, target)` and `adapter.walk(npc, square, onSuccess, onFail)`.
+- Automated test coverage: 112 total passing checks (up from 94):
+  - `tools/test_foundation.py`: 27 passing lifecycle/reload/event checks.
+  - `tools/test_render.py`: 15 passing checks (+2 new: validateTarget and adapter.walk).
+  - `tools/test_checkpoint.py`: 8 passing readback token/cleanup checks.
+  - `tools/test_commands.py`: 45 passing checks (+14 new: start, already-at-target, busy, non-active, invalid coords, floor, distance, start failure, arrival verification, stopped-short failure, path failure, stop cancellation, timeout, replacement, requestWalk).
+  - `tools/test_console.py`: 17 passing checks (+2 new: console panel walk here submission and getDispatch context menu routing).
+
+Native acceptance remains pending Codex live verification following the checklist in `docs/STATUS.md`.
