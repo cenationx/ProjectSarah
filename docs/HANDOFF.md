@@ -16,16 +16,24 @@ The existing canonical checkout is the easiest handoff on this computer.
 ## What exists only on this computer
 
 Latest runtime state: game closed, only SarahFoundation enabled in the isolated
-default. Continue selects `Rising/SarahWorldRenderFresh`, a separate copy of the
+default. Continue selects `Rising/SarahTravelCase`, a separate copy of the fresh
+rendering case. The original rendering case was copied from the
 new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
 remains empty. Older alive/dead cases are preserved. Appearance model viewer
 passed before/after restart. Ordinary world rendering now passed for restored
 and newly spawned NPCs using the bounded production FBO world event hook.
-Next check: offscreen/unloaded-square policy. All temporary drivers, including
-world rendering, are disabled outside the mod. Latest backup group is
+Travel suspension/recovery passed real square unloading, full restart while
+away and automatic restoration at the saved position after returning. Temporary
+driver moved only the disposable player, with original god mode restored on
+return. Final travel case saved slot b; its one-shot probe marker is done.
+Next check: safe live checkpoint-write failure. All temporary drivers, including
+travel, are disabled outside the mod. Latest backup group is
+`runtime/backups/travel-before-20261004`: original fresh rendering case and
+selections, Away-before-restart and Returned-final. See `M0-travel-test.md`.
+Older rendering backup group is
 `runtime/backups/world-render-before-20261004`, with original appearance world
 and selections, Appearance-before-hook, Appearance-before-production,
-Appearance-production-final and Fresh-spawn-final. The selected fresh case saved
+Appearance-production-final and Fresh-spawn-final. The older fresh rendering case saved
 slot a. See `M0-world-render-test.md` for limits, screenshots and restore steps.
 Backup `runtime/backups/appearance-before-20261004` preserves both older worlds,
 original default/key/latest-save files, `FreshControl-before-reload`,
@@ -38,7 +46,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. Continue now selects the fresh rendering case above.
+  world remains dead. Continue now selects the returned travel case above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -55,7 +63,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
 - The original dated world has Sarah dead by design; the alive copy remains
-  independent; Continue selects the fresh rendering case. Before restoration, close
+  independent; Continue selects the returned travel case. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit
@@ -81,8 +89,8 @@ It uses Lupa from `tools/dependencies/python`. The last tested installation was
 Lupa 2.8; on a fresh setup install it into that project-local directory using an
 available Python, with temporary/output directories under the project. This test
 executes actual Lua source with fake engine adapters and events. It does not
-prove gameplay compatibility. Expected latest result: 20 foundation checks.
-Also run `tools/test_render.py` with the same Python: 9 rendering checks.
+prove gameplay compatibility. Expected latest result: 27 foundation checks.
+Also run `tools/test_render.py` with the same Python: 13 engine adapter checks.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -115,6 +123,10 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    FoundationWorldRenderProbe observes actual NPC registration/lighting/flags
    and counts production adapter draws. Experimental drawing defaults off;
    never enable it together with the production rendering callback.
+   FoundationTravelProbe is one-shot and guarded to SarahTravelCase. It uses
+   controlled player debug travel and a full away-world restart to test real
+   streaming. Never redeploy into the completed marker=done case; prepare a new
+   independent case and adjust the driver guard before repeating the test.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.

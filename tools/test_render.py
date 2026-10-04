@@ -12,9 +12,11 @@ ModData={getOrCreate=function() return {} end}
 local count=0
 local function fixture()
     local f={draws=0,shadows=0,registered=true,removing=false,visible=true,light={},client=false,server=false}
-    local player={getZ=function() return 0 end}
+    local player={x=10,y=20,z=0}
+    player.getZ=function() return player.z end; player.getX=function() return player.x end; player.getY=function() return player.y end
     local npc={data={SarahFoundationId='Sarah'},z=0,dead=false,onScreen=true,npc=true}
     local square={isCanSee=function() return f.visible end,getLightInfo=function() return f.light end}
+    square.isFree=function() return f.free~=false end
     npc.square=square
     npc.isDead=function() return npc.dead end
     npc.isNpc=function() return npc.npc end
@@ -32,7 +34,9 @@ local function fixture()
     isClient=function() return f.client end; isServer=function() return f.server end
     getSpecificPlayer=function(index) assert(index==0); return f.player end
     getCell=function() return {
+        getGridSquare=function() if f.loaded==false then return nil else return square end end,
         getObjectList=function() return {contains=function(_,object) assert(object==npc); return f.registered end} end,
+        getAddList=function() return {contains=function() return f.pending end} end,
         getRemoveList=function() return {contains=function(_,object) assert(object==npc); return f.removing end} end
     } end
     f.player=player; f.npc=npc; f.adapter=Engine.new()
@@ -73,4 +77,27 @@ test('missing square or lighting skipped',function()
     skipped(function(f) f.npc.square=nil end); skipped(function(f) f.light=nil end)
 end)
 print('RESULT '..count..' rendering checks passed')
+test('travel hysteresis uses 32-tile suspension and 16-tile return',function()
+    local f=fixture(); local p=f.player; local r={x=10,y=20,z=0}
+    p.x=42; assert(not f.adapter.shouldUnload(f.npc)); assert(not f.adapter.nearCheckpoint(r))
+    p.x=43; assert(f.adapter.shouldUnload(f.npc))
+    p.x=26; assert(f.adapter.nearCheckpoint(r)); p.x=27; assert(not f.adapter.nearCheckpoint(r))
+end)
+test('different floors never restore and suspend active NPC',function()
+    local f=fixture(); f.player.z=1
+    assert(f.adapter.shouldUnload(f.npc)); assert(not f.adapter.nearCheckpoint({x=10,y=20,z=0}))
+end)
+test('residency includes pending add but excludes pending removal or missing square',function()
+    local f=fixture(); assert(f.adapter.isResident(f.npc))
+    f.registered=false; f.pending=true; assert(f.adapter.isResident(f.npc))
+    f.removing=true; assert(not f.adapter.isResident(f.npc))
+    f.removing=false; f.npc.square=nil; assert(not f.adapter.isResident(f.npc))
+end)
+test('restore requires a nearby loaded free saved square',function()
+    local f=fixture(); local r={x=10,y=20,z=0}
+    assert(f.adapter.canRestore(r)); f.loaded=false; assert(not f.adapter.canRestore(r))
+    f.loaded=true; f.free=false; assert(not f.adapter.canRestore(r))
+    f.free=true; f.player.x=50; assert(not f.adapter.canRestore(r))
+end)
+print('RESULT '..count..' total engine adapter checks passed')
 ''')

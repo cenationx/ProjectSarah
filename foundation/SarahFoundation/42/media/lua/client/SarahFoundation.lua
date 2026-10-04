@@ -33,6 +33,7 @@ state.tick=function()
     end
     state.controller:observeDeath()
     if not state.controller.npc and state.ticks==120 then state.controller:ensure() end
+    state.controller:maintain()
 end
 state.save=function() if state.controller then state.controller:save() end end
 state.render=function(playerIndex)

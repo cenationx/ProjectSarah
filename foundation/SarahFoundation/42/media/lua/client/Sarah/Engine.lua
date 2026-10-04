@@ -11,6 +11,23 @@ function Engine.new()
     function adapter.exists(slot) return fileExists(file(slot)) end
     function adapter.isDead(npc) return npc:isDead() end
     function adapter.isIncomplete(npc) return npc:getModData().SarahFoundationPartial == true end
+    function adapter.isResident(npc)
+        return npc:getCurrentSquare()~=nil and (getCell():getObjectList():contains(npc) or getCell():getAddList():contains(npc))
+            and not getCell():getRemoveList():contains(npc)
+    end
+    local function nearPlayer(x,y,z,radius)
+        local player=getSpecificPlayer(0)
+        if not player or math.floor(player:getZ())~=math.floor(z) then return false end
+        local dx,dy=player:getX()-x,player:getY()-y
+        return dx*dx+dy*dy<=radius*radius
+    end
+    function adapter.shouldUnload(npc)
+        return not nearPlayer(npc:getX(),npc:getY(),npc:getZ(),32)
+    end
+    function adapter.nearCheckpoint(record)
+        return record and type(record.x)=="number" and type(record.y)=="number" and type(record.z)=="number"
+            and nearPlayer(record.x,record.y,record.z,16)
+    end
     -- B42 FBO skips IsoPlayer in the moving-object pass, but its player pass
     -- only draws local player slots. Draw our NPC through the world event.
     function adapter.render(npc, playerIndex)
@@ -101,7 +118,7 @@ function Engine.new()
     function adapter.canRestore(record)
         if type(record.x)~="number" or type(record.y)~="number" or type(record.z)~="number" then return true end
         local square=getCell():getGridSquare(math.floor(record.x),math.floor(record.y),math.floor(record.z))
-        return square ~= nil and square:isFree(false)
+        return adapter.nearCheckpoint(record) and square ~= nil and square:isFree(false)
     end
     function adapter.snapshot(npc) return {x=npc:getX(),y=npc:getY(),z=npc:getZ()} end
     function adapter.save(npc,slot) npc:save(file(slot)) end

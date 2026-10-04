@@ -43,7 +43,9 @@ before adding broader features. Multiplayer is outside the initial scope.
   and event availability remain limitations in `M0-world-render-test.md`.
 - [x] Fresh no-mod control reproduces duplicate/invalid room metadata errors;
   root cause remains unknown, with no Sarah fix justified by this comparison.
-- [ ] Define and test offscreen/unloaded-square policy and safe deferred recovery.
+- [x] Define preventive travel suspension and deferred saved-location recovery;
+  controlled player travel passed actual square unloading, away restart and
+  return. Ordinary walking/driving and abrupt-movement boundaries remain open.
 - [ ] Live safe write-failure test, preserving last good checkpoint.
 - [ ] Bounded longer-session test with repeat saves/reloads and no duplication.
 - [ ] Document supported scope, remaining risks and M0 handoff decision.

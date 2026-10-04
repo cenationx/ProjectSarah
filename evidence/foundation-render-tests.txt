@@ -8,3 +8,8 @@ PASS unregistered or removal-pending NPC skipped
 PASS offscreen hidden or other-floor NPC skipped
 PASS missing square or lighting skipped
 RESULT 9 rendering checks passed
+PASS travel hysteresis uses 32-tile suspension and 16-tile return
+PASS different floors never restore and suspend active NPC
+PASS residency includes pending add but excludes pending removal or missing square
+PASS restore requires a nearby loaded free saved square
+RESULT 13 total engine adapter checks passed

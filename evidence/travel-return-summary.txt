@@ -1,0 +1,11 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] RESTORE deferred; saved square unavailable
+LOG  : Lua          f:240> [SarahTravelProbe] PASS AWAY_RESTART tagged=0 playerPreserved=true checkpoint=b
+LOG  : Lua          f:600> [SarahTravelProbe] RETURN playerMoved=true NPCNotTeleported=true
+LOG  : Lua          f:720> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:720> [SarahFoundation] RESTORED b
+LOG  : Lua          f:840> [SarahFoundation] SAVED a
+LOG  : Lua          f:840> [SarahTravelProbe] PASS RETURN_RESTORE tagged=1 tokenPreserved=true clothes=3 inventory=4 xyz=10770.490234375,10271.42578125,0 playerPreserved=true saved=true originalGodModeRestored=true
+LOG  : Lua          f:2757> [SarahFoundation] SAVED b

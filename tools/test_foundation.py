@@ -92,6 +92,53 @@ test('successful unload restores same checkpoint',function()
     local a,c=fixture(); c:ensure(); assert(c:unload()); assert(c.npc==nil)
     assert(c:ensure()); assert(a.restored==1)
 end)
+test('travel unload saves first and restores only near saved square',function()
+    local a,c=fixture(); c:ensure(); local far=true; local available=false
+    a.shouldUnload=function() return far end
+    a.nearCheckpoint=function() return not far end
+    a.canRestore=function() return available end
+    c:maintain(); assert(c.npc==nil and a.files.a and not c.manualUnloaded)
+    c:maintain(); assert(a.restored==0)
+    far=false; c:maintain(); assert(a.restored==0)
+    available=true; c:maintain(); assert(c.npc and a.restored==1 and a.created==2)
+end)
+test('manual unload remains dormant until explicit ensure',function()
+    local a,c=fixture(); c:ensure(); assert(c:unload())
+    a.nearCheckpoint=function() return true end
+    c:maintain(); assert(c.npc==nil and a.restored==0)
+    assert(c:ensure()); assert(c.npc and a.restored==1)
+end)
+test('failed travel save retains NPC and stops automatic retries',function()
+    local a,c=fixture(); c:ensure(); c:save(); local old=a.meta.checkpoints; local npc=c.npc; local writes=0
+    a.shouldUnload=function() return true end
+    a.save=function() writes=writes+1; error('disk failure') end
+    c:maintain(); c:maintain()
+    assert(c.npc==npc and c.travelBlocked and writes==1 and a.meta.checkpoints==old)
+end)
+test('engine-removed NPC cannot overwrite checkpoint or be replaced',function()
+    local a,c=fixture(); c:ensure(); c:save(); local old=a.meta.checkpoints; local npc=c.npc
+    a.objects={}; a.isResident=function() return false end
+    c:maintain(); assert(c.travelBlocked and c.npc==npc)
+    assert(not c:save()); assert(a.meta.checkpoints==old)
+    assert(not c:ensure()); assert(a.created==1)
+end)
+test('travel restore refuses duplicates and stops retries',function()
+    local a,c=fixture(); c:ensure(); c:unload(true)
+    a.objects={{},{}}; a.nearCheckpoint=function() return true end
+    c:maintain(); assert(c.travelBlocked and c.npc==nil and a.restored==0)
+end)
+test('deferred older fallback stops repeated corrupt-slot attempts',function()
+    local a,c=fixture(); a.files={a=true,b=true}; a.meta.checkpoints={{slot='b',bad=true},{slot='a'}}
+    a.nearCheckpoint=function() return true end
+    a.canRestore=function(r) return r.slot=='b' end
+    c:maintain(); c:maintain()
+    assert(c.travelBlocked and c.npc==nil and a.restored==1 and a.meta.checkpoints[1].slot=='b')
+end)
+test('death flag prevents travel recovery',function()
+    local a,c=fixture(); c:ensure(); c.npc.dead=true; c:observeDeath(); c:unload(true)
+    a.nearCheckpoint=function() return true end
+    c:maintain(); assert(c.npc==nil and a.restored==0 and a.meta.dead)
+end)
 print('RESULT '..count..' lifecycle tests passed')
 ''')
 lua.execute(r'''
@@ -129,5 +176,5 @@ assert(failures==1 and SarahFoundation.renderDisabled)
 SarahFoundation.reset()
 assert(SarahFoundation.renderDisabled==nil)
 print('PASS rendering failure stops retries until session reset')
-print('RESULT 20 total foundation checks passed')
+print('RESULT 27 total foundation checks passed')
 ''')
