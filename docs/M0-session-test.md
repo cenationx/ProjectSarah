@@ -34,3 +34,8 @@ verified in the alive view; engine equipment count is still the narrower claim.
 Both sessions were closed with Alt+F4, the temporary driver was moved to
 `runtime/disabled-probes`, and Continue was left pointing at the death case.
 Both disposable worlds and backups remain local and are excluded from Git.
+
+Follow-up: [menu/world transition test](M0-menu-transition-test.md) subsequently
+verified same-process menu return, Continue and alive/dead/alive switching.
+[Main-script reload](M0-reload-test.md) also passed separately. The limitations
+above describe this earlier full-restart test, not the latest project state.

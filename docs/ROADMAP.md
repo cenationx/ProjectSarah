@@ -32,7 +32,8 @@ before adding broader features. Multiplayer is outside the initial scope.
 - [x] Automated callback reload/session-reset checks.
 - [x] Independent alive/dead disposable worlds pass session assertions across
   full process restarts (not same-process world switching).
-- [ ] Live menu return, continuing and switching disposable worlds.
+- [x] Live menu return, same-world Continue and alive/dead/alive switching in
+  one process, using the temporary mouse entrypoint into the real pause menu.
 - [x] Live main-script reload: retained controller/NPC, one tick per frame and
   one save callback after two reloads.
 - [ ] Broader module reload and actual incomplete-cleanup reference checks.

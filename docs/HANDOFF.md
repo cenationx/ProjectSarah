@@ -25,6 +25,10 @@ The existing canonical checkout is the easiest handoff on this computer.
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
   event and does not verify broader module reload or same-process world switching.
+- Menu-transition backup: `runtime/backups/menu-before-20261004`, both worlds
+  plus isolated key file and latest-save selection before that live test.
+  Menu return, same-world Continue and alive/dead/alive switching passed in one
+  process. See `M0-menu-transition-test.md`; both temporary drivers are disabled.
 - Session-test backup: `runtime/backups/sessions-before-20261004` contains the
   original death world before these runs. Restore only with the game closed:
   first preserve the current target, then copy the desired backup into a new
@@ -32,7 +36,8 @@ The existing canonical checkout is the easiest handoff on this computer.
 - Backups: `runtime/backups/foundation-before-20261004-045750` and
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
-- Current test world has Sarah dead by design. Before an alive-NPC test, close
+- The original dated world has Sarah dead by design; the alive copy remains
+  independent and is currently selected by Continue. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit
@@ -68,6 +73,9 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
 ## Live tests
 
 1. Read STATUS and the applicable test report. Confirm game process is closed.
+   Sandboxed process queries may not see a game launched outside that sandbox;
+   use native window inventory or an authorized process query before trusting
+   process absence. Verify process ID/start time when claiming no restart.
 2. Back up the disposable world and mod selection; record the backup path and
    restoration procedure before mutations or destructive fault tests.
 3. Deploy `foundation/SarahFoundation` to `runtime/isolated/mods`. Keep its
@@ -78,6 +86,9 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    alive/dead worlds and marks world-specific metadata. Deploy only the driver(s) required by the test
    before game launch. The death probe kills Sarah; the tombstone probe assumes
    she was already killed and saved. They are not production mod features.
+   FoundationMenuProbe adds a temporary mouse entrypoint into the game's real
+   pause menu for transition testing; pair it with FoundationSessionProbe.
+   This does not verify physical Escape input. Disable both after testing.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.

@@ -3,7 +3,7 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none after the main-script reload checkpoint. Antigravity resume prompt
+Active agent: none; menu/world transition checkpoint completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
@@ -23,7 +23,7 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
 - 19 automated checks pass: 16 lifecycle cases plus 3 simulated callback cases.
 - Latest fix promotes the good fallback slot before subsequent saves and refuses
   adoption of partial constructions. Session callbacks reset controller state;
-  their behavior is covered with simulated events, not live world switching.
+  their behavior is covered by simulated events and the live transitions below.
 - Two independent disposable worlds passed the new live session probe across
   full process restarts: alive case restored exactly one Sarah and saved;
   death case retained its tombstone and zero live Sarahs. Player instance was
@@ -32,24 +32,27 @@ and remote refs to identify the newest checkpoint instead of this historical ID.
   one current tick per frame, one real OnSave adapter call and player preserved.
   Earlier counter-based probe FAILs were false positives caused by B42 forwarding
   old state tables. No production code change was needed. See `M0-reload-test.md`.
+- Live menu return, same-world Continue and alive/dead/alive switching passed
+  within one unchanged Java process. Each menu reset left controller nil;
+  alive cases had exactly one Sarah, death case zero, and player preserved.
+  Temporary mouse entrypoint used the real menu handler; physical Escape input
+  remains unverified. See `M0-menu-transition-test.md` and its sanitized evidence.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: live session transitions
+## Next task: appearance and fresh-world control
 
-1. Inspect files/processes and back up both worlds described in HANDOFF.
-2. The alive copy already exists as `SarahSessionAlive`; the original dated
-   world remains the independent death case. Do not overwrite either case.
-3. Verify quitting to the main menu and continuing the same world leaves exactly
-   one Sarah, correct metadata, and the original player character.
-4. Verify switching between two independently disposable worlds does not transfer
-   Sarah's state or death flag. If unsupported or blocked, record the exact cause.
-5. Main-script reload is verified. Test broader module reload and retention of
-   references from actual incomplete cleanup separately if needed; do not infer
-   these from the normal alive-controller reload result.
-6. Record observations, update milestones, run the automated suite if code
-   changes, and commit/push the checkpoint.
+1. Inspect Git/runtime state and, with game closed, back up both existing cases
+   and isolated selections. Preserve the independent alive and death worlds.
+2. Create a fresh disposable world in the isolated profile without copying old
+   map metadata; record its creation and restoration procedure.
+3. Compare map-load errors with the existing worlds. Use a foundation-disabled
+   fresh control if needed to distinguish engine/map issues from Sarah behavior.
+4. In a backed-up foundation-enabled case, bring Sarah into a clear view and
+   inspect clothing/appearance, recording visual evidence and engine counts.
+5. Record findings and remaining limits, disable temporary probes, close the
+   game, update shared state, and commit/push the checkpoint. Keep AI on hold.
 
 ## Open issues
 
@@ -64,11 +67,14 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 ## Local runtime state at handoff
 
 Game closed. Only SarahFoundation selected in the isolated profile. Temporary
-live/death/tombstone/session/reload probe scripts moved out of the mod into
+live/death/tombstone/session/reload/menu probe scripts moved out of the mod into
 `runtime/disabled-probes`. Continue selects the alive `SarahSessionAlive` world;
-`SarahSessionAlive` is a separate alive copy. Automated Escape input did not
-open the pause menu, so same-process menu/world-switch checks remain open.
+`SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
+the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
+Latest live-test backup: `runtime/backups/menu-before-20261004`, both worlds
+plus isolated key file and latest-save selection. Restore only game-closed,
+after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
 No known tracked code changes are unfinished. Check Git status before work.
 

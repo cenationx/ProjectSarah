@@ -1,0 +1,35 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahMenuProbe] MAIN_MENU controllerNil=true
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahFoundation] SAVED b
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=SarahSessionAlive dead=nil tagged=1 playerPreserved=true
+LOG  : Lua          f:1603> [SarahMenuProbe] OPEN world=SarahSessionAlive
+LOG  : Lua          f:1603> [SarahFoundation] SAVED a
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahMenuProbe] MAIN_MENU controllerNil=true
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahFoundation] SAVED b
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=SarahSessionAlive dead=nil tagged=1 playerPreserved=true
+LOG  : Lua          f:730> [SarahMenuProbe] OPEN world=SarahSessionAlive
+LOG  : Lua          f:730> [SarahFoundation] SAVED a
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahMenuProbe] MAIN_MENU controllerNil=true
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=2026-10-04_04-21-54 dead=true tagged=0 playerPreserved=true
+LOG  : Lua          f:1287> [SarahMenuProbe] OPEN world=2026-10-04_04-21-54
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahMenuProbe] MAIN_MENU controllerNil=true
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahFoundation] SAVED b
+LOG  : Lua          f:240> [SarahSessionProbe] PASS world=SarahSessionAlive dead=nil tagged=1 playerPreserved=true
+LOG  : Lua          f:1066> [SarahFoundation] SAVED a
