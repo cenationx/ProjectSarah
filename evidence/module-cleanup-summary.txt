@@ -1,0 +1,20 @@
+LOG  : Lua          f:0> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:0> [SarahFoundation] SESSION_RESET
+LOG  : Lua          f:120> [SarahFoundation] ACTIVE npc=true worn=3 localPlayerPreserved=true
+LOG  : Lua          f:120> [SarahFoundation] RESTORED a
+LOG  : Lua          f:240> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:240> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:240> [SarahModuleCleanupProbe] RELOADED Engine+Lifecycle+main twice sameController=true sameNPC=true
+LOG  : Lua          f:600> [SarahFoundation] SAVED b
+LOG  : Lua          f:600> [SarahModuleCleanupProbe] PASS HEALTHY_RELOAD tickRate=1 saveCallbacks=1 tagged=1 playerPreserved=true
+LOG  : Lua          f:600> [SarahFoundation] SAVED a
+LOG  : Lua          f:600> [SarahFoundation] FAIL controlled interruption after native removeFromWorld
+LOG  : Lua          f:600> [SarahFoundation] FAIL previous object not fully removed; refusing duplicate
+LOG  : Lua          f:600> [SarahFoundation] LOADED; no external AI layer
+LOG  : Lua          f:600> [SarahModuleCleanupProbe] PASS PARTIAL_CLEANUP injected=true nativeRemovalStarted=true referenceRetained=true replacementRefused=true reloaded=true
+LOG  : Lua          f:720> [SarahFoundation] TRAVEL_BLOCKED travel recovery blocked: NPC already removed; preserving reference and checkpoints
+LOG  : Lua          f:960> [SarahFoundation] FAIL previous object not fully removed; refusing duplicate
+LOG  : Lua          f:960> [SarahFoundation] FAIL NPC no longer resident; retaining reference and checkpoints
+LOG  : Lua          f:960> [SarahModuleCleanupProbe] PASS RETAINED_AFTER_TICKS tickRate=1 replacementRefused=true checkpointRetained=true writes=0 playerPreserved=true restartRequired=true
+LOG  : Lua          f:2642> [SarahFoundation] FAIL NPC no longer resident; retaining reference and checkpoints

@@ -36,7 +36,11 @@ before adding broader features. Multiplayer is outside the initial scope.
   one process, using the temporary mouse entrypoint into the real pause menu.
 - [x] Live main-script reload: retained controller/NPC, one tick per frame and
   one save callback after two reloads.
-- [ ] Broader module reload and actual incomplete-cleanup reference checks.
+- [x] Engine/Lifecycle/main reloads retain controller/NPC and single callbacks;
+  injected interruption after native removal preserves the real unfinished
+  reference across reload/later ticks, refuses replacement/unsafe save and
+  recovers from the good checkpoint on full restart. Native spontaneous or
+  silent cleanup failures and hot schema upgrades remain unverified.
 - [x] Actual-NPC clothing/model viewer inspection before/after full restart.
 - [x] Direct ordinary world-scene visibility, separated positions and diagnosis;
   bounded B42 FBO hook passed restored/fresh NPC scenes. Broad cutaways/floors

@@ -3,14 +3,14 @@
 Updated: 2026-10-04 (Europe/Helsinki).
 State: M0 feasibility demonstrated; foundation hardening remains in progress.
 External AI: ON HOLD by explicit user instruction.
-Active agent: none; bounded longer session completed. Antigravity resume prompt
+Active agent: none; bounded module/cleanup task completed. Antigravity resume prompt
 remains unsent; no second agent is authorized to edit this checkout concurrently.
 
 ## Last verified work
 
-Previous published checkpoint: `1d42d78` on `main`, pushed to
+Previous published checkpoint: `faf1645` on `main`, pushed to
 https://github.com/cenationx/ProjectSarah.
-The accompanying checkpoint adds repeated-session evidence below;
+The accompanying checkpoint adds module/cleanup evidence below;
 use Git history and remote refs to identify its commit rather than this parent ID.
 
 - Unmodified PZNS is incompatible with the installed Build 42.21.0 APIs.
@@ -72,21 +72,27 @@ use Git history and remote refs to identify its commit rather than this parent I
   Full restart loaded cycle 12 and exit saved successfully. No production changes
   needed. This does not prove JVM/native resource reclamation or hours of play.
   See `M0-long-session-test.md`.
+- Engine/Lifecycle/main reload twice passed retained controller/NPC, one tick
+  and real OnSave callback. A deliberate Lua interruption after native Sarah
+  removeFromWorld retained the unfinished real-object reference across another
+  module reload and later ticks. Replacement and nonresident writes were refused;
+  full restart restored the last good checkpoint with current contents/one Sarah,
+  then saved successfully. No production changes. This tests unchanged-source
+  reload and an injected fault, not hot upgrades or spontaneous native failures.
+  See `M0-module-cleanup-test.md`.
 
 Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
 `M0-foundation-live-test.md`, and `../evidence/foundation-policy-tests.txt`.
 
-## Next task: broader module reload and incomplete-cleanup references
+## Next task: supported M0 scope and handoff decision
 
-1. Inspect Git/runtime state; with game closed, back up and create a separate
-   disposable copy of the completed long-session case plus selections.
-2. Inspect module reload behavior; reload Engine/Lifecycle/main through actual
-   game Lua reload and verify controller/NPC retention, one tick and save callback.
-3. Use a bounded reversible adapter cleanup fault around a real test NPC to
-   verify its retained reference survives reload and prevents replacement.
-   Label injected adapter failures separately from native engine failures.
-4. Preserve failures before fixing any demonstrated gap; then retest/restart.
-5. Close game, disable temporary probes, update docs and commit/push. Keep AI on hold.
+1. Reconcile all M0 reports and the source with a concise supported-scope matrix:
+   API inspection, simulated policy, native live tests and injected live faults.
+2. Document recovery/stop conditions and explicitly unsupported boundaries;
+   distinguish narrow feasibility from broad game compatibility or release readiness.
+3. Recommend a bounded M0 handoff decision with remaining limitations for the
+   user to review. Do not mark all hardening complete merely because tests passed.
+4. Update shared docs and commit/push the reviewable scope checkpoint. Keep AI on hold.
 
 ## Open issues
 
@@ -102,15 +108,19 @@ Evidence and boundaries: `M0-PZNS-compatibility.md`, `M0-live-test.md`,
   abrupt movement, floor transitions, combat, hours-long sessions, multiplayer and
   full PZNS compatibility remain unverified.
 - Foundation is deliberately restricted to the exact isolated cache path.
+- Reload tests used unchanged source; schema/function hot upgrades and spontaneous
+  or silent native cleanup failures remain unverified. Interrupted cleanup needs
+  full restart in the tested recovery; no automatic in-session repair is promised.
 
 ## Local runtime state at handoff
 
 Game closed; native window inventory confirmed no Project Zomboid window.
-Only SarahFoundation selected. Continue selects `SarahLongSessionCase`, a separate
-copy of SarahWriteFailureRetest; original retest/travel/fresh/control cases remain intact. Original control
+Only SarahFoundation selected. Continue selects `SarahModuleCleanupCase`, a separate
+copy of SarahLongSessionCase; original long-session/retest/travel/control cases remain intact. Original control
 has an empty world mod list; older alive/dead cases remain preserved.
-All temporary drivers, including long-session, travel and write failure, are outside the mod in
+All temporary drivers, including module-cleanup and long-session, are outside the mod in
 `runtime/disabled-probes`. Production Engine/Lifecycle/main deployed to isolated mod.
+Module-cleanup case recovered from a and saved b on final exit; ModuleCleanupDone=true.
 Long-session case saved slot a on final exit; LongSessionDone=true, cycle=12.
 Original retest saved b; write probe marker done. All exclusive file
 handles released; local .txt release signal remains. Do not rerun the one-shot
@@ -119,14 +129,16 @@ latest-slot inspection and a backed-up separate case are required.
 `SarahSessionAlive` is a separate alive copy. Menu/world switching passed using
 the temporary mouse menu entrypoint; automated Escape input remains unresolved.
 Main-script reload passed in the alive world; the dated world remains dead.
-Latest backup group: `runtime/backups/long-session-before-20261004`: Original-retest,
-Completed-before-restart, Final-restart and selections. Prior write-failure group
+Latest backup group: `runtime/backups/module-cleanup-before-20261004`:
+Original-long-session, Interrupted-before-restart, Recovered-final and selections.
+Prior long-session group retains Original-retest, Completed-before-restart and
+Final-restart. Prior write-failure group
 retains Failed-baseline, Harness-failure and fixed results. Prior travel backup
 retains Away-before-restart and Returned-final. Older rendering, appearance and
 alive/dead backups remain preserved. Restore only game-closed,
 after preserving the current case, into a new disposable directory.
 Runtime files and backups exist locally but are excluded from Git.
-Long-session probe, evidence and handoff updates are included in this checkpoint.
+Module-cleanup probe, evidence and handoff updates are included in this checkpoint.
 No unfinished work remains for this bounded task; M0 hardening is still open.
 Check Git status and fresh native window inventory before resuming UI work.
 

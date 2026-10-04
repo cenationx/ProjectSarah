@@ -16,7 +16,7 @@ The existing canonical checkout is the easiest handoff on this computer.
 ## What exists only on this computer
 
 Latest runtime state: game closed, only SarahFoundation enabled in the isolated
-default. Continue selects `Rising/SarahLongSessionCase`, a separate copy of SarahWriteFailureRetest and SarahTravelCase, ultimately from the fresh
+default. Continue selects `Rising/SarahModuleCleanupCase`, a copy of SarahLongSessionCase, SarahWriteFailureRetest and SarahTravelCase, ultimately from the fresh
 rendering case. The original rendering case was copied from the
 new mod-free control `Rising/2026-10-04_06-16-14`; that original world's mods.txt
 remains empty. Older alive/dead cases are preserved. Appearance model viewer
@@ -33,8 +33,15 @@ Subsequent long-session case passed 12 unload/restores, 25 verified saves and
 25 verifier/world-list cleanups over 365000 ms, then full restart loaded cycle12.
 Final exit saved a; LongSessionDone=true. No production change needed. This does
 not prove hours-long reliability or complete native resource reclamation.
-Next: broader module reload and injected incomplete-cleanup reference checks.
+Module reload/cleanup case then passed Engine/Lifecycle/main reloads, one tick/save
+callback, and reference retention after injected partial native removal across
+reload/later ticks. Replacement and unsafe saves refused. Full restart recovered
+one Sarah from a with current contents/clothes/player; final exit saved b.
+ModuleCleanupDone=true. No production change; unchanged-source/injected-fault limits
+are in `M0-module-cleanup-test.md`. Next: M0 supported-scope matrix and handoff decision.
 All temporary drivers are disabled outside the mod. Latest backup group:
+`runtime/backups/module-cleanup-before-20261004`, Original-long-session,
+Interrupted-before-restart, Recovered-final and selections. Prior
 `runtime/backups/long-session-before-20261004`, Original-retest, Completed-before-restart,
 Final-restart and selections. Prior `runtime/backups/write-failure-before-20261004`, original
 SarahTravelCase/selections, Failed-baseline, Harness-failure, Fixed-before-restart
@@ -57,7 +64,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
 - Test world: `runtime/isolated/Saves/Rising/2026-10-04_04-21-54`.
 - Separate alive case: `runtime/isolated/Saves/Rising/SarahSessionAlive`, copied
   from the pre-recovery backup and live-tested on 2026-10-04. The original dated
-  world remains dead. Continue now selects the completed long-session case above.
+  world remains dead. Continue now selects the recovered module-cleanup case above.
 - Live reload backup: `runtime/backups/reload-before-20261004`, both worlds
   before the reload investigation. Main-script reload passed; use
   `tools/FoundationReloadProbe.lua` for that exact test. It triggers a real save
@@ -74,7 +81,7 @@ See `M0-appearance-control-test.md`; metadata errors reproduced with no mods.
   `runtime/backups/recovery-before-20261004-050552`, each containing the world
   directory. Verify contents before using them.
 - The original dated world has Sarah dead by design; the alive copy remains
-  independent; Continue selects the completed long-session case. Before restoration, close
+  independent; Continue selects the recovered module-cleanup case. Before restoration, close
   the game, copy current world to a new backup/case directory, then restore a
   separate copy of the alive backup. Never delete the last copy of a case.
 - Upstream PZNS: `vendor/PZNS`, commit
@@ -150,6 +157,12 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
    adapter.remove only to observe objects, then checks and releases references
    after ticks. Do not redeploy to repeat cycles in the completed case; prepare
    a separate backed-up matching case and inspect/reset only its probe metadata.
+   FoundationModuleCleanupProbe is guarded to SarahModuleCleanupCase. It reloads
+   Engine/Lifecycle/main, interrupts real removal with an injected Lua exception,
+   restores the wrapper and requires full process restart for recovery checks.
+   Done mode only checks the recovered checkpoint; prepare another backed-up
+   matching case/marker to repeat. Do not clear pinned controller references
+   manually to bypass safeguards.
 5. Launch `tools/launch-isolated.ps1` (optionally `-NoDebug` for intentional
    failures). Inspect the game UI, continue the disposable world, dismiss the
    survival guide, and verify outcomes against logs and game state.
