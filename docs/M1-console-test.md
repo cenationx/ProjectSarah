@@ -1,10 +1,10 @@
 # M1 read-only console slice A: 2026-10-04
 
-IN PROGRESS: slice A native acceptance PASSED; slice B native idle-stop/history/session-reset smoke checks PASSED (active cancellation pending).
-Slice C (bounded "walk here", completion tracking, stop cancellation, timeout, and lifecycle invalidation) IMPLEMENTED,
-hardened against session-reset callback collision, synchronous callbacks, sequence reset, and controller availability; automated suite increased to 125 passing checks
-(29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command, 19 console).
-Native acceptance of slice C walking, arrival, and live movement cancellation pending Codex live check per docs/M1-slice-c-checklist.md.
+IN PROGRESS: slice A native acceptance PASSED; slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C.
+Slice C (bounded "walk here", completion tracking, stop cancellation, timeout, and lifecycle invalidation) IMPLEMENTED and hardened offline (146 automated checks across 6 suites plus 11 runner self-tests).
+Sarah Console equipped with dedicated mouse-operated command shortcut buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]).
+Native UI source inspected read-only against PZ 42.21.0 ISUI (callback signatures, hit areas, focus behavior, auto-scrolling, and stop accessibility verified; no code defects).
+Native acceptance prepared in docs/M1-slice-c-checklist.md using console mouse buttons and human observation.
 Commands/Observations/Console implement help, status, inventory, walk here, stop, and history. External AI remains strictly on hold.
 Automated tests do not establish native input.
 
@@ -291,3 +291,29 @@ Gemini resolved the session-reset callback collision reproduced by Codex and rec
   - All 5 test suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console = 125 checks total.
 
 Checkout ownership is RELEASED to Codex for native testing following `docs/M1-slice-c-checklist.md`. External AI remains strictly ON HOLD.
+
+## Sarah Console mouse shortcuts and native UI inspection (2026-10-05)
+
+Gemini implemented mouse-operated command buttons directly on the Sarah Console panel and inspected native UI interaction against installed PZ 42.21.0 ISUI source (offline only; no game launches, desktop automation, or runtime deployment):
+- **Mouse shortcut toolbar in Sarah Console**:
+  - Dedicated buttons for `Help`, `Status`, `Inventory`, `History`, `Walk Here`, and `Stop` along with `Close` and `Run`.
+  - Every button executes through `executeCommand(commandText)` routing to `self.dispatch:execute()` and displays through unified history output, identical to typed entry.
+  - Avoids unreliable desktop keyboard injection while allowing Codex to trigger commands and inspect results, with the user controlling character movement.
+  - English translations added to `Translate/EN/UI.json` (`UI_SarahConsole_Help`, etc.) with `tr()` fallback.
+- **Native UI source inspection (PZ 42.21.0 ISUI)**:
+  - Inspected `ISButton.lua`, `ISScrollingListBox.lua`, `ISUIElement.lua`, and `ISTextEntryBox.lua` read-only.
+  - Verified callback signatures: `ISButton:onMouseUp` invokes `self.onclick(self.target, self, ...)`. In `Console.lua`, buttons pass `target = self` (`Panel`), so `Panel.onShortcut*` receives `Panel` as `self`. The `Close` button passes `state.close` as `onclick` with `nil` target, cleanly cleaning up `state.panel`.
+  - Verified hit areas: toolbar `y = 296, h = 26`, widths 72, 80, 96, 82, 102, 72; gaps 6-7px, 12px margins. 8px vertical clearance above and below toolbar; no overlaps with list box (`y: 42..288`) or text entry (`y: 330..356`).
+  - Native `ISButton` auto-width check: Measured title widths + 10px are well within allocated button widths (15-30px clearance), preventing unexpected width expansion.
+  - Focus behavior: `Panel:executeCommand` resets entry text (`self.entry:setText('')`) and refocuses (`self.entry:focus()`), ensuring keyboard readiness without extra clicks.
+  - Output scrolling: `Panel:append` calls `self.history:setYScroll(...)` to keep latest results scrolled into view.
+  - Stop accessibility: `btnStop.enable = true` is never disabled. Panel remains active in `UIManager` throughout timed action execution, ensuring `Stop` is clickable at any time during a walk.
+  - No concrete code defects found. Per rule, native UI acceptance is not claimed from code inspection alone.
+- **Automated test suite (146 passing checks)**:
+  - 7 new console tests added in `tools/test_console.py` (26 checks total).
+  - All 6 offline suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 driver = 146 checks, plus 11 runner self-tests.
+- **Checklist and deployment protocol updated**:
+  - `docs/M1-slice-c-checklist.md` updated with mouse-operated acceptance procedure, division of responsibilities, and deployment/recovery protocol.
+  - Temporary acceptance driver `tools/FoundationWalkStopDriver.lua` retained as optional.
+  - Single next task: native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
+  - External AI remains strictly ON HOLD. Checkout ownership released to Codex.

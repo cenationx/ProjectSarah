@@ -25,13 +25,18 @@ corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
 146 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-26 console, 14 acceptance driver) plus 11 runner self-tests. Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
-and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
+26 console, 14 acceptance driver) plus 11 runner self-tests. Native UI source inspected read-only against PZ 42.21.0
+ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
+Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
+active moving-action cancellation tested natively alongside slice C.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
-scoping, production controller contract, safe context menu routing, and temporary acceptance driver with sustained halt verification)
-implemented and hardened offline (146 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
-per `docs/M1-slice-c-checklist.md`.
-Automated special-key delivery remains limited by Computer Use; physical keys need the user. Keep external AI on hold.
+scoping, production controller contract, safe context menu routing, and console mouse buttons toolbar) implemented and hardened offline;
+native acceptance prepared in `docs/M1-slice-c-checklist.md` using the mouse context menu (`Sarah: console`) and 7 console buttons
+([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]).
+The temporary driver in `tools/FoundationWalkStopDriver.lua` is optional; native acceptance proceeds via production console buttons
+and direct human observation.
+Single next task: native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
+Keep external AI strictly on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
 module-cleanup case/selections/keys, First-live-before-repair and Final-console.
@@ -108,21 +113,45 @@ locally for compilation; CFR 0.152 was used only for local engine inspection.
 
 ## Live tests
 
-### Temporary native acceptance driver for walk/stop testing
-To run native walk and stop testing without manual typing:
-1. Ensure the game is CLOSED.
-2. Deploy driver: copy `tools/FoundationWalkStopDriver.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
-3. Launch game with isolated profile and `SarahConsoleNativeCase`.
-4. The driver UI panel appears at (20, 200). It never starts any test automatically.
-5. Move the player 4–6 tiles away from Sarah on the same floor with a clear path.
-6. Click `Walk then Stop`:
-   - Driver dispatches `walk here`, monitors observable movement (>= 0.2 tiles), and issues `stop`.
-   - Verifies Sarah halts before target square and marks mid-walk cancellation `PASS`.
-   - If Sarah reaches target square too early, driver marks `INVALID: Arrived too soon` (not labelled mid-walk cancellation).
-7. Click `Walk to Player`: verifies clean resumption after cancellation.
-8. Click `Status & History`: logs status and history to verify dispatch record.
-9. Close game cleanly.
-10. Remove driver: delete `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
+### Production console mouse buttons acceptance (primary) & temporary driver (optional)
+
+Native acceptance of M1 Slice C and console mouse buttons proceeds via the production mod UI buttons
+and human observation as detailed in `docs/M1-slice-c-checklist.md`. The temporary driver under `tools/` is optional.
+
+#### Deployment requirements for Codex
+1. Ensure Project Zomboid is CLOSED (`javaw.exe` / `java.exe` absent).
+2. Create a timestamped backup directory (e.g. `runtime/backups/slice-c-<timestamp>`) and copy `SarahConsoleNativeCase`,
+   `keysB42.ini`, `options.ini`, `latestSave.ini`, and current `runtime/isolated/mods/SarahFoundation`.
+3. Deploy reviewed production source files from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`:
+   - `42/media/lua/client/SarahFoundation.lua` (context menu dispatch routing and feedback)
+   - `42/media/lua/client/Sarah/Commands.lua` (slice C walk dispatch, cancellation, dual-identity, monotonic token)
+   - `42/media/lua/client/Sarah/Console.lua` (mouse shortcut buttons toolbar, unified executeCommand, tr() helper)
+   - `42/media/lua/client/Sarah/Engine.lua` (SarahWalkAction, adapter.validateTarget, adapter.walk)
+   - `42/media/lua/shared/Translate/EN/UI.json` (new button label translations)
+   - `README.md`
+   *(Baseline in `runtime/isolated/mods/` is Slice B; files `Lifecycle.lua`, `Observations.lua`, and `mod.info` are unchanged).*
+4. Verify no temporary diagnostic probes are in `runtime/isolated/mods/SarahFoundation` (`runtime/disabled-probes`).
+5. Do NOT deploy `tools/FoundationWalkStopDriver.lua` for the primary checklist (keep mod free of test harnesses).
+
+#### Native testing procedure
+- Follow the 7 ordered gates in `docs/M1-slice-c-checklist.md`.
+- User controls movement and visually confirms NPC movement/arrival/halting.
+- Codex operates the console via mouse context menu (`Sarah: console`) and the 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]), and inspects text output.
+
+#### Recovery / rollback checklist
+1. Close game cleanly.
+2. To roll back mod source to Slice B: restore from `runtime/backups/slice-b-20261005-014102/Previous-mod` (or `Final-native` mod files).
+3. To restore world save: copy backed-up `SarahConsoleNativeCase` into `runtime/isolated/Saves/Rising/SarahConsoleNativeCase`.
+4. To restore key bindings: copy backed-up `keysB42.ini` to `runtime/isolated/Lua/keysB42.ini`.
+
+#### Optional: temporary acceptance driver
+If automated walk-then-stop sequence verification is additionally desired:
+1. Deploy driver: copy `tools/FoundationWalkStopDriver.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
+2. Launch game with isolated profile and `SarahConsoleNativeCase`.
+3. Driver UI panel appears at (20, 200). Reposition player 4-6 tiles away on same floor.
+4. Click `Walk then Stop`: monitors observable movement, issues stop, and verifies sustained positional stability.
+5. Click `Walk to Player`: verifies resumption after cancellation.
+6. Close game cleanly and remove driver: delete `ZZSarahWalkStopDriver.lua` from the mod directory.
 
 1. Read STATUS and the applicable test report. Confirm game process is closed.
    Sandboxed process queries may not see a game launched outside that sandbox;
@@ -536,3 +565,29 @@ Gemini added mouse-operated command shortcut buttons to `SarahConsole.lua` and a
   - Temporary driver in `tools/FoundationWalkStopDriver.lua` retained for Codex evaluation.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+## Preparation for native acceptance using console mouse buttons (latest, 2026-10-05)
+
+Gemini completed offline preparation for native acceptance of M1 slice C and console mouse buttons (offline only; no game launches, desktop automation, or runtime deployment):
+- **Native UI source inspection (PZ 42.21.0 ISUI)**:
+  - Inspected `ISButton.lua`, `ISScrollingListBox.lua`, `ISUIElement.lua`, and `ISTextEntryBox.lua` read-only under `G:\Games\ProjectZomboid\media\lua\client\ISUI\`.
+  - Callback signatures: `ISButton:onMouseUp` invokes `self.onclick(self.target, self, ...)`. In `Console.lua`, buttons pass `target = self` (the `Panel`), so `Panel.onShortcut*` receives `Panel` as `self`, executing `Panel:executeCommand(...)` correctly. The `Close` button passes `state.close` as `onclick` with `nil` target, which cleanly cleans up `state.panel`. Signatures match native PZ UI exactly.
+  - Button hit areas and geometry: Toolbar is positioned at `y = height - 74` (`y = 296`, `height = 26`) with button widths 72, 80, 96, 82, 102, 72 and 6-7px horizontal gaps. Clearance is 8px below list box (`y: 42..288`) and 8px above text input (`y: 330..356`). No overlaps.
+  - Title string auto-expansion check: Native `ISButton:new` expands button width if `width < getTextManager():MeasureStringX(UIFont.Small, title) + 10`. In our layout, all button titles ("Help", "Status", "Inventory", "History", "Walk Here", "Stop") measure 15-30px smaller than assigned widths, preventing unintended button width expansion.
+  - Focus behavior: `Panel:executeCommand` resets entry text (`self.entry:setText('')`) and refocuses (`self.entry:focus()`), ensuring immediate keyboard input readiness without extra clicks.
+  - Output scrolling: `Panel:append` calls `self.history:setYScroll(-math.max(0, #self.history.items * self.history.itemheight - self.history.height + 8))` after each added line, keeping newest entries scrolled into view.
+  - Stop accessibility during walk: `btnStop.enable = true` is never toggled off. Panel remains active in `UIManager` throughout timed action execution, ensuring `Stop` is clickable at any time during a walk.
+  - Boundary: Design verified; no code defects identified. Per rule, native UI acceptance is not claimed from code inspection alone.
+- **Checklist update (`docs/M1-slice-c-checklist.md`)**:
+  - Re-oriented all 7 acceptance gates to use the mouse context menu (`Sarah: console`) and the 7 buttons (`[Help]`, `[Status]`, `[Inventory]`, `[History]`, `[Walk Here]`, `[Stop]`, `[Close]`).
+  - Clear division of responsibilities: User moves player and visually verifies NPC movement/arrival/halt; Codex operates UI buttons and inspects console output.
+  - Omitted repeating accepted slice A physical keyboard gates unless investigating a regression.
+  - Clarified that `tools/FoundationWalkStopDriver.lua` is optional; native acceptance proceeds via production console buttons.
+- **Deployment and recovery protocol documented for Codex**:
+  - Documented exact production source files (`SarahFoundation.lua`, `Commands.lua`, `Console.lua`, `Engine.lua`, `UI.json`, `README.md`).
+  - Documented baseline (Slice B at `runtime/isolated/mods/SarahFoundation/` and `runtime/backups/slice-b-20261005-014102/Final-native`) vs pending Slice C & UI changes.
+  - Documented pre-test backup, deployment, and recovery/rollback checklists (without executing deployment).
+- **Single next task**:
+  - Native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
+  - External AI remains strictly ON HOLD.
+  - Checkout ownership is RELEASED to Codex.

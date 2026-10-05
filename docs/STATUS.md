@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 146 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver) plus 11 passing runner self-tests. Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop]). Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native UI checks and slice C walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (146 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Native UI source inspected read-only against PZ 42.21.0 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and stop accessibility verified; no code defects). Acceptance checklist updated in docs/M1-slice-c-checklist.md for mouse-operated workflow (Codex operates console buttons; user controls movement and visually confirms NPC movement/arrival/halting). Production mod deployment requirements and recovery checklists documented for Codex. Temporary acceptance driver in tools/FoundationWalkStopDriver.lua confirmed optional. Single next task: native M1 slice C and console-button acceptance by Codex following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -499,3 +499,27 @@ Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
   - Temporary driver in `tools/FoundationWalkStopDriver.lua` retained for Codex evaluation.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+### Preparation for native acceptance using console mouse buttons (Gemini, 2026-10-05)
+- **Native UI source inspection (PZ 42.21.0 ISUI)**:
+  - Inspected `ISButton.lua`, `ISScrollingListBox.lua`, `ISUIElement.lua`, and `ISTextEntryBox.lua` read-only under `G:\Games\ProjectZomboid\media\lua\client\ISUI\`.
+  - Callback signatures: `ISButton:onMouseUp` invokes `self.onclick(self.target, self, ...)`. In `Console.lua`, buttons pass `target = self` (the `Panel`), so `Panel.onShortcut*` receives `Panel` as `self`, executing `Panel:executeCommand(...)` correctly. The `Close` button passes `state.close` as `onclick` with `nil` target, which cleanly cleans up `state.panel`. Signatures match native PZ UI exactly.
+  - Button hit areas and geometry: Toolbar is positioned at `y = height - 74` (`y = 296`, `height = 26`) with button widths 72, 80, 96, 82, 102, 72 and 6-7px horizontal gaps. Clearance is 8px below list box (`y: 42..288`) and 8px above text input (`y: 330..356`). No overlaps.
+  - Title string auto-expansion check: Native `ISButton:new` expands button width if `width < getTextManager():MeasureStringX(UIFont.Small, title) + 10`. In our layout, all button titles ("Help", "Status", "Inventory", "History", "Walk Here", "Stop") measure 15-30px smaller than assigned widths, preventing unintended button width expansion.
+  - Focus behavior: `Panel:executeCommand` resets entry text (`self.entry:setText('')`) and refocuses (`self.entry:focus()`), ensuring immediate keyboard input readiness without extra clicks.
+  - Output scrolling: `Panel:append` calls `self.history:setYScroll(-math.max(0, #self.history.items * self.history.itemheight - self.history.height + 8))` after each added line, keeping newest entries scrolled into view.
+  - Stop accessibility during walk: `btnStop.enable = true` is never toggled off. Panel remains active in `UIManager` throughout timed action execution, ensuring `Stop` is clickable at any time during a walk.
+  - Boundary: Design verified; no code defects identified. Per rule, native UI acceptance is not claimed from code inspection alone.
+- **Checklist update (`docs/M1-slice-c-checklist.md`)**:
+  - Re-oriented all 7 acceptance gates to use the mouse context menu (`Sarah: console`) and the 7 buttons (`[Help]`, `[Status]`, `[Inventory]`, `[History]`, `[Walk Here]`, `[Stop]`, `[Close]`).
+  - Clear division of responsibilities: User moves player and visually verifies NPC movement/arrival/halt; Codex operates UI buttons and inspects console output.
+  - Omitted repeating accepted slice A physical keyboard gates unless investigating a regression.
+  - Clarified that `tools/FoundationWalkStopDriver.lua` is optional; native acceptance proceeds via production console buttons.
+- **Deployment and recovery protocol documented for Codex**:
+  - Documented exact production source files (`SarahFoundation.lua`, `Commands.lua`, `Console.lua`, `Engine.lua`, `UI.json`, `README.md`).
+  - Documented baseline (Slice B at `runtime/isolated/mods/SarahFoundation/` and `runtime/backups/slice-b-20261005-014102/Final-native`) vs pending Slice C & UI changes.
+  - Documented pre-test backup, deployment, and recovery/rollback checklists (without executing deployment).
+- **Single next task**:
+  - Native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
+  - External AI remains strictly ON HOLD.
+  - Checkout ownership is RELEASED to Codex.
