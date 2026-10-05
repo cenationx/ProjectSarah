@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-197 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-36 console, 14 acceptance driver, 41 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+202 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+36 console, 14 acceptance driver, 46 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -36,7 +36,7 @@ Movable console panel implemented offline via title-bar mouse dragging with boun
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
 Bounded manual follow-player command implemented offline and hardened against Codex review: safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
-User-facing follow status distinctions (following while walking, waiting in range, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (console panel append and in-world halo notifications without polling or replay) implemented and verified offline (41 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
+User-facing follow status distinctions (following while walking, waiting in range vs waiting before next walk during cooldown, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (unified disengagement + stop failure notice, console panel append, in-world halo notifications without polling or replay) implemented and verified offline (46 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
@@ -87,7 +87,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (197 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (202 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -107,8 +107,8 @@ Individual suites can also still be executed directly:
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
 - `tools/test_console.py`: 36 simulated console UI/key/shortcut/dragging/bounds/session/feedback checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-- `tools/test_follow.py`: 41 manual follow-player companion navigation/status/notice checks.
-197 automated checks total (across 7 suites) plus 11 runner self-tests and 19 preflight tests. Simulated checks do not prove exceptional native cleanup.
+- `tools/test_follow.py`: 46 manual follow-player companion navigation/status/notice checks.
+202 automated checks total (across 7 suites) plus 11 runner self-tests and 19 preflight tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing

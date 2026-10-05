@@ -144,24 +144,6 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         self.lastAction={id=action.id,command=action.command,state='cancelled',reason=action.summary}
         self:updateHistory(action.id,'cancelled',action.summary)
 
-        local isUser=(isUserStop==true) or (reason=='stopped by user') or (reason=='session reset')
-        if not isUser then
-            local noticeMsg
-            if action.command=='follow' then
-                noticeMsg='Follow disengaged: '..action.summary..'.'
-            else
-                noticeMsg='Action #'..action.id..' cancelled: '..action.summary..'.'
-            end
-            self.noticeQueue[#self.noticeQueue+1]={
-                id=action.id,
-                command=action.command,
-                state=action.state,
-                reason=action.summary,
-                message=noticeMsg,
-                isBad=true
-            }
-        end
-
         local stopOk,stopErr=self:invokeStop(reason or 'cancelled',{
             id=action.id,
             command=action.command,
@@ -173,9 +155,32 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         })
         if not stopOk then
             self.stopFailed=stopErr or 'stop failed'
+            action.stopFailed=self.stopFailed
+            self.lastAction.stopFailed=self.stopFailed
         else
             self.stopFailed=nil
         end
+
+        local isUser=(isUserStop==true) or (reason=='stopped by user') or (reason=='session reset')
+        if not isUser then
+            local noticeMsg
+            local stopWarn=not stopOk and (' Warning: engine stop failed ('..tostring(self.stopFailed)..'); movement blocked pending recovery.') or ''
+            if action.command=='follow' then
+                noticeMsg='Follow disengaged: '..action.summary..'.'..stopWarn
+            else
+                noticeMsg='Action #'..action.id..' cancelled: '..action.summary..'.'..stopWarn
+            end
+            self.noticeQueue[#self.noticeQueue+1]={
+                id=action.id,
+                command=action.command,
+                state=action.state,
+                reason=action.summary,
+                message=noticeMsg,
+                isBad=true,
+                stopFailed=not stopOk and self.stopFailed or nil
+            }
+        end
+
         return true,{id=action.id,command=action.command,state=action.state,summary=action.summary},stopOk,stopErr
     end
     function self:checkLifecycle()
@@ -284,12 +289,15 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 return false,'retired'
             end
             if not self.active or self.active.id~=actId or self.active.token~=actToken then
+                stepRetired=true
                 return false,'stale'
             end
             if actSession and self.active.session and actSession~=self.active.session then
+                stepRetired=true
                 return false,'stale'
             end
             if self.active.stepGen~=curStepGen or self.active.stepState~='walking' then
+                stepRetired=true
                 return false,'stale step'
             end
             local currentOwner,currentNpc=self:getIdentity()
@@ -958,7 +966,24 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                             result.lines[#result.lines+1]='Follow: following while walking'
                         end
                     else
-                        result.lines[#result.lines+1]='Follow: follow engaged but waiting within range'
+                        local inDeadzone=false
+                        if data.npc and isValidCoord(data.npc.x,data.npc.y,data.npc.z) and
+                           data.player and isValidCoord(data.player.x,data.player.y,data.player.z) then
+                            local nz=math.floor(data.npc.z)
+                            local pz=math.floor(data.player.z)
+                            if nz==pz then
+                                local dx=data.player.x-data.npc.x
+                                local dy=data.player.y-data.npc.y
+                                if dx*dx+dy*dy<=4.0 then
+                                    inDeadzone=true
+                                end
+                            end
+                        end
+                        if inDeadzone then
+                            result.lines[#result.lines+1]='Follow: follow engaged but waiting within range'
+                        else
+                            result.lines[#result.lines+1]='Follow: follow engaged but waiting before next walk'
+                        end
                     end
                 end
             elseif self.lastAction then

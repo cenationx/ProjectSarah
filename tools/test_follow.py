@@ -1207,5 +1207,287 @@ test('asynchronous follow disengagement enqueues one-time notice and user stop d
     assert(#d:consumeNotices() == 0)
 end)
 
+-- 42. Follow status during cooldown distinguishes inside vs outside deadzone
+test('follow status during cooldown distinguishes inside vs outside deadzone', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+
+    local startRes = d:execute('follow')
+    assert(startRes.state == 'running')
+    assert(d.active and d.active.command == 'follow')
+
+    -- Enter cooldown
+    d.active.stepState = 'idle'
+    d.active.currentTarget = nil
+    d.active.cooldown = 15
+
+    -- 42a. Inside deadzone (<= 2 tiles): reports waiting within range
+    f.playerPos.x = 11; f.playerPos.y = 10; f.playerPos.z = 0
+    local stInRange = d:execute('status')
+    assert(stInRange.state == 'completed')
+    assert(stInRange.lines[2] == 'Action: #1 follow (running)')
+    assert(stInRange.lines[3] == 'Follow: follow engaged but waiting within range')
+
+    -- Exactly on 2-tile boundary (dx=2, dy=0, distSq=4.0): waiting within range
+    f.playerPos.x = 12; f.playerPos.y = 10; f.playerPos.z = 0
+    local stBoundary = d:execute('status')
+    assert(stBoundary.lines[3] == 'Follow: follow engaged but waiting within range')
+
+    -- 42b. Outside deadzone (> 2 tiles, e.g. 3 tiles away): reports waiting before next walk
+    f.playerPos.x = 13; f.playerPos.y = 10; f.playerPos.z = 0
+    local stOutside = d:execute('status')
+    assert(stOutside.state == 'completed')
+    assert(stOutside.lines[2] == 'Action: #1 follow (running)')
+    assert(stOutside.lines[3] == 'Follow: follow engaged but waiting before next walk')
+
+    -- 42c. Different floor during cooldown: reports waiting before next walk
+    f.playerPos.x = 11; f.playerPos.y = 10; f.playerPos.z = 1
+    local stDiffFloor = d:execute('status')
+    assert(stDiffFloor.lines[3] == 'Follow: follow engaged but waiting before next walk')
+
+    -- 42d. Missing coordinates during status: lifecycle cancels with player unavailable
+    f.playerPos.x = 11; f.playerPos.y = 10; f.playerPos.z = 0
+    local dMissing = Commands.new(function()
+        return {
+            state = 'active',
+            npc = {x = 10, y = 10, z = 0},
+            player = nil
+        }
+    end, function() return true end, f.identityProvider, function() return true end)
+    dMissing.active = {
+        id = 1,
+        session = dMissing.session,
+        command = 'follow',
+        state = 'running',
+        token = 1,
+        stepState = 'idle',
+        cooldown = 15
+    }
+    local stMissing = dMissing:execute('status')
+    assert(stMissing.lines[2]:find('Action: idle %(last: #1 cancelled%)'))
+    assert(stMissing.lines[3] == 'Follow: disengaged (player unavailable)')
+end)
+
+-- 43. Repeated Status calls leave follow state, cooldown, and queues completely unchanged
+test('repeated status calls leave follow state cooldown and queues completely unchanged', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+
+    d:execute('follow')
+    d.active.stepState = 'idle'
+    d.active.currentTarget = nil
+    d.active.cooldown = 15
+    d.active.stepTicks = 0
+    d.active.stepGen = 1
+
+    local initId = d.active.id
+    local initToken = d.active.token
+    local initGen = d.active.stepGen
+    local initCooldown = d.active.cooldown
+    local initSummary = d.active.summary
+
+    -- Call status 5 times in succession
+    for i = 1, 5 do
+        local st = d:execute('status')
+        assert(st.state == 'completed')
+    end
+
+    -- Verify follow state is completely untouched
+    assert(d.active ~= nil)
+    assert(d.active.id == initId)
+    assert(d.active.token == initToken)
+    assert(d.active.stepGen == initGen)
+    assert(d.active.stepState == 'idle')
+    assert(d.active.cooldown == initCooldown)
+    assert(d.active.stepTicks == 0)
+    assert(d.active.currentTarget == nil)
+    assert(d.active.summary == initSummary)
+    assert(#d.noticeQueue == 0)
+    assert(#d:consumeNotices() == 0)
+    assert(d.stopFailed == nil)
+end)
+
+-- 44. Asynchronous leash break combined with failed engine stop enqueues one unified notice
+test('asynchronous leash break combined with failed engine stop enqueues one unified notice', function()
+    local stopShouldFail = true
+    local stopCallCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason, act)
+        stopCallCount = stopCallCount + 1
+        if stopShouldFail then return false, 'engine jammed' end
+        return true
+    end, f.identityProvider, function() return true end)
+
+    local startRes = d:execute('follow')
+    assert(startRes.state == 'running')
+    assert(d.active.id == 1)
+
+    -- Leash break (> 8 tiles)
+    f.playerPos.x = 25; f.playerPos.y = 10
+    local tickOk, tickErr = d:tick()
+    assert(tickOk == false)
+    assert(d.active == nil)
+
+    -- Preserves original cancellation reason and request ID
+    assert(d.lastAction.id == 1)
+    assert(d.lastAction.state == 'cancelled')
+    assert(d.lastAction.reason == 'player out of range (>8 tiles)')
+    assert(d.stopFailed == 'engine jammed')
+
+    -- Exactly one notification carrying both disengagement and stop-failure information
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    local n = notices[1]
+    assert(n.id == 1)
+    assert(n.command == 'follow')
+    assert(n.state == 'cancelled')
+    assert(n.reason == 'player out of range (>8 tiles)')
+    assert(n.stopFailed == 'engine jammed')
+    assert(n.isBad == true)
+    assert(n.message:find('Follow disengaged: player out of range %(>8 tiles%)%.'))
+    assert(n.message:find('Warning: engine stop failed %(engine jammed%)'))
+    assert(n.message:find('movement blocked pending recovery%.'))
+    assert(not n.message:find('Sarah stopped'))
+
+    -- No duplicate notices on subsequent ticks
+    assert(#d:consumeNotices() == 0)
+    for i = 1, 5 do d:tick() end
+    assert(#d:consumeNotices() == 0)
+
+    -- Status reports idle cancelled and stop failure warning
+    local st = d:execute('status')
+    assert(st.lines[2] == 'Action: idle (last: #1 cancelled)')
+    assert(st.lines[3] == 'Follow: disengaged (player out of range (>8 tiles))')
+    assert(hasLine(st.lines, 'Warning: engine stop failed %(engine jammed%); movement blocked pending recovery%.'))
+
+    -- Movement is blocked pending recovery
+    local followBlock = d:execute('follow')
+    assert(followBlock.state == 'rejected')
+    assert(followBlock.lines[1]:find('Prior engine stop failed %(engine jammed%); movement blocked until stop recovers%.'))
+
+    local walkBlock = d:execute('walk here')
+    assert(walkBlock.state == 'rejected')
+    assert(walkBlock.lines[1]:find('Prior engine stop failed %(engine jammed%); movement blocked until stop recovers%.'))
+end)
+
+-- 45. Asynchronous path failure combined with failed engine stop enqueues one unified notice
+test('asynchronous path failure combined with failed engine stop enqueues one unified notice', function()
+    local lastFailCallback = nil
+    local stopShouldFail = true
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason, act)
+        if stopShouldFail then return false, 'actuator locked' end
+        return true
+    end, f.identityProvider, function(tgt, onComp, onFail)
+        lastFailCallback = onFail
+        return true, {}
+    end)
+
+    d:execute('follow')
+    assert(d.active and d.active.command == 'follow' and d.active.stepState == 'walking')
+    assert(type(lastFailCallback) == 'function')
+
+    -- Asynchronous path failure arrives from engine
+    lastFailCallback(nil, 'path blocked')
+    assert(d.active == nil)
+
+    -- Preserves original cancellation reason and request ID
+    assert(d.lastAction.id == 1)
+    assert(d.lastAction.state == 'cancelled')
+    assert(d.lastAction.reason == 'path blocked')
+    assert(d.stopFailed == 'actuator locked')
+
+    -- Exactly one notification carrying both path failure and stop failure
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    local n = notices[1]
+    assert(n.id == 1)
+    assert(n.command == 'follow')
+    assert(n.state == 'cancelled')
+    assert(n.reason == 'path blocked')
+    assert(n.stopFailed == 'actuator locked')
+    assert(n.message:find('Follow disengaged: path blocked%.'))
+    assert(n.message:find('Warning: engine stop failed %(actuator locked%)'))
+    assert(n.message:find('movement blocked pending recovery%.'))
+    assert(not n.message:find('Sarah stopped'))
+
+    -- Subsequent status reflects path failure and warning
+    local st = d:execute('status')
+    assert(st.lines[2] == 'Action: idle (last: #1 cancelled)')
+    assert(st.lines[3] == 'Follow: disengaged (path blocked)')
+    assert(hasLine(st.lines, 'Warning: engine stop failed %(actuator locked%); movement blocked pending recovery%.'))
+end)
+
+-- 46. Successful recovery clears failure and stale callbacks after recovery are ignored
+test('successful recovery clears failure and stale callbacks after recovery are ignored', function()
+    local lastCompleteCb = nil
+    local lastFailCb = nil
+    local stopShouldFail = true
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason, act)
+        if stopShouldFail then return false, 'engine jammed' end
+        return true
+    end, f.identityProvider, function(tgt, onComp, onFail)
+        lastCompleteCb = onComp
+        lastFailCb = onFail
+        return true, {}
+    end)
+
+    -- Start follow (#1)
+    d:execute('follow')
+    assert(d.active and d.active.id == 1)
+
+    -- Leash break with failed stop
+    f.playerPos.x = 30; f.playerPos.y = 10
+    d:tick()
+    assert(d.active == nil)
+    assert(d.stopFailed == 'engine jammed')
+    d:consumeNotices()
+
+    -- Later stop succeeds: clears failure and reports recovery
+    stopShouldFail = false
+    local recRes = d:execute('stop')
+    assert(recRes.state == 'completed')
+    assert(hasLine(recRes.lines, 'Prior engine stop failure cleared; movement recovered%.'))
+    assert(hasLine(recRes.lines, 'Sarah stopped; nothing active%.'))
+    assert(d.stopFailed == nil)
+
+    -- Status reports clean idle without warnings
+    local stClean = d:execute('status')
+    assert(not hasLine(stClean.lines, 'Warning: engine stop failed'))
+
+    -- Stale callbacks from action #1 are defused
+    local staleFailCb = lastFailCb
+    local staleCompleteCb = lastCompleteCb
+
+    staleFailCb(nil, 'late path failure')
+    assert(d.active == nil)
+    assert(d.stopFailed == nil)
+    assert(#d.noticeQueue == 0)
+
+    staleCompleteCb()
+    assert(d.active == nil)
+    assert(d.stopFailed == nil)
+    assert(#d.noticeQueue == 0)
+
+    -- New follow action starts cleanly
+    f.playerPos.x = 14; f.playerPos.y = 10
+    local newRes = d:execute('follow')
+    assert(newRes.state == 'running')
+    assert(d.active ~= nil and d.active.id == newRes.id)
+    assert(d.active.command == 'follow')
+
+    -- Stale callbacks from action #1 fire again: cannot mutate active follow
+    staleFailCb(nil, 'late path failure')
+    assert(d.active ~= nil and d.active.id == newRes.id and d.active.command == 'follow')
+    assert(d.stopFailed == nil)
+    assert(#d.noticeQueue == 0)
+
+    staleCompleteCb()
+    assert(d.active ~= nil and d.active.id == newRes.id and d.active.command == 'follow')
+    assert(d.stopFailed == nil)
+    assert(#d.noticeQueue == 0)
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')

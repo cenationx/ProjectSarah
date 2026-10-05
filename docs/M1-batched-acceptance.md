@@ -2,10 +2,10 @@
 
 Updated: 2026-10-05 (Europe/Helsinki).
 Status: **PREPARED** for consolidated native execution by Codex and the user.
-Offline verification: **197 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
+Offline verification: **202 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
-> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented and hardened offline (41 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
+> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented and hardened offline (46 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
 
 ---
 
@@ -72,9 +72,9 @@ These checks cover the newly implemented offline manual companion behavior and u
 | Gate | Target Feature | Specific Acceptance Criterion | Execution Actor |
 |---|---|---|---|
 | **F1** | Follow Status: Walking | While walking toward player, `[Status]` outputs `Follow: following while walking to (x, y, z)` | Codex clicks `[Status]` while Sarah walks |
-| **F2** | Follow Status: In Range | Within 2 tiles of player, `[Status]` outputs `Follow: follow engaged but waiting within range` | Codex clicks `[Status]` with player in range |
+| **F2** | Follow Status: In Range / Before Next Walk | During cooldown, `[Status]` outputs `Follow: follow engaged but waiting within range` if player is within 2-tile deadzone; otherwise `Follow: follow engaged but waiting before next walk` | Codex clicks `[Status]` with player in / out of deadzone |
 | **F3** | Follow Status: Disengaged | After leash break / disengagement, `[Status]` outputs `Follow: disengaged (<reason>)` | Codex clicks `[Status]` after disengagement |
-| **F4** | Stop Failure Warning | If engine stop fails, `[Status]` warns `Warning: engine stop failed (<reason>); movement blocked pending recovery.` | Codex inspects status if stop fails |
+| **F4** | Stop Failure Warning & Recovery | If engine stop fails during disengagement or user stop, `[Status]` warns `Warning: engine stop failed (<reason>); movement blocked pending recovery.` and movement is rejected until successful `[Stop]` clears failure | Codex inspects status if stop fails; verifies recovery |
 | **F5** | Asynchronous Disengagement Feedback | Leash break (> 8 tiles) immediately outputs `Follow disengaged: player out of range (>8 tiles).` to open panel and triggers in-world halo text without manual polling | User walks > 8 tiles while following; Codex/User observes feedback |
 | **F6** | Closed-Console Feedback & No Replay | Disengagement while console is closed displays in-world halo text; subsequent console opening starts clean without replaying notices | User closes console, triggers disengagement, reopens console |
 
@@ -264,12 +264,14 @@ Executing the following steps in sequence has the goal of completing acceptance 
 ### Phase 6: Post-M1 Follow Status & Feedback Smoke Checks (Optional / Non-Blocking)
 *Note: These steps verify follow companion status distinctions and asynchronous feedback if tested within the same live session. Failure of these steps does not invalidate M1 gates R1–R8.*
 
-1. **Gate F1 & F2 (Follow Status: Walking vs In-Range Waiting)**:
+1. **Gate F1 & F2 (Follow Status: Walking vs In-Range Waiting vs Before Next Walk)**:
    - Codex clicks `[Follow]` while player is 4–6 tiles away from Sarah on the same floor.
    - While Sarah is walking, Codex clicks `[Status]`:
      - **Verification**: Status displays `Action: #<id> follow (running)` and `Follow: following while walking to (x, y, z)`.
    - Sarah reaches within 2 tiles of player and halts. Codex clicks `[Status]`:
      - **Verification**: Status displays `Action: #<id> follow (running)` and `Follow: follow engaged but waiting within range`.
+   - If player steps > 2 tiles away during step cooldown before next walk dispatch, Codex clicks `[Status]`:
+     - **Verification**: Status displays `Follow: follow engaged but waiting before next walk`.
 
 2. **Gate F5 & F3 (Asynchronous Leash Break Feedback & Disengaged Status)**:
    - With console open and follow active, user walks rapidly > 8 tiles away.
@@ -286,6 +288,11 @@ Executing the following steps in sequence has the goal of completing acceptance 
      - Codex opens Sarah Console via context menu or F9.
      - Console opens clean: no replayed notification messages, no spurious command execution.
      - Codex clicks `[Status]`: accurately reflects `Follow: disengaged (player out of range (>8 tiles))`.
+
+4. **Gate F4 (Stop Failure Warning & Recovery)**:
+   - If an engine stop fails during disengagement or user stop, `[Status]` outputs `Warning: engine stop failed (<reason>); movement blocked pending recovery.`
+   - Subsequent `[Follow]` or `[Walk Here]` requests are rejected while movement is blocked.
+   - Clicking `[Stop]` clears the failure and confirms `Prior engine stop failure cleared; movement recovered.` and `Sarah stopped; nothing active.`
 
 ---
 
