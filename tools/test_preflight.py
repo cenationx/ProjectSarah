@@ -271,6 +271,110 @@ class TestPreflight(unittest.TestCase):
         self.assertFalse(data["ready"])
         self.assertEqual(data["checks"]["isolated_profile"]["status"], "missing_case")
 
+    def test_individual_source_file_missing_blocks_readiness(self):
+        """When an individual source file is missing from repository, preflight reports source_missing and blocks."""
+        src_console = self.mock_repo / "foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua"
+        src_console.unlink()
+
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "BLOCKED")
+        self.assertEqual(data["checks"]["deployed_files"]["status"], "source_missing")
+        self.assertEqual(data["checks"]["deployed_files"]["source_missing_count"], 1)
+        self.assertIn("42/media/lua/client/Sarah/Console.lua", data["checks"]["deployed_files"]["source_missing_files"])
+        self.assertTrue(any("source file(s) missing from repository" in b for b in data["blockers"]))
+
+    def test_git_status_failure_reports_unknown(self):
+        """When git status command fails, get_git_info reports status=unknown and dirty=unknown."""
+        mock_head = subprocess.CompletedProcess(args=["git", "rev-parse", "HEAD"], returncode=0, stdout="mockcommit1234567890abcdef\n")
+        mock_branch = subprocess.CompletedProcess(args=["git", "rev-parse", "--abbrev-ref", "HEAD"], returncode=0, stdout="main\n")
+        mock_status_fail = subprocess.CompletedProcess(args=["git", "status", "--porcelain"], returncode=1, stdout="", stderr="git error")
+
+        def mock_subprocess_run(cmd, *args, **kwargs):
+            if "rev-parse" in cmd and "HEAD" in cmd and "--abbrev-ref" not in cmd:
+                return mock_head
+            elif "--abbrev-ref" in cmd:
+                return mock_branch
+            elif "status" in cmd:
+                return mock_status_fail
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_subprocess_run), \
+             patch("shutil.which", return_value="/usr/bin/git"), \
+             patch.dict(os.environ, {"SARAH_GIT": "git"}):
+            git_info = preflight.get_git_info(self.mock_repo)
+
+        self.assertTrue(git_info["available"])
+        self.assertEqual(git_info["status"], "unknown")
+        self.assertEqual(git_info["dirty"], "unknown")
+        self.assertIn("Git status query failed", git_info["summary"])
+
+        # Also verify evaluate_preflight treats unknown git as unverified and not ready
+        with patch("preflight.get_git_info", return_value=git_info), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "UNKNOWN")
+        self.assertIn(git_info["summary"], data["unknowns"])
+
+    def test_unknown_process_query_reports_unknown_overall(self):
+        """When game process querying is unavailable (status=unknown), preflight reports UNKNOWN and not ready."""
+        mock_proc_unknown = {
+            "status": "unknown",
+            "running_processes": [],
+            "query_supported": False,
+            "summary": "Process query unavailable; verify game is closed via task manager",
+        }
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=mock_proc_unknown):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "UNKNOWN")
+        self.assertIn(mock_proc_unknown["summary"], data["unknowns"])
+
+    def test_unverified_test_report_commit_reports_unknown_overall(self):
+        """When test report commit match cannot be verified, preflight reports UNKNOWN and not ready."""
+        mock_git_unavail = {
+            "available": False,
+            "commit": "unavailable",
+            "short_commit": "unavailable",
+            "branch": "unavailable",
+            "dirty": "unknown",
+            "status": "unknown",
+            "summary": "Git binary or repository metadata unavailable",
+        }
+        with patch("preflight.get_git_info", return_value=mock_git_unavail), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "UNKNOWN")
+        self.assertEqual(data["checks"]["test_report"]["status"], "unknown_commit")
+        self.assertTrue(any("commit match cannot be verified" in u for u in data["unknowns"]))
+
+    def test_passing_report_from_dirty_run_blocks_readiness(self):
+        """A passing test report generated against a dirty working tree does NOT prove clean HEAD tested and blocks."""
+        report_file = self.mock_repo / "tools/reports/test-report.json"
+        dirty_run_data = {
+            "git": {"commit": "mockcommit1234567890abcdef", "branch": "main", "dirty": True},
+            "summary": {"overall": "passed", "total_checks": 153},
+        }
+        report_file.write_text(json.dumps(dirty_run_data), encoding="utf-8")
+
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "BLOCKED")
+        self.assertEqual(data["checks"]["test_report"]["status"], "dirty_run")
+        self.assertTrue(any("dirty working tree" in b for b in data["blockers"]))
+
     def test_readonly_invariant(self):
         """Preflight execution does NOT modify any source, runtime, or save files."""
         # Collect file hashes across entire mock environment before run

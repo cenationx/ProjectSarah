@@ -25,7 +25,7 @@ corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
 153 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-33 console, 14 acceptance driver) plus 11 runner self-tests and 14 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+33 console, 14 acceptance driver) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -670,36 +670,34 @@ Gemini resolved the small-screen recovery defect where the panel reached y=-70 a
 
 ## Consolidated M1 native acceptance session and preflight tool handoff (latest, 2026-10-05)
 
-Gemini prepared the consolidated M1 native acceptance session plan and implemented the acceptance preflight tool for Codex and the user (offline only; no game launches, desktop automation, or runtime modifications):
+Gemini hardened the preflight acceptance tool against false-ready conditions and corrected the consolidated M1 native acceptance session plan for Codex and the user (offline only; no game launches, desktop automation, or runtime modifications):
 
 ### What Was Delivered
-1. **Consolidated session protocol (`docs/M1-batched-acceptance.md`)**:
-   - Reconciles all existing evidence: 12 gates accepted (A1–A6 in slice A, B1–B2 in slice B, C1–C6 in slice C), and focuses on the 8 remaining native acceptance gates (R1: movable console dragging, R2: control click isolation, R3: position retention across close/open, R4: resolution/small-screen adaptation with non-negative title bar clamp, R5: distance refusal via `[Walk Here]` button, R6: red context-menu refusal feedback, R7: post-reload WASD character movement, R8: centered default reset).
-   - Orders checks to minimize operations: exactly 1 game launch, exactly 1 in-process reload (`Quit to Main Menu` -> `Continue`), and exactly 2 user movement phases.
-   - Divides roles cleanly: Codex drives mouse interactions (preflight, dragging, control clicks, close/reopen, command buttons, menu navigation) while the user operates physical WASD movement and observes visual cues.
-   - Resolves small-room constraint: provides setup for `SarahSpaciousCase` (Rosewood Fire Station vehicle bay or Church nave with >= 10-12 clear floor tiles) plus a safe porch exterior step fallback in the existing case.
-2. **Native acceptance preflight tool (`tools/preflight.py`)**:
-   - Read-only pre-flight inspection script that checks Git state, test report status (detecting stale reports), isolated profile configuration, production vs deployed file hashes (SHA-256), temporary probes, backup availability, and game process status (`javaw.exe`/`java.exe`).
-   - Run via:
-     ```powershell
-     $sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-     & $sarahPython tools/preflight.py
-     ```
-   - Automatically detected that `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` needs deployment to `runtime/isolated/mods/SarahFoundation/` before live acceptance.
-3. **Preflight automated test suite (`tools/test_preflight.py`)**:
-   - 14 automated unit tests covering readiness detection, missing files, stale reports, mismatched file hashes, probe detection, active game processes, missing backups, misconfigured mod files, missing saves, read-only file immutability, report formatting, and CLI execution.
+1. **Preflight false-ready hardening (`tools/preflight.py`)**:
+   - *Individual source missing detection*: Tracks `source_missing_count` and `source_missing_files`. When any individual required production file is missing from the repository, sets `status = "source_missing"` and blocks readiness in `evaluate_preflight`.
+   - *Failed Git status query handling*: When `git status --porcelain` returns non-zero, sets `status = "unknown"`, `dirty = "unknown"`, and records command failure instead of falsely treating it as clean.
+   - *Explicit UNKNOWN / not-ready result*: When essential checks cannot be verified (e.g. process query unavailable, Git status unknown, or test report commit match unverified), reports `overall = "UNKNOWN"` with `ready = False` and enumerates unverified items, preventing false `READY` results.
+   - *Dirty-run test report rejection*: Inspects `rep_git.dirty` flag in `test-report.json`. A test report generated on a dirty working tree is flagged `status = "dirty_run"` and blocked, ensuring clean HEAD verification.
+2. **Preflight automated test suite (`tools/test_preflight.py`)**:
+   - 19 automated unit tests (including 5 new targeted regressions covering individual source file missing, git status failure, unknown process querying, unverified commit match, and dirty-run test reports).
+3. **Consolidated session protocol corrections (`docs/M1-batched-acceptance.md`)**:
+   - Building dimensions (Fire Station garage, Church nave, gymnasium) and interior safety in normal saves are explicitly treated as unverified estimates.
+   - Removed the outdoor front porch fallback; the user explicitly declined outdoor testing risk due to zombie infection hazards.
+   - Proposed a fresh isolated custom sandbox save configured with zero zombies (`Zombie Population = None`) for spacious testing, eliminating infection and combat risks.
+   - Described completing acceptance in a single game process launch as an operational goal conditional on advance case preparation, rather than an unconditional guarantee.
 
 ### Offline Baseline
 - 153 automated checks pass across 6 suites in `tools/run_tests.py` (0.24s).
-- 11 runner self-tests pass in `tools/test_runner.py` (2.36s).
-- 14 preflight unit tests pass in `tools/test_preflight.py` (0.57s).
-- Total: 178 passing tests across project tools and production modules.
+- 11 runner self-tests pass in `tools/test_runner.py` (2.34s).
+- 19 preflight unit tests pass in `tools/test_preflight.py` (0.66s).
+- Total: 183 passing tests across project tools and production modules.
 
 ### Next Steps for Codex
 1. Verify game is closed (`javaw.exe` absent).
-2. Deploy reviewed production files (specifically `Console.lua`) from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`.
-3. Run `& $sarahPython tools/preflight.py` and confirm all items pass.
-4. Execute the batched native session following `docs/M1-batched-acceptance.md`.
+2. Prepare `SarahSpaciousCase` in a fresh zero-zombie sandbox save with Sarah and player placed 3 tiles apart on floor 0, and set in `runtime/isolated/latestSave.ini`.
+3. Deploy reviewed production files (specifically `Console.lua`) from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`.
+4. Run `& $sarahPython tools/preflight.py` and confirm all items pass.
+5. Execute the batched native session following `docs/M1-batched-acceptance.md`.
 
 ### State and Ownership
 - Game is CLOSED (SAVED a, GameThread exited, no native window).

@@ -105,19 +105,30 @@ def get_git_info(repo_root: Path) -> dict:
             text=True,
             timeout=5,
         )
-        dirty = bool(r_status.stdout.strip()) if r_status.returncode == 0 else False
 
         info["available"] = True
         info["commit"] = commit
         info["short_commit"] = commit[:7] if len(commit) >= 7 else commit
         info["branch"] = branch
-        info["dirty"] = dirty
-        info["status"] = "dirty" if dirty else "clean"
-        info["summary"] = (
-            f"Git is {info['status']} at {info['short_commit']} (branch: {branch})"
-        )
+
+        if r_status.returncode == 0:
+            dirty = bool(r_status.stdout.strip())
+            info["dirty"] = dirty
+            info["status"] = "dirty" if dirty else "clean"
+            info["summary"] = (
+                f"Git is {info['status']} at {info['short_commit']} (branch: {branch})"
+            )
+        else:
+            info["dirty"] = "unknown"
+            info["status"] = "unknown"
+            info["summary"] = (
+                f"Git status query failed (exit {r_status.returncode}) at {info['short_commit']} (branch: {branch})"
+            )
         return info
-    except Exception:
+    except Exception as e:
+        info["dirty"] = "unknown"
+        info["status"] = "unknown"
+        info["summary"] = f"Git inspection error: {e}"
         return info
 
 
@@ -144,12 +155,14 @@ def check_test_report(repo_root: Path, git_info: dict) -> dict:
         data = json.loads(report_path.read_text(encoding="utf-8"))
         rep_git = data.get("git", {})
         rep_commit = rep_git.get("commit")
+        rep_dirty = rep_git.get("dirty", False)
         rep_summary = data.get("summary", {})
         overall = rep_summary.get("overall", "unknown")
         total_checks = rep_summary.get("total_checks", 0)
 
         result["commit"] = rep_commit
         result["short_commit"] = rep_commit[:7] if rep_commit and len(rep_commit) >= 7 else rep_commit
+        result["report_dirty"] = rep_dirty
         result["overall"] = overall
         result["total_checks"] = total_checks
 
@@ -157,7 +170,12 @@ def check_test_report(repo_root: Path, git_info: dict) -> dict:
             head_commit = git_info["commit"]
             if rep_commit == head_commit:
                 result["matches_head"] = True
-                if overall == "passed":
+                if rep_dirty:
+                    result["status"] = "dirty_run"
+                    result["summary"] = (
+                        f"Unverified: test report for {result['short_commit']} was run against a dirty working tree, not clean HEAD. Re-run tools/run_tests.py on clean checkout."
+                    )
+                elif overall == "passed":
                     result["status"] = "synced"
                     result["summary"] = (
                         f"Synced: {total_checks} checks passed at {result['short_commit']}"
@@ -275,14 +293,18 @@ def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
         "matching_count": 0,
         "different_count": 0,
         "missing_count": 0,
+        "source_missing_count": 0,
         "files": {},
         "mismatched_files": [],
         "missing_files": [],
+        "source_missing_files": [],
         "summary": "",
     }
 
     if not src_root.is_dir():
         result["status"] = "source_missing"
+        result["source_missing_count"] = len(REQUIRED_PRODUCTION_FILES)
+        result["source_missing_files"] = list(REQUIRED_PRODUCTION_FILES)
         result["summary"] = "Production source directory foundation/SarahFoundation missing"
         return result
 
@@ -306,6 +328,8 @@ def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
             src_hash = sha256_file(src_file)
         else:
             file_status = "source_missing"
+            result["source_missing_count"] += 1
+            result["source_missing_files"].append(rel_str)
 
         if file_status != "source_missing":
             if dst_file.is_file():
@@ -321,6 +345,12 @@ def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
                 file_status = "missing"
                 result["missing_count"] += 1
                 result["missing_files"].append(rel_str)
+        else:
+            if dst_file.is_file():
+                dst_hash = sha256_file(dst_file)
+            else:
+                result["missing_count"] += 1
+                result["missing_files"].append(rel_str)
 
         result["files"][rel_str] = {
             "source_hash": src_hash[:8] if src_hash else None,
@@ -328,7 +358,12 @@ def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
             "status": file_status,
         }
 
-    if result["missing_count"] > 0:
+    if result["source_missing_count"] > 0:
+        result["status"] = "source_missing"
+        result["summary"] = (
+            f"{result['source_missing_count']} production source file(s) missing from repository: {', '.join(result['source_missing_files'])}"
+        )
+    elif result["missing_count"] > 0:
         result["status"] = "missing"
         result["summary"] = (
             f"{result['missing_count']} deployed file(s) missing from isolated mod directory"
@@ -484,16 +519,17 @@ def check_game_processes(target_names=None) -> dict:
 
 
 def evaluate_preflight(checks: dict) -> dict:
-    """Evaluate overall readiness and collect blocking reasons."""
+    """Evaluate overall readiness and collect blocking reasons, unverified checks, and warnings."""
     blockers = []
+    unknowns = []
     warnings = []
 
     # 1. Git State
     git_st = checks["git"]["status"]
     if git_st == "dirty":
         blockers.append("Git working tree is dirty (uncommitted or untracked changes).")
-    elif git_st == "unknown":
-        warnings.append("Git status could not be verified.")
+    elif git_st == "unknown" or not checks["git"].get("available", True):
+        unknowns.append(checks["git"]["summary"])
 
     # 2. Test Report
     rep_st = checks["test_report"]["status"]
@@ -505,24 +541,24 @@ def evaluate_preflight(checks: dict) -> dict:
         blockers.append("Offline test suite has failed checks; fix issues before native testing.")
     elif rep_st == "corrupt":
         blockers.append(checks["test_report"]["summary"])
+    elif rep_st == "dirty_run":
+        blockers.append(checks["test_report"]["summary"])
+    elif rep_st in ("unknown_commit", "unknown"):
+        unknowns.append(checks["test_report"]["summary"])
 
     # 3. Isolated Profile
     prof_st = checks["isolated_profile"]["status"]
-    if prof_st in ("missing", "missing_case"):
-        blockers.append(checks["isolated_profile"]["summary"])
-    elif prof_st == "misconfigured":
+    if prof_st in ("missing", "missing_case", "misconfigured"):
         blockers.append(checks["isolated_profile"]["summary"])
 
     # 4. Deployed Files
     dep_st = checks["deployed_files"]["status"]
-    if dep_st == "different":
-        blockers.append(checks["deployed_files"]["summary"])
-    elif dep_st in ("missing", "source_missing"):
+    if dep_st in ("missing", "source_missing", "different"):
         blockers.append(checks["deployed_files"]["summary"])
 
     # 5. Probes
     prb_st = checks["temporary_probes"]["status"]
-    if prb_st == "probes_detected":
+    if prb_st in ("probes_detected", "mod_missing"):
         blockers.append(checks["temporary_probes"]["summary"])
 
     # 6. Backups
@@ -534,12 +570,24 @@ def evaluate_preflight(checks: dict) -> dict:
     proc_st = checks["game_processes"]["status"]
     if proc_st == "running":
         blockers.append(checks["game_processes"]["summary"])
+    elif proc_st == "unknown":
+        unknowns.append(checks["game_processes"]["summary"])
 
-    is_ready = (len(blockers) == 0)
+    if blockers:
+        overall = "BLOCKED"
+        is_ready = False
+    elif unknowns:
+        overall = "UNKNOWN"
+        is_ready = False
+    else:
+        overall = "READY"
+        is_ready = True
+
     return {
         "ready": is_ready,
-        "overall": "READY" if is_ready else "BLOCKED",
+        "overall": overall,
         "blockers": blockers,
+        "unknowns": unknowns,
         "warnings": warnings,
     }
 
@@ -576,6 +624,7 @@ def run_preflight(repo_root=None, runtime_root=None) -> dict:
         "overall": eval_result["overall"],
         "ready": eval_result["ready"],
         "blockers": eval_result["blockers"],
+        "unknowns": eval_result["unknowns"],
         "warnings": eval_result["warnings"],
         "checks": checks,
     }
@@ -584,7 +633,7 @@ def run_preflight(repo_root=None, runtime_root=None) -> dict:
 def format_markdown_report(data: dict) -> str:
     """Format concise Markdown report."""
     checks = data["checks"]
-    status_icon = "READY" if data["ready"] else "BLOCKED"
+    status_icon = data["overall"]
 
     lines = [
         "# Project Sarah Native Acceptance Preflight Report",
@@ -622,6 +671,13 @@ def format_markdown_report(data: dict) -> str:
             lines.append(f"- :x: {b}")
         lines.append("")
 
+    if data.get("unknowns"):
+        lines.append("## Unverified Checks (Not Ready)")
+        lines.append("")
+        for u in data["unknowns"]:
+            lines.append(f"- :question: {u}")
+        lines.append("")
+
     if data["warnings"]:
         lines.append("## Warnings")
         lines.append("")
@@ -646,7 +702,7 @@ def print_terminal_summary(data: dict):
     print("=" * 68)
 
     def print_item(label, st, summary):
-        tag = "[PASS]" if st in ("clean", "synced", "ready", "available") else "[WARN]" if st in ("stale", "different", "unknown") else "[FAIL]"
+        tag = "[PASS]" if st in ("clean", "synced", "ready", "available") else "[WARN]" if st in ("stale", "different", "dirty_run", "unknown", "unknown_commit") else "[FAIL]"
         print(f"  {tag:<7} {label}: {st} ({summary})")
 
     print_item("Git State", checks["git"]["status"], checks["git"]["summary"])
@@ -660,6 +716,10 @@ def print_terminal_summary(data: dict):
     print("-" * 68)
     if data["ready"]:
         print("OVERALL PREFLIGHT: READY FOR NATIVE ACCEPTANCE")
+    elif data["overall"] == "UNKNOWN":
+        print(f"OVERALL PREFLIGHT: UNKNOWN ({len(data.get('unknowns', []))} essential check(s) unverified / not-ready)")
+        for u in data.get("unknowns", []):
+            print(f"  - {u}")
     else:
         print(f"OVERALL PREFLIGHT: BLOCKED ({len(data['blockers'])} item(s) require action)")
         for b in data["blockers"]:

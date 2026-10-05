@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests and 14 preflight tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Consolidated M1 native acceptance session plan authored (docs/M1-batched-acceptance.md) and read-only preflight tool implemented (tools/preflight.py). Remaining native checks (movable dragging, position retention, resolution adaptation, distance refusal, red context-menu refusal, post-reload movement) prepared for single batched acceptance session by Codex.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests and 19 preflight tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Consolidated M1 native acceptance session plan authored (docs/M1-batched-acceptance.md) and read-only preflight tool hardened against false-ready conditions (tools/preflight.py). Remaining native checks (movable dragging, position retention, resolution adaptation, distance refusal, red context-menu refusal, post-reload movement) prepared for single batched acceptance session by Codex.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,12 +13,12 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice C source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex (pending Console.lua deployment for small-screen fix). Final native case/settings/log preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-c-native-20261005-143139/Final-native`. Key settings F9; Forward W.
-- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py` and 14 preflight tests in `tools/test_preflight.py`.
+- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py` and 19 preflight tests in `tools/test_preflight.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests and 14 preflight tests. Single-entry runner `tools/run_tests.py`, preflight tool `tools/preflight.py`, and documentation `docs/verification-workflow.md` verified.
+- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests and 19 preflight tests. Single-entry runner `tools/run_tests.py`, hardened preflight tool `tools/preflight.py`, and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -650,4 +650,30 @@ Gemini prepared a consolidated M1 native acceptance protocol and implemented a r
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime and saves untouched.
   - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+### Preflight false-ready hardening and batched acceptance corrections (Gemini, 2026-10-05)
+
+Gemini resolved the four preflight false-ready defects discovered by Codex and corrected `docs/M1-batched-acceptance.md` (offline only; no game launches, desktop automation, or runtime modifications):
+- **Preflight false-ready hardening (`tools/preflight.py`)**:
+  1. *Individual source missing detection (`check_deployed_files`)*: Tracks `source_missing_count` and `source_missing_files`. When any individual required production file is missing from the repository, sets `status = "source_missing"` and blocks readiness in `evaluate_preflight`.
+  2. *Failed Git status query handling (`get_git_info`)*: When `git status --porcelain` returns non-zero, sets `status = "unknown"`, `dirty = "unknown"`, and records command failure instead of falsely treating it as clean.
+  3. *Explicit UNKNOWN / not-ready result (`evaluate_preflight`)*: When essential checks cannot be verified (e.g. process query unavailable, Git status unknown, or test report commit match unverified), reports `overall = "UNKNOWN"` with `ready = False` and enumerates unverified items, preventing false `READY` results.
+  4. *Dirty-run test report rejection (`check_test_report`)*: Inspects `rep_git.dirty` flag in `test-report.json`. A test report generated on a dirty working tree is flagged `status = "dirty_run"` and blocked, ensuring clean HEAD verification.
+- **Preflight automated test suite (`tools/test_preflight.py`)**:
+  - Added 5 new targeted regression tests covering: missing individual source files blocking readiness, git status query failure reporting unknown, unknown process querying reporting UNKNOWN overall, unverified test-report commit reporting UNKNOWN overall, and dirty-run test reports blocking readiness.
+  - All 19 preflight tests pass cleanly (0.66s).
+- **Corrections to batched acceptance plan (`docs/M1-batched-acceptance.md`)**:
+  - Treated proposed building dimensions (Rosewood Fire Station, Church nave, gymnasium) and interior safety in normal saves as unverified estimates.
+  - Removed the outdoor front porch fallback; the user explicitly declined outdoor testing risk due to zombie hazards.
+  - Proposed a fresh isolated sandbox save configured with zero zombies (`Zombie Population = None`) for spacious testing, eliminating infection and combat risks.
+  - Described completing acceptance in a single game process launch as an operational goal conditional on advance case preparation, rather than an unconditional guarantee.
+- **Automated test suite (172 passing checks + 11 runner self-tests)**:
+  - `tools/run_tests.py`: 153 checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 driver = 153 checks).
+  - `tools/test_runner.py`: 11 runner self-tests passing.
+  - `tools/test_preflight.py`: 19 preflight tests passing.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime and saves untouched.
+  - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
 

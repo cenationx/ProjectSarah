@@ -78,12 +78,12 @@ Run acceptance preflight tool before native testing (read-only inspection):
 ```powershell
 & $sarahPython tools/preflight.py
 ```
-To test the preflight tool itself (14 unit tests):
+To test the preflight tool itself (19 unit tests):
 ```powershell
 & $sarahPython tools/test_preflight.py
 ```
 
-Expected totals across 6 offline suites: 29 + 15 + 8 + 54 + 33 + 14 = 153 checks, plus 11 runner self-tests and 14 preflight tests. These execute actual Lua with simulated
+Expected totals across 6 offline suites: 29 + 15 + 8 + 54 + 33 + 14 = 153 checks, plus 11 runner self-tests and 19 preflight tests. These execute actual Lua with simulated
 engine/UI fixtures. They do not establish native game compatibility or input.
 For consolidated native acceptance, follow `docs/M1-batched-acceptance.md`. Bulk Unicode typing and automated function keys were
 unreliable in this game; physical/user checks and real observations must be labelled.

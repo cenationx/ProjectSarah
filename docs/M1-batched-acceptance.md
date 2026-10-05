@@ -2,10 +2,10 @@
 
 Updated: 2026-10-05 (Europe/Helsinki).
 Status: **PREPARED** for consolidated native execution by Codex and the user.
-Offline verification: **153 automated checks pass across 6 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **14 preflight tests pass** (`tools/test_preflight.py`).
+Offline verification: **153 automated checks pass across 6 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
-> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan to eliminate repeated game launches and fragmented test cycles.
+> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
 
 ---
 
@@ -71,26 +71,27 @@ The following 8 items remain pending native live acceptance:
 ## 3. Spacious Disposable Case: `SarahSpaciousCase`
 
 ### 3.1 Problem Diagnosis from Session `12b20a6`
-In checkpoint `12b20a6`, distance refusal checks were skipped because the test character was located inside a small residential house where rooms measured under 5x5 tiles. The user was reluctant to navigate through exterior doors into unexplored outdoors due to zombie infection hazards and lack of safe visibility.
+In checkpoint `12b20a6`, distance refusal checks were skipped because the test character was located inside a small residential house where rooms measured under 5x5 tiles. The user explicitly declined stepping outside into unexplored outdoors due to zombie infection hazards and lack of safe visibility.
 
-### 3.2 Space Requirements
+### 3.2 Space and Safety Requirements
 - **Floor level**: Flat, same floor (`z = 0`).
 - **Distance**: At least **10–12 clear tiles** in a straight line between the player and Sarah without doors, walls, or solid obstacles.
-- **Safety**: Fully cleared interior or fenced yard with daylight, no active zombie spawns.
+- **Safety**: Fully safe environment without zombie attack or infection risk. Outdoor testing was explicitly declined by the user.
 
-### 3.3 Recommended Option: `SarahSpaciousCase`
-1. **Creation**: Clone an isolated save or create a fresh disposable sandbox save in a spacious indoor facility:
-   - **Primary choice**: Rosewood Fire Station apparatus bay (large flat vehicle garage, ~14x10 open tiles on `z = 0`).
-   - **Secondary choice**: Rosewood Church nave (~16x8 open tiles on `z = 0`) or Rosewood High School gymnasium (~20x15 open tiles).
-2. **Setup**:
-   - Position Sarah and player standing 3 tiles apart in the open floor area.
-   - Save cleanly and copy to `runtime/isolated/Saves/Rising/SarahSpaciousCase`.
+### 3.3 Proposed Approach: Fresh Isolated Zero-Zombie Sandbox
+To eliminate all zombie hazards without relying on dangerous outdoor exploration or unverified interior clearances:
+1. **Zero-Zombie Sandbox Creation**:
+   - In the isolated profile, create a fresh disposable custom sandbox world configured with **zero zombies** (Zombie Population / Count = "None" / `Zombies=1` in PZ sandbox settings).
+   - In a zero-zombie environment, character death and infection risks are completely eliminated.
+2. **Building Dimensions & Interior Safety (Unverified)**:
+   - Specific building dimensions (e.g. Rosewood Fire Station apparatus bay estimated at ~14x10 open tiles on `z = 0`, Church nave ~16x8, high school gymnasium ~20x15) and interior safety in normal survival saves are **unverified estimates**; their actual clear tile dimensions and obstacle layout have not been confirmed in-engine.
+   - In a standard survival save, these locations cannot be presumed safe or cleared. In a zero-zombie sandbox, however, spacious indoor facilities (or even open paved parking lots / street spans) can be navigated with complete safety.
+3. **Case Setup (`SarahSpaciousCase`)**:
+   - Position Sarah and the player standing 3 tiles apart in the open flat area on floor 0.
+   - Save cleanly via pause menu and quit to desktop (`SAVED a` or `b`).
+   - Copy the save directory to `runtime/isolated/Saves/Rising/SarahSpaciousCase`.
    - Update `runtime/isolated/latestSave.ini` to select `SarahSpaciousCase`.
-
-### 3.4 Fallback Option: Safe Exterior Step in Existing Case
-If continuing in `SarahConsoleNativeCase`:
-- Have the user step through the exterior doorway onto the front porch/driveway while keeping Sarah inside near the doorway on `z = 0`.
-- Verify a straight line of **10 tiles** between the outdoor player and indoor Sarah before issuing distance commands.
+   - Ensure baseline backup includes this prepared case before starting the batched session.
 
 ---
 
@@ -132,7 +133,7 @@ flowchart TD
 
 ## 5. Ordered Batched Acceptance Protocol
 
-Executing the following steps in sequence requires **exactly 1 game process launch**, **exactly 1 in-process reload**, and **exactly 2 user movement phases**:
+Executing the following steps in sequence has the goal of completing acceptance in **1 game process launch** (conditional on having `SarahSpaciousCase` prepared and selected beforehand), **1 in-process reload**, and **2 user movement phases**:
 
 ### Phase 0: Preflight and Pre-Test Backup (Game Closed)
 1. Ensure Project Zomboid is closed (`javaw.exe` / `java.exe` absent).

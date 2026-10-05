@@ -146,7 +146,7 @@ $sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\depen
 - JSON: `tools/reports/preflight-report.json`
 
 ### Preflight Automated Tests
-Unit tests in `tools/test_preflight.py` (14 checks) cover readiness detection, missing files, stale reports, mismatched hashes, probe detection, running processes, and read-only file immutability:
+Unit tests in `tools/test_preflight.py` (19 checks) cover readiness detection, missing files (including missing individual source files), stale reports, dirty-run test reports, mismatched hashes, probe detection, active game processes, process query unknown states, Git status failure handling, and read-only file immutability:
 ```powershell
 & $sarahPython tools/test_preflight.py
 ```
