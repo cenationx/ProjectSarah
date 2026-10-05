@@ -1,10 +1,11 @@
 ## Current offline next step (2026-10-06)
 
-Inert candidate collector implemented and fixture-tested; see COLLECTOR-OFFLINE.md.
-401 suite checks +11 runner +19 preflight PASS. Next is offline adapter identity/token
-and exact-enum boundary investigation/fixtures. No native integration/deployment;
-independent lighting and native Follow/rendering remain open. Live tests deferred,
-external/model AI ON HOLD. Current user preference: Codex handles coding; live testing stays in this chat.
+Caller-token registry and exact-reference obstruction policies implemented/tested
+OFFLINE; see ADAPTER-BOUNDARY-OFFLINE.md. All 450 suite +11 runner +19 preflight
+checks PASS. Next: injected one-shot coordinator contract and independent-light
+runtime evidence audit, no native wiring. Identity/exposure/light and native
+Follow/rendering gates remain open. Gemini drafts code; Codex applies/reviews/tests.
+Live tests stay in this chat, deferred; external/model AI ON HOLD.
 
 # Project Sarah roadmap
 

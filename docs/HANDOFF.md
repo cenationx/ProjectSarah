@@ -1,3 +1,31 @@
+## Latest checkpoint: inert adapter boundary policies (2026-10-06)
+
+Gemini handles coding drafts; Codex alone applies/reviews/tests/commits/pushes.
+Live testing stays in this chat and remains explicitly deferred. Codex owns checkout.
+SessionIdentity.lua and ObstructionNormalizer.lua are implemented/tested OFFLINE,
+not imported/integrated/deployed. See ADAPTER-BOUNDARY-OFFLINE.md for caller-token
+provenance/unique namespaces, FIFO64 IDs and exact-reference enum interpretation.
+Native wrapper identity, Lua exposure and independent lighting remain unverified.
+Gemini authored code/base fixtures with NO TOOLS; Codex corrected nil-hole false
+positives, mandatory overflow fixtures and actual Perception/Knowledge composition.
+49 boundary checks; all 450 suite checks/11 suites +11 runner +19 preflight PASS.
+No game launches, saves/settings changes, movement/events or external/model AI.
+Latest deployed baseline remains 5fa6b9c; isolated world/backups unchanged.
+Next offline work: one-shot injected sampling coordinator contract with shared
+budgets/lifecycle invalidation and independent-light evidence audit; no native wiring.
+Follow/rendering native gates remain pending. Older state blocks are historical.
+
+## Corrected user workflow and current task (2026-10-06)
+
+Gemini handles the NEXT coding task; Codex alone applies, reviews, tests and
+commits/pushes. Live testing stays in this chat and remains deferred until explicitly
+resumed. This corrects the earlier ambiguous Codex-coding reminder.
+Starting clean main 9046099; Codex retains sole checkout editing ownership.
+Historical start of completed batch: Gemini NO-TOOLS implementation/fixtures for a bounded caller-token
+session registry and exact-reference obstruction normalizer. No engine identity
+or enum exposure is assumed verified. No production wiring, deployment/game
+launches, saves/settings changes or model AI integration.
+
 ## Current user workflow preference (2026-10-06)
 
 User now requests Codex handles coding; live testing stays in this chat.

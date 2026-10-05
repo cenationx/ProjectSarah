@@ -1,3 +1,9 @@
+## Latest offline baseline (2026-10-06, adapter boundary)
+
+Default runner includes 11 suites and 450 checks, including 49 adapter boundary
+fixtures. Runner self-tests:11; preflight self-tests:19. See ADAPTER-BOUNDARY-OFFLINE.md
+for evidence limits; earlier totals below are historical.
+
 ## Latest offline baseline (2026-10-06)
 
 Default runner now includes 10 suites and 401 checks, including 69 collector

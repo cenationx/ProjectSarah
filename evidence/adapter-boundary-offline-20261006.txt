@@ -1,0 +1,12 @@
+Project Sarah identity/obstruction boundary checkpoint, 2026-10-06
+Starting checkpoint:9046099ad4e134d0b5d193f1f8c45b05c36eb46e, clean main/origin.
+Codex sole checkout editor; Gemini3.8FlashHIGH authored NO-TOOLS source/base fixtures.
+Codex reviewed code and repaired test false positives from nil holes/optional skips,
+then replaced simulated memory flag with actual pure Perception/Knowledge calls.
+Final adapter boundary suite:49 PASS; full run_tests.py:450/11 suites PASS.
+Runner self-tests:11 PASS; preflight self-tests:19 PASS. Diff checks PASS.
+Enum mocks use tables/Python userdata; overflow uses offline debug upvalue hooks.
+No actual Java/Kahlua identity/exposure/light or game acceptance established.
+No imports into production, integration, deployment, launch, saves/settings changes.
+Coding delegation corrected:Gemini drafts; Codex applies/reviews/tests; live testing here.
+Next:offline coordinator contract/shared budget lifecycle audit and independent light.
