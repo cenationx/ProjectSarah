@@ -1,3 +1,25 @@
+## Latest checkpoint: native binding/lifecycle review (2026-10-06)
+
+Started clean main795db52; Codex sole checkout editor. Gemini3.8 Flash HIGH
+NO-TOOLS evidence draft/revision reviewed against installed class/source facts.
+See NATIVE-BINDING-LIFECYCLE-REVIEW.md and evidence/binding-review-offline-20261006.txt.
+Concrete candidate mappings recorded for13 probe aliases; actual Lua invocation,
+enum paths/types and native wrapper identity remain UNKNOWN. Three square lookup
+overloads and public global getCell metadata independently confirmed offline.
+Residency object/add/remove collections are Set/HashSet, not ArrayList; exclude
+whole-collection getObjectListForLua materialization. Engine.isResident has at
+most10 explicit Lua-to-API call expressions, not a measured native cost bound.
+Reload replaces the SarahFoundation table but preserves controller; future caller
+needs a separate framework/epoch/reset contract. No native caller is implemented.
+48 probe checks rerun PASS; runtime code unchanged. Prior full555 checks/13 suites
++11 runner +19 preflight baseline not rerun for this documentation-only batch.
+Next bounded offline Gemini coding: inert caller epoch/reset policy and capture
+operation accounting contract, no native residency simulation or runtime hooks.
+Codex reviews/applies/tests/commits/pushes. Live testing stays here and deferred.
+Lighting unknown, external/model AI ON HOLD, Stop unchanged. No deployment/game
+launch/save/settings changes; deployed baseline5fa6b9c. Follow/rendering pending.
+Older blocks below are historical and superseded here.
+
 ## Latest checkpoint: inert symbol exposure probe (2026-10-06)
 
 Started clean main40bc5aa; Codex retains sole shared-checkout editing ownership.

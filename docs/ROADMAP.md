@@ -10,8 +10,10 @@
 - [x] Inert tools/NativeExposureProbe.lua, Gemini authoring/Codex review:
   48 probe checks; full555 checks/13 suites +11 runner +19 preflight PASS.
   No native resolver/invocation; symbol/enum reference fixtures are not engine proof.
-- [ ] Review concrete native caller/resolver mapping and lifecycle-token evidence,
-  then deferred overload/enum/reset acceptance cases. No deployment/live testing.
+- [x] Concrete native candidate/resolver mapping and lifecycle review:
+  NATIVE-BINDING-LIFECYCLE-REVIEW.md, deferred cases prepared, native gates open.
+- [ ] Inert caller epoch/reset policy and capture operation accounting contract
+  with Gemini coding/Codex review, no bindings/events/native residency simulation.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/

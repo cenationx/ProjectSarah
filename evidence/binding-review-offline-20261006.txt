@@ -1,0 +1,18 @@
+Project Sarah - concrete binding/lifecycle review, 2026-10-06
+Start:795db524b3099fe0a83580890c7b879bc690a765,main,clean;editorCodex.
+Gemini3.8 Flash HIGH:NO-TOOLS draft/revision; Codex corrected/reviewed evidence.
+Installed jar SHA256:E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33.
+Code attributes directly read; no classes initialized/native methods invoked.
+GlobalObject.getCell flags0x9,LuaMethod namegetCell/globaltrue.
+Code:IsoWorld.instance0,IsoWorld.getCell3; latter currentCell read1.
+Square lookup:DDD,boxedDoublex3,III public overloads; doubleLuaMethod annotation.
+Facing getters public forwardDirection.x/y field reads; getMovingObjects ArrayListfield.
+Cell residency getters return Set fields; getObjectListForLua stream/toList.
+LOS:cell+sixints+boolean and cell+sixints+boolean+int descriptors verified.
+SarahFoundation reload creates new state table and retains old controller.
+Engine.isResident max10 explicit API call expressions, not a nativework/latency bound.
+No reliable native wrapper identity/enumlookup/generation proof established.
+Probe48 actual-Lua fixture checks rerun PASS. Runtime source unchanged.
+Prior full555suite+11runner+19preflight baseline not rerun in documentation-only batch.
+No runtime bridge/deployment/game launch/save/settings/Stop changes; lightunknown.
+Deferred acceptance cases documented, not performed. External/model AI ON HOLD.
