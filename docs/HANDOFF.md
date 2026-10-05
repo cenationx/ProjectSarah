@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-202 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-36 console, 14 acceptance driver, 46 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+211 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+36 console, 14 acceptance driver, 55 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -36,7 +36,7 @@ Movable console panel implemented offline via title-bar mouse dragging with boun
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
 Bounded manual follow-player command implemented offline and hardened against Codex review: safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
-User-facing follow status distinctions (following while walking, waiting in range vs waiting before next walk during cooldown, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (unified disengagement + stop failure notice, console panel append, in-world halo notifications without polling or replay) implemented and verified offline (46 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
+User-facing follow status distinctions (following while walking, waiting in range vs waiting before next walk during cooldown, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (unified disengagement + stop failure notice, console panel append, in-world halo notifications without polling or replay) implemented and verified offline. Responsive mid-walk retargeting implemented with bounded frequency (min 6 ticks), deadzone halting, single movement action enforcement, and callback retirement before stop (55 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
@@ -87,7 +87,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (202 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (211 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -107,8 +107,8 @@ Individual suites can also still be executed directly:
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
 - `tools/test_console.py`: 36 simulated console UI/key/shortcut/dragging/bounds/session/feedback checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-- `tools/test_follow.py`: 46 manual follow-player companion navigation/status/notice checks.
-202 automated checks total (across 7 suites) plus 11 runner self-tests and 19 preflight tests. Simulated checks do not prove exceptional native cleanup.
+- `tools/test_follow.py`: 55 manual follow-player companion navigation/status/notice/retargeting checks.
+211 automated checks total (across 7 suites) plus 11 runner self-tests and 19 preflight tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -848,3 +848,37 @@ Game CLOSED via native window close; SAVED a and GameThread exited verified, no 
 Next: bounded offline Follow responsiveness proposal/implementation for Gemini, preserving 2-tile deadzone, 8-tile leash, single movement action, true completion, callback/session guards and reliable Stop. Remaining native wording and drag recovery checks must stay explicit; do not claim full acceptance. Current 202 suite checks +11 runner +19 preflight were verified before live deployment; docs-only checkpoint did not rerun them.
 
 Gemini offline responsiveness handoff (2026-10-05): user authorized next coding task. Checkout ownership RELEASED to Gemini for bounded Follow responsiveness work; Codex will review after Gemini releases it. Game CLOSED; Final-native backup preserved. Starting implementation/evidence checkpoint 9a675d5. Scope: diagnose stale-target tracking and eligible-tick cooldown, implement a justified small improvement with offline regression tests, preserve all existing movement/Stop/lifecycle/leash safety. No launches, desktop automation, deployed runtime/save/settings changes, external AI, longer-distance movement or unrelated refactoring. Native responsiveness remains unverified until Codex tests. Full copyable instructions provided to user. Gemini must update shared notes, commit/push verified offline changes, then explicitly release ownership to Codex.
+
+## Bounded Follow responsiveness implementation & Codex handoff (2026-10-05)
+
+Gemini completed offline implementation and automated regression coverage for Follow responsiveness improvements in `Commands.lua` and `tools/test_follow.py` (offline only; no game launches, desktop automation, or runtime modifications):
+- **Diagnosed tracking delays**:
+  1. Committing to stale targets without mid-stride course corrections (`stepState == 'walking'` ignored player movement).
+  2. Artificial 15-eligible-tick cooldown on step arrival before choosing next destination.
+  3. Failure to halt upon reaching the 2-tile deadzone mid-walk.
+- **Implemented changes**:
+  - `findFollowTarget(nx, ny, nz, px, py, pz)` helper extracted for shared candidate generation and validation.
+  - Safe mid-walk retargeting in `tickFollow()`: bounded frequency (`minRetargetTicks = 6` / ~100ms), triggers when player shifts >= 2 tiles (`playerShiftSq >= 4.0`) or target distance > 2 tiles (`targetDistSq > 4.0`).
+  - Pre-retirement of step callbacks (`act.retireStep()`) and generation increment *before* invoking `self:invokeStop('retarget')`.
+  - Confirmed stop success required before dispatching new step; stop failure sets `self.stopFailed` and blocks further movement until recovery.
+  - Mid-walk deadzone halting: halts cleanly via `invokeStop('in range')` when within 2 tiles after at least 6 ticks; immediate resumption when player leaves deadzone without artificial cooldown.
+  - Preserved single movement action in engine, 2-tile deadzone, 8-tile leash, same-floor restriction, 600-tick timeout, and all lifecycle/identity guards.
+- **Verification**: 211 automated checks pass across 7 suites in `tools/run_tests.py`, plus 11 runner self-tests and 19 preflight tests.
+
+### Codex native test checklist for Follow responsiveness
+When ready for native testing in the isolated zero-zombie sandbox:
+1. Ensure game is CLOSED (`javaw.exe` absent).
+2. Create fresh backup of `runtime/isolated/Saves/Rising/Sandbox/2026-10-05_19-04-21` and isolated settings.
+3. Deploy reviewed production file `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`.
+4. Launch isolated test game (`Sandbox/2026-10-05_19-04-21`).
+5. Position player 3–4 tiles from Sarah on clear ground.
+6. Open Sarah Console via context menu or key (F9), click [Follow]. Verify Sarah begins following.
+7. **Forward tracking**: Walk steadily in one direction. Verify Sarah adjusts path and tracks player smoothly without stopping at old squares or falling far behind.
+8. **Turning tracking**: Make a 90-degree turn. Verify Sarah redirects her path toward the player's new heading within ~0.5s instead of completing the old heading.
+9. **Deadzone arrival**: Stop and let Sarah approach within 2 tiles. Verify Sarah halts cleanly into idle stance without orbiting or overshooting.
+10. **Immediate resumption**: Walk away beyond 2 tiles. Verify Sarah immediately begins following without an extended pause.
+11. **Mid-stride stop**: While Sarah is actively walking, click [Stop]. Verify Sarah halts immediately, stays stopped, and does not automatically resume when player walks away.
+12. **Leash cancellation**: Restart [Follow], sprint >8 tiles away. Verify follow disengages with red cancellation feedback.
+13. Close console, save and exit cleanly.
+
+Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

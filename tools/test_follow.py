@@ -1489,5 +1489,355 @@ test('successful recovery clears failure and stale callbacks after recovery are 
     assert(#d.noticeQueue == 0)
 end)
 
+-- 47. Moving target retargets mid-walk to new forward position
+test('moving target retargets mid-walk to new forward position', function()
+    local lastStopReason = nil
+    local walkCalls = {}
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason, act)
+        lastStopReason = reason
+        return true
+    end, f.identityProvider, function(tgt, onComp, onFail)
+        walkCalls[#walkCalls + 1] = {tgt = tgt, onComp = onComp, onFail = onFail}
+        return true
+    end)
+
+    d:execute('follow')
+    assert(#walkCalls == 1)
+    assert(d.active and d.active.stepState == 'walking')
+    assert(d.active.currentTarget.x == 13 and d.active.currentTarget.y == 10)
+    local step1Gen = d.active.stepGen
+
+    -- Player moves forward to (16, 10) (2 tiles forward)
+    f.playerPos.x = 16
+
+    -- Ticks 1..5: bounded frequency prevents premature retargeting
+    for i = 1, 5 do
+        d:tick()
+        assert(#walkCalls == 1)
+        assert(d.active.currentTarget.x == 13 and d.active.currentTarget.y == 10)
+        assert(d.active.stepGen == step1Gen)
+    end
+
+    -- Tick 6: minRetargetTicks reached, mid-walk retarget triggers
+    d:tick()
+    assert(#walkCalls == 2)
+    assert(lastStopReason == 'retarget')
+    assert(d.active and d.active.stepState == 'walking')
+    assert(d.active.currentTarget.x == 15 and d.active.currentTarget.y == 10)
+    assert(d.active.stepGen > step1Gen)
+    assert(d.active.summary:find('Following player to %(15, 10, 0%)'))
+end)
+
+-- 48. Turning target retargets mid-walk to orthogonal position
+test('turning target retargets mid-walk to orthogonal position', function()
+    local walkCalls = {}
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason) return true end, f.identityProvider, function(tgt, onComp, onFail)
+        walkCalls[#walkCalls + 1] = {tgt = tgt, onComp = onComp, onFail = onFail}
+        return true
+    end)
+
+    d:execute('follow')
+    assert(#walkCalls == 1)
+    assert(d.active.currentTarget.x == 13 and d.active.currentTarget.y == 10)
+
+    -- Player turns 90 degrees North to (14, 13)
+    f.playerPos.x = 14
+    f.playerPos.y = 13
+
+    for i = 1, 6 do d:tick() end
+
+    assert(#walkCalls == 2)
+    assert(d.active.stepState == 'walking')
+    assert(d.active.currentTarget.y ~= 10)
+    assert(d.active.currentTarget.x == 14 or d.active.currentTarget.x == 13)
+    assert(d.active.currentTarget.y == 12 or d.active.currentTarget.y == 13)
+end)
+
+-- 49. Bounded retarget frequency throttles path restarts to minimum ticks
+test('bounded retarget frequency throttles path restarts to minimum ticks', function()
+    local stopCount = 0
+    local walkCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason)
+        if reason == 'retarget' then stopCount = stopCount + 1 end
+        return true
+    end, f.identityProvider, function(tgt)
+        walkCount = walkCount + 1
+        return true
+    end)
+
+    d:execute('follow')
+    assert(walkCount == 1)
+    assert(stopCount == 0)
+
+    -- Player moves further each tick within leash
+    f.playerPos.x = 15; d:tick(); assert(walkCount == 1 and stopCount == 0)
+    f.playerPos.x = 15.5; d:tick(); assert(walkCount == 1 and stopCount == 0)
+    f.playerPos.x = 16; d:tick(); assert(walkCount == 1 and stopCount == 0)
+    d:tick(); assert(walkCount == 1 and stopCount == 0)
+    d:tick(); assert(walkCount == 1 and stopCount == 0)
+
+    -- Tick 6: first retarget fires
+    d:tick()
+    assert(walkCount == 2 and stopCount == 1)
+
+    -- Player moves again: next 5 ticks must NOT retarget
+    f.playerPos.y = 12
+    for _ = 1, 5 do
+        d:tick()
+        assert(walkCount == 2 and stopCount == 1)
+    end
+
+    -- Tick 12: second retarget fires
+    d:tick()
+    assert(walkCount == 3 and stopCount == 2)
+end)
+
+-- 50. Stale callbacks from step 1 are defused after mid-walk retargeting
+test('stale callbacks from step 1 are defused after mid-walk retargeting', function()
+    local capturedStep1Comp, capturedStep1Fail
+    local capturedStep2Comp, capturedStep2Fail
+    local walkCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function(tgt, onComp, onFail)
+        walkCount = walkCount + 1
+        if walkCount == 1 then
+            capturedStep1Comp = onComp
+            capturedStep1Fail = onFail
+        elseif walkCount == 2 then
+            capturedStep2Comp = onComp
+            capturedStep2Fail = onFail
+        end
+        return true
+    end)
+
+    d:execute('follow')
+    assert(walkCount == 1)
+
+    -- Player moves to (16, 10) and 6 ticks elapse -> retarget
+    f.playerPos.x = 16
+    for _ = 1, 6 do d:tick() end
+    assert(walkCount == 2)
+    local step2Id = d.active.id
+    local step2Gen = d.active.stepGen
+    local step2Target = d.active.currentTarget
+
+    -- Stale fail callback from step 1 arrives
+    capturedStep1Fail(nil, 'stopped')
+    assert(d.active ~= nil)
+    assert(d.active.id == step2Id)
+    assert(d.active.stepGen == step2Gen)
+    assert(d.active.currentTarget.x == step2Target.x)
+    assert(#d.noticeQueue == 0)
+
+    -- Another stale fail callback from step 1 arrives
+    capturedStep1Fail(nil, 'path failed')
+    assert(d.active ~= nil)
+    assert(d.active.id == step2Id)
+    assert(d.active.stepGen == step2Gen)
+    assert(#d.noticeQueue == 0)
+
+    -- Stale complete callback from step 1 arrives
+    capturedStep1Comp()
+    assert(d.active ~= nil)
+    assert(d.active.stepState == 'walking')
+    assert(d.active.stepGen == step2Gen)
+
+    -- Legitimate step 2 completion works normally
+    capturedStep2Comp()
+    assert(d.active.stepState == 'idle')
+    assert(d.active.cooldown == 15)
+end)
+
+-- 51. Synchronous callbacks during retarget dispatch are handled safely
+test('synchronous callbacks during retarget dispatch are handled safely', function()
+    -- Part A: synchronous completion during retarget dispatch
+    local walkCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function(tgt, onComp, onFail)
+        walkCount = walkCount + 1
+        if walkCount == 2 then
+            onComp()
+        end
+        return true
+    end)
+
+    d:execute('follow')
+    f.playerPos.x = 16
+    for _ = 1, 6 do d:tick() end
+    assert(walkCount == 2)
+    assert(d.active ~= nil)
+    assert(d.active.stepState == 'idle')
+    assert(d.active.cooldown == 15)
+
+    -- Part B: synchronous failure during retarget dispatch
+    walkCount = 0
+    local f2 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d2 = Commands.new(f2.observe, function() return true end, f2.identityProvider, function(tgt, onComp, onFail)
+        walkCount = walkCount + 1
+        if walkCount == 2 then
+            onFail(nil, 'path blocked')
+        end
+        return true
+    end)
+
+    d2:execute('follow')
+    f2.playerPos.x = 16
+    for _ = 1, 6 do d2:tick() end
+    assert(walkCount == 2)
+    assert(d2.active == nil)
+    assert(d2.lastAction.state == 'cancelled')
+    assert(d2.lastAction.reason == 'path blocked')
+    assert(#d2.noticeQueue == 1)
+end)
+
+-- 52. User stop during tracking halts engine and stays stopped
+test('user stop during tracking halts engine and stays stopped', function()
+    local lastStopReason = nil
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason)
+        lastStopReason = reason
+        return true
+    end, f.identityProvider, function() return true end)
+
+    d:execute('follow')
+    f.playerPos.x = 15
+    d:tick()
+    assert(d.active and d.active.stepState == 'walking')
+
+    local stopRes = d:execute('stop')
+    assert(stopRes.state == 'completed')
+    assert(lastStopReason == 'stopped by user')
+    assert(d.active == nil)
+
+    -- Subsequent player moves and ticks do not restart follow
+    f.playerPos.x = 16
+    for _ = 1, 10 do d:tick() end
+    assert(d.active == nil)
+
+    local st = d:execute('status')
+    assert(st.lines[2] == 'Action: idle (last: #1 cancelled)')
+    assert(st.lines[3] == 'Follow: disengaged (stopped by user)')
+end)
+
+-- 53. Failed engine stop during retargeting blocks movement and sets stopFailed
+test('failed engine stop during retargeting blocks movement and sets stopFailed', function()
+    local stopShouldFail = false
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason)
+        if stopShouldFail then return false, 'motor jammed' end
+        return true
+    end, f.identityProvider, function() return true end)
+
+    d:execute('follow')
+    assert(d.active and d.active.stepState == 'walking')
+
+    f.playerPos.x = 16
+    for _ = 1, 5 do d:tick() end
+
+    -- Stop fails on retarget at tick 6
+    stopShouldFail = true
+    local ok, err = d:tick()
+    assert(ok == false)
+    assert(d.active == nil)
+    assert(d.stopFailed == 'motor jammed')
+
+    -- One notice enqueued with failure warning
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    assert(notices[1].message:find('Warning: engine stop failed %(motor jammed%)'))
+    assert(notices[1].message:find('movement blocked pending recovery%.'))
+
+    -- Follow and walk here rejected while stopFailed
+    local folBlock = d:execute('follow')
+    assert(folBlock.state == 'rejected')
+    assert(folBlock.lines[1]:find('movement blocked until stop recovers%.'))
+
+    local walkBlock = d:execute('walk here')
+    assert(walkBlock.state == 'rejected')
+    assert(walkBlock.lines[1]:find('movement blocked until stop recovers%.'))
+
+    -- Recovery via successful stop
+    stopShouldFail = false
+    local recRes = d:execute('stop')
+    assert(recRes.state == 'completed')
+    assert(d.stopFailed == nil)
+    assert(hasLine(recRes.lines, 'Prior engine stop failure cleared; movement recovered%.'))
+    assert(hasLine(recRes.lines, 'Sarah stopped; nothing active%.'))
+end)
+
+-- 54. No movement restart after cancellation
+test('no movement restart after cancellation', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+
+    d:execute('follow')
+    assert(d.active ~= nil)
+
+    -- Leash break cancels follow
+    f.playerPos.x = 20
+    d:tick()
+    assert(d.active == nil)
+    assert(d.lastAction.reason == 'player out of range (>8 tiles)')
+
+    -- Player returns close to Sarah
+    f.playerPos.x = 12
+    for _ = 1, 10 do d:tick() end
+    assert(d.active == nil)
+
+    local st = d:execute('status')
+    assert(st.lines[2] == 'Action: idle (last: #1 cancelled)')
+    assert(st.lines[3] == 'Follow: disengaged (player out of range (>8 tiles))')
+end)
+
+-- 55. Deadzone entry mid-walk halts engine cleanly and transitions to idle in range
+test('deadzone entry mid-walk halts engine cleanly and transitions to idle in range', function()
+    local lastStopReason = nil
+    local walkCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 13.5, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason)
+        lastStopReason = reason
+        return true
+    end, f.identityProvider, function(tgt)
+        walkCount = walkCount + 1
+        return true
+    end)
+
+    d:execute('follow')
+    assert(walkCount == 1)
+    assert(d.active.stepState == 'walking')
+
+    -- Player steps closer into deadzone (dist = 1.5 tiles <= 2.0)
+    f.playerPos.x = 11.5
+
+    -- Ticks 1..5: bounded frequency lets current walk continue
+    for _ = 1, 5 do
+        d:tick()
+        assert(d.active.stepState == 'walking')
+    end
+
+    -- Tick 6: minRetargetTicks reached while in deadzone -> halts cleanly
+    d:tick()
+    assert(d.active ~= nil)
+    assert(d.active.stepState == 'idle')
+    assert(d.active.currentTarget == nil)
+    assert(d.active.summary == 'Following player (in range)')
+    assert(lastStopReason == 'in range')
+
+    -- Status reports waiting within range
+    local st = d:execute('status')
+    assert(st.lines[2] == 'Action: #1 follow (running)')
+    assert(st.lines[3] == 'Follow: follow engaged but waiting within range')
+
+    -- Player moves away to (15, 10) (dist = 5 tiles)
+    f.playerPos.x = 15
+    d:tick()
+    assert(walkCount == 2)
+    assert(d.active.stepState == 'walking')
+    assert(d.active.currentTarget.x == 14 and d.active.currentTarget.y == 10)
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')
