@@ -1,3 +1,11 @@
+## Current user workflow preference (2026-10-06)
+
+User now requests Codex handles coding; live testing stays in this chat.
+This supersedes the earlier preference to delegate coding to Gemini.
+Live testing remains deferred until explicitly resumed; Codex alone deploys and
+launches with disposable-profile backups. No game/save/settings change authorized
+by this workflow reminder. Offline checkpoint remains 4449666 (401+11+19 PASS).
+
 ## Latest checkpoint: offline candidate collector (2026-10-06)
 
 Codex owns checkout. CandidateCollector.lua is implemented OFFLINE and inert,
@@ -6,7 +14,7 @@ round-robin list cursors and transactional lifecycle discard. See COLLECTOR-OFFL
 Gemini 3.8 Flash HIGH authored code/base fixtures via NO-TOOLS drafts/structured
 CLI exports; Codex applied/reviewed, fixed a budget-boundary starvation bug,
 corrected fixture assumptions and added review regressions. Gemini did not edit
-checkout. User explicitly prefers coding delegated to Gemini, Codex review/tests.
+checkout. Earlier batch used Gemini coding drafts with Codex review/tests; see current preference above.
 All 401 suite checks across 10 suites +11 runner +19 preflight self-tests PASS.
 No native imports/production wiring/deployment/game launches or saves/settings
 changes. Latest deployed baseline remains 5fa6b9c; disposable world/backups unchanged.

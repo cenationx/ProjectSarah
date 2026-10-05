@@ -4,7 +4,7 @@ Inert candidate collector implemented and fixture-tested; see COLLECTOR-OFFLINE.
 401 suite checks +11 runner +19 preflight PASS. Next is offline adapter identity/token
 and exact-enum boundary investigation/fixtures. No native integration/deployment;
 independent lighting and native Follow/rendering remain open. Live tests deferred,
-external/model AI ON HOLD. Gemini authors coding drafts; Codex applies/reviews/tests.
+external/model AI ON HOLD. Current user preference: Codex handles coding; live testing stays in this chat.
 
 # Project Sarah roadmap
 
