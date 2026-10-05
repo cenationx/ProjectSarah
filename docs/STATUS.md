@@ -1,3 +1,22 @@
+## Latest checkpoint: reviewed adapter diagnostic design (2026-10-06)
+
+Codex owns the checkout. NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md is a reviewed design,
+not an implemented collector or native probe. Gemini 3.8 Flash HIGH drafted with
+NO TOOLS through the user-visible temporary interactive Remote Control session;
+Codex corrected hidden-position leakage, unsupported generation/identity claims,
+enumeration fairness and explicit budget/lifecycle boundaries. Gemini did not edit
+this checkout. No production changes, deployment, game launches or saves/settings
+changes. Independent lighting and native Follow/rendering remain unresolved.
+The verified code baseline remains aa7595f: 332 suite checks +11 runner +19 preflight
+self-tests passed there. This docs-only checkpoint validates text/diff consistency;
+those suites were not rerun. Latest deployed baseline remains 5fa6b9c.
+Next: pure injected CandidateCollector policy and actual-Lua budget/fairness/reset
+fixtures; resolve identity tokens offline before any native registry. No native
+wiring. Live testing deferred; external/model AI ON HOLD. Temporary Gemini session
+remains available for visible NO-TOOLS drafts, in the empty Admin visibility-test
+workspace. It grants no Sarah checkout editing ownership or gameplay permissions.
+Earlier state blocks and counts below are historical.
+
 ## Authoritative resume state: coverage helper checkpoint (2026-10-06)
 
 Codex owns checkout. Started from clean main 8fddc76. Implemented inert offline
@@ -1006,3 +1025,5 @@ Gemini dispatch cancelled before task execution: both sandbox and normal CLI att
 Coverage helper batch IN PROGRESS (2026-10-05): starting clean main 8fddc76, no other coding/game processes found. Gemini 3.8 Flash HIGH authenticated successfully after manual login. Codex releases single-editor ownership to Gemini for bounded offline coverage implementation/tests and bytecode lighting verification. No integration/deployment/game launches/save or settings changes. Codex reviews and alone commits/pushes. External/model AI ON HOLD.
 
 Gemini CLI credentials work outside Codex sandbox. Headless task stopped before edits because RunCommand permission was auto-denied. No bypass used. Codex reclaims single-editor ownership. Retry is a no-tools source-in-prompt generation/review batch: Gemini returns proposed code/tests only; Codex applies/reviews/tests. No permission settings changed.
+
+Historical start of completed native adapter diagnostic specification (2026-10-06): starting clean main aa7595f, Codex retains sole checkout ownership. Gemini 3.8 Flash HIGH is assisting through the user-visible temporary interactive Remote Control session in an empty Admin test workspace, with source-in-prompt NO-TOOLS specification drafting only. No Gemini checkout access granted. No production integration/deployment/launches/saves/settings changes; live testing deferred, external/model AI ON HOLD.

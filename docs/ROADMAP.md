@@ -1,3 +1,11 @@
+## Current offline next step (2026-10-06)
+
+Reviewed native-adapter diagnostic design is complete; see
+NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md. Next is a pure injected candidate collector
+with bounded enumeration, fairness and lifecycle-discard fixtures. No native
+adapter/lighting integration or deployment is complete. Native Follow/rendering
+acceptance and independent lighting remain open; live tests deferred, AI ON HOLD.
+
 # Project Sarah roadmap
 
 The intended direction is a dependable Sarah NPC foundation, followed by a small

@@ -1,3 +1,22 @@
+## Latest checkpoint: reviewed adapter diagnostic design (2026-10-06)
+
+Codex owns the checkout. NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md is a reviewed design,
+not an implemented collector or native probe. Gemini 3.8 Flash HIGH drafted with
+NO TOOLS through the user-visible temporary interactive Remote Control session;
+Codex corrected hidden-position leakage, unsupported generation/identity claims,
+enumeration fairness and explicit budget/lifecycle boundaries. Gemini did not edit
+this checkout. No production changes, deployment, game launches or saves/settings
+changes. Independent lighting and native Follow/rendering remain unresolved.
+The verified code baseline remains aa7595f: 332 suite checks +11 runner +19 preflight
+self-tests passed there. This docs-only checkpoint validates text/diff consistency;
+those suites were not rerun. Latest deployed baseline remains 5fa6b9c.
+Next: pure injected CandidateCollector policy and actual-Lua budget/fairness/reset
+fixtures; resolve identity tokens offline before any native registry. No native
+wiring. Live testing deferred; external/model AI ON HOLD. Temporary Gemini session
+remains available for visible NO-TOOLS drafts, in the empty Admin visibility-test
+workspace. It grants no Sarah checkout editing ownership or gameplay permissions.
+Earlier state blocks and counts below are historical.
+
 ## Current authoritative handoff (2026-10-06)
 
 Codex owns checkout. Coverage.lua is implemented/tested OFFLINE, inert and not
