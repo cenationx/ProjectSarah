@@ -248,7 +248,7 @@ test('walk-then-stop verifies observable movement before issuing stop and confir
     assert(dispatch.lastAction.state == 'cancelled')
     assert(lastStoppedNpc ~= nil)
 
-    -- Settle halt over 5 ticks
+    -- Settle halt over 5 ticks with stable coordinates
     for i = 1, 5 do d.tick() end
     assert(d.getPhase() == 'IDLE')
     assert(d.getLastResult() == 'PASS')
@@ -359,6 +359,191 @@ test('session teardown removes UI panel, resets state, and rejects stale callbac
     -- Ticking now does not advance previous run
     d.tick()
     assert(d.getPhase() == 'IDLE')
+end)
+
+-- Regression 1: Cancelled dispatch state with continued physical movement does not PASS
+test('cancelled dispatch state with continued physical movement does not PASS', function()
+    currentSarah.x, currentSarah.y, currentSarah.z = 10, 20, 0
+    specificPlayer.x, specificPlayer.y, specificPlayer.z = 15, 20, 0
+    local dispatch = resetDispatch()
+    local d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    assert(d.getPhase() == 'WAIT_MOVEMENT')
+
+    -- Movement observed (0.3 tiles) -> stop issued, enters WAIT_HALT
+    currentSarah.x = 10.3
+    d.tick()
+    assert(d.getPhase() == 'WAIT_HALT')
+    assert(dispatch.lastAction.state == 'cancelled')
+
+    -- Sarah continues physically moving (0.1 tiles per tick > HALT_TOLERANCE 0.05)
+    for i = 1, 30 do
+        currentSarah.x = currentSarah.x + 0.1
+        d.tick()
+    end
+
+    -- Must not report PASS; must detect continued movement and fail
+    assert(d.getLastResult() ~= 'PASS')
+    assert(d.getLastResult() == 'FAILED')
+    assert(d.getPhase() == 'IDLE')
+    d.teardown()
+end)
+
+-- Regression 2: Missing observations after stop do not PASS
+test('missing observations after stop do not PASS', function()
+    currentSarah.x, currentSarah.y, currentSarah.z = 10, 20, 0
+    specificPlayer.x, specificPlayer.y, specificPlayer.z = 15, 20, 0
+    local dispatch = resetDispatch()
+    local d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    assert(d.getPhase() == 'WAIT_MOVEMENT')
+
+    -- Movement observed (0.3 tiles) -> stop issued, enters WAIT_HALT
+    currentSarah.x = 10.3
+    d.tick()
+    assert(d.getPhase() == 'WAIT_HALT')
+    assert(dispatch.lastAction.state == 'cancelled')
+
+    -- Simulate observation missing or inactive (e.g. unload or death)
+    local originalObserve = dispatch.observe
+    dispatch.observe = function() return {state = 'unavailable'} end
+
+    d.tick()
+    -- Missing observations must invalidate the run, never substitute old coordinates to PASS
+    assert(d.getLastResult() ~= 'PASS')
+    assert(d.getLastResult() == 'INVALIDATED')
+    assert(d.getPhase() == 'IDLE')
+
+    dispatch.observe = originalObserve
+    d.teardown()
+end)
+
+-- Regression 3: Identity replacement or a newer action invalidates monitoring without stopping the replacement/new action
+test('identity replacement or a newer action invalidates monitoring without stopping the replacement/new action', function()
+    -- Sub-case A: Identity replacement during WAIT_HALT
+    currentSarah.x, currentSarah.y, currentSarah.z = 10, 20, 0
+    specificPlayer.x, specificPlayer.y, specificPlayer.z = 15, 20, 0
+    local dispatch = resetDispatch()
+    local d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    currentSarah.x = 10.3
+    d.tick()
+    assert(d.getPhase() == 'WAIT_HALT')
+
+    -- Replace NPC identity
+    local replacementNpc = {x = 10.3, y = 20, z = 0}
+    currentCtrl = {npc = replacementNpc}
+    lastStoppedNpc = nil
+
+    d.tick()
+    assert(d.getLastResult() == 'INVALIDATED')
+    assert(d.getPhase() == 'IDLE')
+    -- Replacement NPC was not stopped
+    assert(lastStoppedNpc == nil)
+    d.teardown()
+
+    -- Sub-case B: Newer action active during WAIT_HALT
+    currentSarah = {x = 10, y = 20, z = 0}
+    currentCtrl = {npc = currentSarah}
+    dispatch = resetDispatch()
+    d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    currentSarah.x = 10.3
+    d.tick()
+    assert(d.getPhase() == 'WAIT_HALT')
+
+    -- External caller begins a newer action #99
+    dispatch.active = {id = 99, token = 99, session = 1, command = 'walk here', owner = currentCtrl, npc = currentSarah}
+    lastStoppedNpc = nil
+
+    d.tick()
+    assert(d.getLastResult() == 'INVALIDATED')
+    assert(d.getPhase() == 'IDLE')
+    -- Newer action remains active and was not stopped
+    assert(dispatch.active ~= nil and dispatch.active.id == 99)
+    assert(lastStoppedNpc == nil)
+    d.teardown()
+
+    -- Sub-case C: Newer action active during WAIT_MOVEMENT
+    currentSarah = {x = 10, y = 20, z = 0}
+    currentCtrl = {npc = currentSarah}
+    dispatch = resetDispatch()
+    d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    assert(d.getPhase() == 'WAIT_MOVEMENT')
+
+    -- External caller begins a newer action #88
+    dispatch.active = {id = 88, token = 88, session = 1, command = 'walk here', owner = currentCtrl, npc = currentSarah}
+    lastStoppedNpc = nil
+
+    d.tick()
+    assert(d.getLastResult() == 'INVALIDATED')
+    assert(d.getPhase() == 'IDLE')
+    -- Newer action #88 remains active and was not stopped
+    assert(dispatch.active ~= nil and dispatch.active.id == 88)
+    assert(lastStoppedNpc == nil)
+    d.teardown()
+
+    -- Sub-case D: Identity replacement during WAIT_MOVEMENT
+    currentSarah = {x = 10, y = 20, z = 0}
+    currentCtrl = {npc = currentSarah}
+    dispatch = resetDispatch()
+    d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    assert(d.getPhase() == 'WAIT_MOVEMENT')
+
+    -- Controller identity replaced
+    local replacementCtrl = {npc = {x = 10, y = 20, z = 0}}
+    currentCtrl = replacementCtrl
+    lastStoppedNpc = nil
+
+    d.tick()
+    assert(d.getLastResult() == 'INVALIDATED')
+    assert(d.getPhase() == 'IDLE')
+    assert(lastStoppedNpc == nil)
+    d.teardown()
+end)
+
+-- Regression 4: Real movement followed by sustained stable observations can PASS
+test('real movement followed by sustained stable observations can PASS', function()
+    currentSarah.x, currentSarah.y, currentSarah.z = 10, 20, 0
+    specificPlayer.x, specificPlayer.y, specificPlayer.z = 15, 20, 0
+    local dispatch = resetDispatch()
+    local d = loadDriver()
+    d.init()
+
+    d.onWalkThenStop()
+    assert(d.getPhase() == 'WAIT_MOVEMENT')
+
+    -- Movement from 10.0 to 10.35 (0.35 tiles >= 0.2 tiles)
+    currentSarah.x = 10.35
+    d.tick()
+    assert(d.getPhase() == 'WAIT_HALT')
+    assert(dispatch.lastAction.state == 'cancelled')
+
+    -- Sarah halts and position remains sustained within tolerance across 5 consecutive ticks
+    for i = 1, 4 do
+        d.tick()
+        assert(d.getPhase() == 'WAIT_HALT')
+        assert(d.getLastResult() == nil)
+    end
+    -- 5th tick achieves required sustained stability
+    d.tick()
+    assert(d.getLastResult() == 'PASS')
+    assert(d.getPhase() == 'IDLE')
+    d.teardown()
 end)
 
 print('RESULT ' .. count .. ' driver tests passed')

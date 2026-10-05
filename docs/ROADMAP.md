@@ -76,7 +76,7 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
   key delivery verified; safe input focus, close and mouse fallback.
 - [x] Slice B: stop, cancellation and bounded request/result history; 94 automated checks and native idle-stop/history/session-reset smoke checks passed. Native active-action cancellation remains required alongside slice C.
 - [x] Slice C: walk here, initially nearby/same-floor; one action, true completion
-  tracking, timeout, busy/invalid-target rejection, synchronous callback hardening, and session-reset collision protection (135 automated checks pass across core suites and acceptance driver; native live movement and cancellation verification pending Codex check per docs/M1-slice-c-checklist.md).
+  tracking, timeout, busy/invalid-target rejection, synchronous callback hardening, session-reset collision protection, and sustained halt acceptance verification (139 automated checks pass across core suites and acceptance driver; native live movement and cancellation verification pending Codex check per docs/M1-slice-c-checklist.md).
 - [x] Reset/invalidate actions on unload, death, controller change and world switch.
 - [ ] Native live command/focus/rebind/movement/restart tests in backed-up
   isolated cases; one Sarah and local player preserved.

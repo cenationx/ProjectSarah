@@ -24,13 +24,12 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
-135 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-19 console, 10 acceptance driver). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
+139 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+19 console, 14 acceptance driver). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
 and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
-scoping, production controller contract, and safe context menu routing) implemented, hardened against session-reset
-callback collisions (monotonic action tokens, session validation in completeAction, callback pre-checks) and synchronous
-callbacks (125 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
+scoping, production controller contract, safe context menu routing, and temporary acceptance driver with sustained halt verification)
+implemented and hardened offline (139 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
 per `docs/M1-slice-c-checklist.md`.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user. Keep external AI on hold.
 
@@ -434,3 +433,28 @@ Gemini completed the lifecycle audit and hardening of M1 command and action boun
   - Game is CLOSED.
   - Follow `docs/M1-slice-c-checklist.md` in `SarahConsoleNativeCase`.
   - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+## Temporary acceptance driver & halt evidence hardening (latest, 2026-10-05)
+
+Gemini built and verified a temporary acceptance driver in `tools/FoundationWalkStopDriver.lua` and hardened halt verification evidence offline (no game launches, runtime deployment, or desktop automation):
+- **WAIT_HALT evidence verification**:
+  - Requires fresh, valid observations of the same controller and NPC on every tick; missing observations immediately invalidate the run (`INVALIDATED`), never substituting old/cached coordinates.
+  - Captures `walkToken`, `walkSession`, controller identity, and NPC identity privately from the dispatched action.
+  - Controller or NPC replacement or an unrelated/newer active action immediately invalidates monitoring (`INVALIDATED`) without stopping the replacement entity or new action.
+  - Movement timeout cleanup strictly checks action ID, token, session, and identity, ensuring it never stops an unrelated newer action.
+  - Position is sampled over a bounded observation window (`MAX_HALT_TICKS = 30`).
+  - Requires sustained positional stability: `REQUIRED_STABLE_TICKS = 5` consecutive tick observations with positional delta `<= HALT_TOLERANCE = 0.05` tiles.
+  - Continued physical movement resets stability counter and fails after the observation window (`FAILED: Continued movement`).
+- **Driver offline unit tests (`tools/test_driver.py`)**:
+  - 14 automated unit tests pass, covering profile gating, panel initialization, status/history execution, walk dispatch & monitor, observable movement verification, mid-walk cancellation, invalid early arrival handling, tick timeout, overlapping run refusal, post-cancellation resumption, session teardown, and 4 new regression tests (continued movement failure, missing observation invalidation, identity replacement/newer action protection, and sustained positional stability PASS).
+  - Total project suite: 139 checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 driver).
+- **Deployment & operation instructions for Codex**:
+  1. *Deploy*: Copy `tools/FoundationWalkStopDriver.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
+  2. *Launch*: Launch isolated game with `SarahConsoleNativeCase`. The driver panel appears at `(20, 200)`.
+  3. *Reposition player*: Move player 4–6 tiles away from Sarah on the same floor with a clear path.
+  4. *Run Walk then Stop*: Click `Walk then Stop`. Watch console output for `[SarahDriver] WALK_THEN_STOP PASS: Mid-walk cancellation verified with sustained halt stability`.
+  5. *Test resumption*: Click `Walk to Player`. Verify Sarah walks to the player's new position and arrives.
+  6. *Verify history*: Click `Status & History`. Verify recent outcomes recorded.
+  7. *Remove*: Close game cleanly. Delete `ZZSarahWalkStopDriver.lua` from `runtime/isolated/mods/SarahFoundation/42/media/lua/client/`.
+
+Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

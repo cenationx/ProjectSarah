@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 135 passing automated checks (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 10 acceptance driver). Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver). Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,12 +13,12 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
-- Automated tests: 135 automated checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 10 acceptance driver).
+- Automated tests: 139 automated checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver).
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 135 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases, 10 acceptance driver sequencing/movement/timeout/teardown cases).
+- **Automated policy checks**: 139 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases).
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -384,16 +384,24 @@ Gemini built and verified a temporary mouse-operated acceptance driver in `tools
     1. `Status & History`: Executes real `status` and `history` through dispatch, logging structured lines.
     2. `Walk to Player`: Executes real `walk here`, records start/target coordinates and request ID, and monitors arrival on game ticks.
     3. `Stop`: Executes real `stop`, cancelling active movement via engine stop callback and logging outcomes.
-    4. `Walk then Stop`: Automated test sequence for mid-walk cancellation:
+    4. `Walk then Stop`: Automated test sequence for mid-walk cancellation with verified halt evidence:
        - Records initial Sarah and player positions. Refuses if Sarah is already at target square (`Already at target; manually reposition player first`).
+       - Captures `walkToken`, `walkSession`, controller identity, and NPC identity privately from the dispatched action.
        - Dispatches `walk here`. Monitors ticks until observable movement is verified (`>= 0.2` tiles).
-       - Bounded wait (180 ticks timeout). If Sarah reaches the target square before stop can be issued, reports `INVALID: Arrived too soon` (does NOT label early arrival as mid-walk cancellation).
-       - Once movement is verified, issues `stop`. Waits 5 ticks for engine halt to settle, then verifies Sarah halted before target square, active action cancelled, and engine stop completed (`PASS: Mid-walk cancelled`).
+       - Bounded wait (180 ticks timeout). If Sarah reaches the target square before stop can be issued, reports `INVALID: Arrived too soon` (does NOT label early arrival as mid-walk cancellation). If timeout fires, only cancels the monitored action, never stopping an unrelated newer action.
+       - Once movement is verified, issues `stop`.
+       - *WAIT_HALT evidence verification*:
+         - Requires fresh, valid observations of the same controller and NPC on every tick; missing observations immediately invalidate the run (`INVALIDATED`), never substituting old/cached coordinates.
+         - Identity replacement or a newer active action immediately invalidates monitoring (`INVALIDATED`) without stopping the replacement entity or new action.
+         - Samples position over a bounded observation window (`MAX_HALT_TICKS = 30`).
+         - Requires sustained positional stability: `REQUIRED_STABLE_TICKS = 5` consecutive tick observations with positional delta `<= HALT_TOLERANCE = 0.05` tiles.
+         - Continued physical movement resets stability and fails after the observation window (`FAILED: Continued movement`).
+         - Verifies Sarah halted before target square, active action cancelled in dispatch, stop completed, and sustained stability achieved before reporting `PASS: Mid-walk cancelled`.
        - Resets driver phase to `IDLE`, allowing an immediate subsequent walk to the player's current position.
     5. `Close Driver`: Hides the panel. Context menu option `Sarah: open test driver` allows reopening.
   - *Teardown & safety*: Teardown removes panel from UIManager on `Events.OnMainMenuEnter` and `Events.OnGameStart`, increments session token to reject stale callbacks, and cancels lingering state. Prevents overlapping driver runs.
 - **Automated driver verification (`tools/test_driver.py`)**:
-  - 10 new offline unit tests (all passing):
+  - 14 offline unit tests (all passing):
     1. Driver refuses outside exact isolated profile or world.
     2. Driver panel initialization creates mouse buttons and starts idle without executing commands.
     3. Status and history button executes via real dispatch and logs concise outcomes.
@@ -404,12 +412,16 @@ Gemini built and verified a temporary mouse-operated acceptance driver in `tools
     8. Driver refuses overlapping test runs while walk-then-stop is in progress.
     9. Subsequent walk request succeeds after mid-walk cancellation.
     10. Session teardown removes UI panel, resets state, and rejects stale callbacks.
-  - Total automated suite: 135 checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 10 driver).
+    11. Regression: Cancelled dispatch state with continued physical movement does not PASS (detects continued movement and fails).
+    12. Regression: Missing observations after stop do not PASS (invalidates run without substituting old coordinates).
+    13. Regression: Identity replacement or a newer action invalidates monitoring without stopping the replacement/new action (covers halt identity replacement, halt newer action, movement wait newer action, movement wait identity replacement).
+    14. Regression: Real movement followed by sustained stable observations achieves halt PASS.
+  - Total automated suite: 139 checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 driver).
 - **Deployment, operation, and removal instructions for Codex**:
   1. *Deploy*: Copy `tools/FoundationWalkStopDriver.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
   2. *Launch*: Launch isolated game with `SarahConsoleNativeCase`. The driver panel appears at top-left.
   3. *Reposition player*: Move player 4–6 tiles away from Sarah on the same floor with a clear path.
-  4. *Run Walk then Stop*: Click `Walk then Stop`. Watch console output for `[SarahDriver] WALK_THEN_STOP PASS: Mid-walk cancellation verified`.
+  4. *Run Walk then Stop*: Click `Walk then Stop`. Watch console output for `[SarahDriver] WALK_THEN_STOP PASS: Mid-walk cancellation verified with sustained halt stability`.
   5. *Test resumption*: Click `Walk to Player`. Verify Sarah walks to the player's new position and arrives.
   6. *Verify history*: Click `Status & History`. Verify recent outcomes recorded.
   7. *Remove*: Close game cleanly. Delete `ZZSarahWalkStopDriver.lua` from `runtime/isolated/mods/SarahFoundation/42/media/lua/client/`.
