@@ -640,3 +640,29 @@ Gemini implemented and verified title-bar mouse dragging and window size robustn
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Baseline backups preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
   - Checkout ownership is RELEASED to Codex. AI remains ON HOLD.
+
+## Small-screen console layout adaptation and recovery handoff (latest, 2026-10-05)
+
+Gemini resolved the small-screen recovery defect where the panel reached y=-70 at screen size 500x300, rendering title bar and Close unreachable (offline only; no game launches, desktop automation, or runtime modifications):
+- **Implemented changes (`Console.lua`)**:
+  - `state.computeHeight(sh)`: Dynamically computes panel height clamped to `math.min(370, math.max(180, sh))`. Adapts panel height to available screen height on small displays (`300px` on 500x300), while preserving standard `370px` on normal displays.
+  - `state.clampPosition(x, y, w, h)`: Strict non-negative clamp `minY = 0` and `maxY = math.max(0, sh - h)`. The panel `y` coordinate is strictly `>= 0`, guaranteeing the 40px title bar and Close button never enter negative screen space or disappear off the top.
+  - `Panel:setPanelHeight(newH)`: Dynamically resizes `self.history` to `math.max(40, newH - 124)`, updates toolbar buttons to `newH - 74`, and input row (`entry`, `btnRun`) to `newH - 40`.
+  - `state.open()`: Instantiates panel with `h = state.computeHeight(sh)`, clamping initial position.
+  - `state.resolution(oldw, oldh, neww, newh)`: Invokes `Panel:setPanelHeight(targetH)` on open panel and re-clamps coordinates to `[0, maxY]`; if closed, re-clamps `state.pos`.
+  - Control reachability: Sliding horizontally between `[-60, 0]` on 500x300 keeps the title bar reachable across `[0, 420]` for drag restarting, while providing full access to all left and right controls (Close, Run, Stop, Help, Status, Inventory, entry).
+- **Automated test suite (`tools/test_console.py`)**:
+  - Replaced small-screen test accepting `y = -70` with comprehensive layout adaptation checks (height 300, history height 176, toolbar y=226, entry y=260, Close y=10, y=0, non-negative vertical drag clamp, horizontal slide control reachability, drag restart from visible title bar, command execution, Close click, reopening).
+  - Enhanced `OnResolutionChange` test to verify dynamic shrinking to 500x300, component repositioning, expansion back to 1280x720, and closed-panel resolution shrink.
+  - All 153 automated checks pass across 6 suites in `tools/run_tests.py` (0.24s).
+  - All 11 runner self-tests pass in `tools/test_runner.py` (2.36s).
+- **Codex native test checklist for small-screen handling**:
+  1. Deploy updated `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/Sarah/Console.lua` with game closed.
+  2. Launch isolated game with `SarahConsoleNativeCase`.
+  3. Open Sarah Console; drag panel and verify title bar remains on screen and never slides above screen top (y >= 0).
+  4. If testing at small resolution or windowed size (e.g. 500x300): verify panel height adapts, title bar and Close button remain visible and clickable, and sliding left/right enables clicking all toolbar and input controls.
+  5. Close and reopen; verify panel reopens at adapted size and accessible coordinates.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Baseline backups preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+  - Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.

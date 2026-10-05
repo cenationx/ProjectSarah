@@ -110,13 +110,18 @@ function state.conflict(key)
         end
     end
 end
+function state.computeHeight(sh)
+    local core=getCore()
+    sh=sh or (core and core.getScreenHeight and core:getScreenHeight()) or 720
+    return math.min(370,math.max(180,sh))
+end
 function state.clampPosition(x,y,w,h)
-    w=w or 560; h=h or 370
     local core=getCore()
     local sw=(core and core.getScreenWidth and core:getScreenWidth()) or 1280
     local sh=(core and core.getScreenHeight and core:getScreenHeight()) or 720
+    w=w or 560; h=h or state.computeHeight(sh)
     local minX=math.min(0,sw-w); local maxX=math.max(0,sw-w)
-    local minY=math.min(0,sh-h); local maxY=math.max(0,sh-h)
+    local minY=0; local maxY=math.max(0,sh-h)
     local cx=math.max(minX,math.min(maxX,x or minX))
     local cy=math.max(minY,math.min(maxY,y or minY))
     return cx,cy
@@ -145,7 +150,7 @@ function Panel:initialise()
     ISPanel.initialise(self)
     self:setWantKeyEvents(true)
     self.keepOnScreen=false
-    self.history=ISScrollingListBox:new(12,42,self.width-24,self.height-124)
+    self.history=ISScrollingListBox:new(12,42,self.width-24,math.max(40,self.height-124))
     self.history:initialise(); self.history:instantiate(); self:addChild(self.history)
     self.history:setFont(UIFont.Small,4)
 
@@ -185,6 +190,29 @@ function Panel:initialise()
     self:append('Commands: help, status, inventory, walk here, stop, history. Enter submits.')
     local conflict=state.conflict(getCore():getKey(binding))
     self:append(conflict or 'Toggle: '..getKeyName(getCore():getKey(binding))..' (Options > Key bindings)')
+end
+function Panel:setPanelHeight(newH)
+    newH=math.floor(newH or self.height)
+    if self.setHeight then self:setHeight(newH) else self.height=newH end
+    if self.history then
+        local histH=math.max(40,newH-124)
+        if self.history.setHeight then self.history:setHeight(histH) else self.history.height=histH end
+    end
+    local btnY=newH-74
+    local btnKeys={'btnHelp','btnStatus','btnInventory','btnHistory','btnWalkHere','btnStop'}
+    for _,k in ipairs(btnKeys) do
+        local btn=self[k]
+        if btn then
+            if btn.setY then btn:setY(btnY) else btn.y=btnY end
+        end
+    end
+    local inputY=newH-40
+    if self.entry then
+        if self.entry.setY then self.entry:setY(inputY) else self.entry.y=inputY end
+    end
+    if self.btnRun then
+        if self.btnRun.setY then self.btnRun:setY(inputY) else self.btnRun.y=inputY end
+    end
 end
 function Panel:append(line)
     -- Rows are clipped to a compact fixed width; no unbounded history.
@@ -250,14 +278,15 @@ end
 function state.open()
     if not allowed() then return end
     if state.panel then state.panel.entry:focus(); return end
-    local w,h=560,370
+    local core=getCore()
+    local sw=(core and core.getScreenWidth and core:getScreenWidth()) or 1280
+    local sh=(core and core.getScreenHeight and core:getScreenHeight()) or 720
+    local w=560
+    local h=state.computeHeight(sh)
     local x,y
     if state.pos then
         x,y=state.clampPosition(state.pos.x,state.pos.y,w,h)
     else
-        local core=getCore()
-        local sw=(core and core.getScreenWidth and core:getScreenWidth()) or 1280
-        local sh=(core and core.getScreenHeight and core:getScreenHeight()) or 720
         x,y=state.clampPosition(math.max(0,(sw-w)/2),math.max(0,(sh-h)/2),w,h)
     end
     state.pos={x=x,y=y}
@@ -308,13 +337,15 @@ state.reset=function()
     if state.dispatch then state.dispatch:reset() end
 end
 state.resolution=function(oldw,oldh,neww,newh)
+    local targetH=state.computeHeight(newh)
     if state.panel then
+        if state.panel.setPanelHeight then state.panel:setPanelHeight(targetH) end
         local cx,cy=state.clampPosition(state.panel.x,state.panel.y,state.panel.width,state.panel.height)
         if state.panel.setX then state.panel:setX(cx) else state.panel.x=cx end
         if state.panel.setY then state.panel:setY(cy) else state.panel.y=cy end
         state.pos={x=state.panel.x,y=state.panel.y}
     elseif state.pos then
-        local cx,cy=state.clampPosition(state.pos.x,state.pos.y,560,370)
+        local cx,cy=state.clampPosition(state.pos.x,state.pos.y,560,targetH)
         state.pos={x=cx,y=cy}
     end
 end

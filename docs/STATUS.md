@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping (normal and small screens), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -596,3 +596,25 @@ Gemini implemented title-bar mouse dragging, screen boundary clamping, and in-se
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime and saves untouched.
   - Checkout ownership is RELEASED to Codex.
+
+### Small-screen console layout adaptation and recovery fix (Gemini, 2026-10-05)
+
+Gemini resolved the oversized-panel recovery bug on small window sizes (offline only; no game launches, desktop automation, or runtime modifications):
+- **Oversized-panel recovery bug resolution**:
+  - *Problem*: At screen size 500x300, the 560x370 panel previously reached `y = -70` under `minY = math.min(0, sh - h)`. Its entire 40px title bar and Close button were pushed offscreen. Once the mouse was released, dragging could not be restarted, and closing/reopening retained the inaccessible offscreen coordinate.
+  - *Height adaptation (`state.computeHeight(sh)`)*: Clamps panel height to `math.min(370, math.max(180, sh))`. On standard screens (`sh >= 370`), height remains standard 370px. On small screens (`sh < 370`), height scales down to match available screen height (e.g. 300px at `sh = 300`).
+  - *Strict non-negative title bar clamp (`minY = 0`)*: `state.clampPosition` computes `minY = 0` and `maxY = math.max(0, sh - h)`. Because `minY = 0`, the panel `y` coordinate is strictly non-negative under all conditions (`cy >= 0`). The 40px title bar and Close button can never enter negative screen space or be dragged off the top of the screen.
+  - *Dynamic component layout (`Panel:setPanelHeight(newH)`)*: Updates `self.history` height to `math.max(40, newH - 124)`, toolbar buttons (`btnHelp`..`btnStop`) to `y = newH - 74`, and input row (`entry`, `btnRun`) to `y = newH - 40`.
+  - *Small-screen control accessibility*: On 500x300, horizontal sliding within `[-60, 0]` provides full access: when slid left to `x = -60`, right-side controls (`Close` at screen x=420, `Run` at 424, `Stop` at 416) are completely on screen; when slid right to `x = 0`, left-side controls (`Help`, `Status`, `Inventory`, text entry) are on screen. The top 40px title bar remains visible and grab-able across screen x `[0, 420]`, enabling drag restart at any time.
+  - *Dynamic resolution handling*: `Events.OnResolutionChange` dynamically calls `Panel:setPanelHeight(targetH)` on open panel and re-clamps coordinates to `[0, maxY]`; if closed, re-clamps `state.pos`.
+  - *Reopening and retention*: Closing and reopening retains adapted height and non-negative position; session reset clears position to center default.
+- **Automated test suite (153 passing checks)**:
+  - Updated `tools/test_console.py`:
+    1. Replaced small-screen test accepting `y = -70` with comprehensive layout adaptation checks (panel height 300, history height 176, toolbar y=226, entry y=260, Close y=10, y=0, non-negative vertical drag clamp, horizontal slide control reachability, drag restart from visible title bar, command execution, Close click, and reopening at adapted size).
+    2. Enhanced `OnResolutionChange` test to verify dynamic shrinking to 500x300, component repositioning, expansion back to 1280x720, and closed-panel resolution shrink.
+  - All 6 suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 driver = 153 checks total.
+  - All 11 runner self-tests in `tools/test_runner.py` pass.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime and saves untouched.
+  - Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.

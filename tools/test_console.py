@@ -26,6 +26,7 @@ function Base:setVisible(v) self.visible=v end
 function Base:getIsVisible() return self.visible~=false end
 function Base:setX(x) self.x=x end
 function Base:setY(y) self.y=y end
+function Base:setHeight(h) self.height=h end
 function Base:bringToTop() self.top=true end
 function Base:addItem(text) self.items[#self.items+1]={text=text} end
 function Base:setYScroll(v) self.scroll=v end
@@ -619,32 +620,83 @@ test('dragging bounds clamped on standard screen and keeps entire panel onscreen
     s.close()
     s.reset()
 end)
-test('dragging bounds clamped on small screens and keeps panel accessible without getting lost',function()
-    -- Small screen: 500x300 (smaller than panel 560x370)
+test('small-screen layout adapts height and keeps title bar, drag handle, Close, and controls reachable',function()
+    -- Small screen: 500x300 (smaller than default 560x370)
     screenW=500; screenH=300
     s.open()
     local p=s.panel
-    -- Clamped between [500-560, 0] = [-60, 0] and [300-370, 0] = [-70, 0]
-    assert(p.x<=0 and p.x>=-60)
-    assert(p.y<=0 and p.y>=-70)
+    assert(p~=nil)
 
+    -- 1. Height adaptation and layout geometry
+    assert(p.height==300)
+    assert(p.history.height==176) -- 300 - 124
+    assert(p.btnHelp.y==226)      -- 300 - 74
+    assert(p.entry.y==260)        -- 300 - 40
+    assert(p.btnRun.y==260)
+    assert(p.btnClose.y==10)
+    assert(p.y==0)                -- Strictly non-negative; title bar is at [0, 40]
+    assert(p.x<=0 and p.x>=-60)   -- Horizontal centering/clamp: [500-560, 0] = [-60, 0]
+
+    -- 2. Vertical drag cannot move title bar offscreen (y stays strictly non-negative)
     p:onMouseDown(50, 15)
     assert(p.moving==true)
 
-    -- Drag right/down to max bounds: (0, 0)
-    p:onMouseMove(200, 200)
-    assert(p.x==0 and p.y==0)
+    p:onMouseMove(0, -200)
+    assert(p.y==0)                -- Cannot drag up into negative space
+    assert(s.pos.y==0)
 
-    -- Drag left/up to min bounds: (-60, -70)
-    p:onMouseMove(-200, -200)
-    assert(p.x==-60 and p.y==-70)
+    p:onMouseMove(0, 200)
+    assert(p.y==0)                -- Cannot drag down beyond screen height
+    assert(s.pos.y==0)
 
-    -- Mid-range drag: (-30, -35)
-    p:onMouseMove(30, 35)
-    assert(p.x==-30 and p.y==-35)
+    -- 3. Horizontal sliding makes all controls accessible
+    -- Slide left to x = -60: right controls (Close, Run, Stop) are on screen
+    p:onMouseMove(-200, 0)
+    assert(p.x==-60 and p.y==0)
+    -- Verify right-side controls are fully within screen bounds [0, 500]
+    local closeScreenX = p.x + p.btnClose.x
+    assert(closeScreenX==420 and closeScreenX + 68 <= 500)
+    local runScreenX = p.x + p.btnRun.x
+    assert(runScreenX==424 and runScreenX + 64 <= 500)
+    local stopScreenX = p.x + p.btnStop.x
+    assert(stopScreenX==416 and stopScreenX + 72 <= 500)
 
-    p:onMouseUp(10, 10)
+    -- Release mouse at x = -60
+    p:onMouseUp(50, 15)
     assert(p.moving==false)
+    assert(s.pos.x==-60 and s.pos.y==0)
+
+    -- 4. Drag restart works after release from the accessible title bar
+    -- Title bar is visible from screen 0 to 420; grab at screen x=100 (relative x = 160)
+    p:onMouseDown(160, 15)
+    assert(p.moving==true)
+    -- Slide back right to x = 0: left controls (Help, Status, text entry) are on screen
+    p:onMouseMove(200, 0)
+    assert(p.x==0 and p.y==0)
+    local helpScreenX = p.x + p.btnHelp.x
+    assert(helpScreenX==12 and helpScreenX + 72 <= 500)
+    local entryScreenX = p.x + p.entry.x
+    assert(entryScreenX==12 and entryScreenX + 464 <= 500)
+    p:onMouseUp(50, 15)
+    assert(p.moving==false)
+
+    -- 5. Command execution works on small screen
+    p.btnHelp:click()
+    local foundHelp=false
+    for _,item in ipairs(p.history.items) do
+        if item.text:find('help') then foundHelp=true end
+    end
+    assert(foundHelp)
+
+    -- 6. Close and reopen retains accessible position and adapted height
+    p.btnClose:click()
+    assert(s.panel==nil)
+    assert(s.pos.y==0)
+
+    s.open()
+    p=s.panel
+    assert(p~=nil and p.height==300 and p.y==0 and p.x==0)
+    assert(p.btnClose.y==10 and p.btnClose.x==480)
 
     s.close()
     s.reset()
@@ -756,7 +808,7 @@ test('session reset clears position and re-centers console on next open',functio
     s.close()
     s.reset()
 end)
-test('OnResolutionChange immediately re-clamps open panel and closed position',function()
+test('OnResolutionChange immediately re-clamps open panel, adapts height, and updates closed position',function()
     s.open()
     local p=s.panel
     -- Move to bottom-right of 1280x720: (720, 350)
@@ -764,6 +816,7 @@ test('OnResolutionChange immediately re-clamps open panel and closed position',f
     p:onMouseMove(500, 500)
     p:onMouseUp(50, 15)
     assert(p.x==720 and p.y==350)
+    assert(p.height==370 and p.history.height==246)
 
     -- Shrink resolution to 1024x768 while open
     screenW=1024; screenH=768
@@ -771,20 +824,43 @@ test('OnResolutionChange immediately re-clamps open panel and closed position',f
     for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1280, 720, 1024, 768) end
     -- Clamped to max X = 1024 - 560 = 464; Y = 350 (<= 768 - 370 = 398)
     assert(s.panel.x==464 and s.panel.y==350)
+    assert(s.panel.height==370 and s.panel.history.height==246)
     assert(s.pos.x==464 and s.pos.y==350)
+
+    -- Shrink resolution further while open to small screen 500x300
+    screenW=500; screenH=300
+    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1024, 768, 500, 300) end
+    -- Adapted height: 300, history: 176, toolbar: 226, entry: 260
+    assert(s.panel.height==300)
+    assert(s.panel.history.height==176)
+    assert(s.panel.btnHelp.y==226)
+    assert(s.panel.entry.y==260)
+    -- Clamped position: X clamped to 0 (since 464 > 0 and maxX = 0), Y clamped to 0 (minY = 0, maxY = 0)
+    assert(s.panel.x==0 and s.panel.y==0)
+    assert(s.pos.x==0 and s.pos.y==0)
+
+    -- Expand resolution back to 1280x720 while open
+    screenW=1280; screenH=720
+    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(500, 300, 1280, 720) end
+    assert(s.panel.height==370)
+    assert(s.panel.history.height==246)
+    assert(s.panel.btnHelp.y==296)
+    assert(s.panel.entry.y==330)
+    assert(s.panel.x==0 and s.panel.y==0)
 
     -- Close panel
     s.close()
 
-    -- Shrink resolution further while closed to 800x600
-    screenW=800; screenH=600
-    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1024, 768, 800, 600) end
-    -- Clamped pos to maxX = 800 - 560 = 240, maxY = 600 - 370 = 230
-    assert(s.pos.x==240 and s.pos.y==230)
+    -- Shrink resolution while closed to 500x300
+    screenW=500; screenH=300
+    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1280, 720, 500, 300) end
+    -- Clamped pos to maxX = 0, maxY = 0
+    assert(s.pos.x==0 and s.pos.y==0)
 
-    -- Reopen after resolution change
+    -- Reopen after resolution change on small screen
     s.open()
-    assert(s.panel.x==240 and s.panel.y==230)
+    assert(s.panel.height==300 and s.panel.history.height==176)
+    assert(s.panel.x==0 and s.panel.y==0)
 
     s.close()
     s.reset()
