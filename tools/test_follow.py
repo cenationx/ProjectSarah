@@ -1896,6 +1896,7 @@ local function makeAdvancingFixture(opts)
             return true, {x = target.x, y = target.y, z = target.z}
         end,
         walk = function(n, target, onComplete, onFail)
+            assert(activeWalk == nil, 'replacement walk started before previous engine action stopped')
             if opts.walkFail then return false, 'walk start failed' end
             local record = {
                 target = {x = target.x, y = target.y, z = target.z},

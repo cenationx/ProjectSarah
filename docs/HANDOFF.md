@@ -900,7 +900,7 @@ Gemini completed offline implementation and automated verification of bounded pr
     3. Resets `stallTicks = 0` upon step arrival (`onStepComplete`), updating progress reference coordinates.
     4. While walking outside the deadzone without >= 0.5 tiles delta: increments `act.stallTicks = (act.stallTicks or 0) + 1` each tick, preserving accumulated stall ticks across mid-walk retargets.
     5. If `stallTicks >= (act.maxStallTicks or 600)`: cancels active follow with `'timeout'`, halts the engine, records failure in history, and enqueues notice `Follow disengaged: timeout.`
-    6. Verified healthy long-running follow can run indefinitely (1200+ ticks tested without timeout) as progress continuously resets `stallTicks`, while any blocked stall with continuous retargets is strictly caught and halted at 600 ticks.
+    6. Observed healthy follow for 1200 simulated ticks without timeout; indefinite native operation is not established as progress continuously resets `stallTicks`, while any blocked stall with continuous retargets is strictly caught and halted at 600 ticks.
 - **Deterministic advancing simulation fixture (`tools/test_follow.py`)**:
   - Implemented `makeAdvancingFixture(opts)` modeling physical NPC advancement toward active targets at configurable speed (`npcSpeed = 0.1` tiles/tick), arrival detection (`arrivalThreshold = 0.15`), engine callbacks (`onComplete`, `onFail`), stop callbacks (including synchronous fail and complete injection), and stall simulation (`stalled = true`).
   - Added tests 57–66 (expanding `tools/test_follow.py` from 56 to 66 checks):
@@ -924,3 +924,7 @@ Gemini completed offline implementation and automated verification of bounded pr
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime, saves, and settings untouched.
   - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+Codex offline review of Gemini 55574ab (2026-10-05): ownership released to Codex. Independently verified 222 suite checks +11 runner +19 preflight PASS. Progress watchdog correctly accumulates motionless ticks across retarget replacements; existing per-step timeout still applies. Strengthened advancing fixture to assert no active simulated engine action exists when starting another, instead of silently replacing it; reran all 222 suite checks PASS. No production-source correction needed in this review. Corrected claim of indefinite healthy operation: only 1200 simulated ticks established. Displacement progress is not proof of route progress; circling/oscillation and native path startup overhead remain limitations requiring observation. Deterministic fixture is straight-line policy simulation, not native collision/pathfinding.
+
+Game CLOSED; source not deployed; saves/settings/backups unchanged. Codex retains ownership. Live tests still deferred by user; responsive Follow and progress watchdog are offline-only. Latest native baseline remains 5fa6b9c with evidence through 9a675d5. Next code work must stay bounded to current foundation; no AI or broader feature gate assumed complete.
