@@ -5,8 +5,10 @@
   invalidation, unknown lighting, scalar-only results and abort cursor reset.
   Gemini authored; Codex reviewed/applied. 57 sampler checks; all 507 suite checks
   across 12 suites +11 runner +19 preflight self-tests PASS.
-- [ ] Sarah-independent lighting evidence audit, with actual exposure/lifecycle
-  limitations preserved. No native wiring or live testing authorized by this step.
+- [x] Bounded independent-light evidence audit: no suitable supplied query
+  established. See INDEPENDENT-LIGHTING-AUDIT.md; this is not exhaustive API proof.
+- [ ] Prepare inert native exposure diagnostic artifact offline with Gemini,
+  Codex review/tests, no lighting query/wiring/deployment/live invocation.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/

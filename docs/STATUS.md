@@ -1,3 +1,24 @@
+## Latest checkpoint: bounded independent-light audit (2026-10-06)
+
+Codex owns the shared checkout; clean main2cce1d8 verified at start. Gemini
+3.8 Flash HIGH reviewed supplied evidence with NO TOOLS; Codex rejected overclaims,
+reviewed the revision and independently confirmed selected bytecode/getter paths.
+See INDEPENDENT-LIGHTING-AUDIT.md and evidence/lighting-audit-offline-20261006.txt.
+No supplied candidate establishes trustworthy read-only, Sarah-independent target
+illumination. Packed RGB is passive cache; JNI lamp totals are zero (fallback
+stores values); climate ambient/day/night can use local-player cheat overrides.
+Indexed JNI lightInfo may update caches/room-seen state. -1 refresh bypass and
+square field write reconfirmed. This bounded result does not prove no other API exists.
+Sampler lighting remains unknown; no runtime code or Knowledge policy changed.
+57 sampler checks rerun PASS. Prior full507 checks/12 suites +11 runner +19 preflight
+baseline remains valid for unchanged source; full suite not rerun for this docs batch.
+No native/game calls, deployment, saves/settings changes. Deployed baseline5fa6b9c.
+Next bounded offline coding batch: Gemini drafts an inert native exposure diagnostic
+artifact from NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md; Codex reviews/applies/tests.
+Actual Lua invocation, identity/exposure, loaded-world proof and Follow/rendering
+remain pending. Live tests stay here and deferred; external/model AI ON HOLD.
+Older checkpoint/workflow blocks below are historical, superseded here.
+
 ## Latest checkpoint: inert diagnostic sampler (2026-10-06)
 
 Gemini 3.8 Flash HIGH authored the sampler/base fixtures through NO-TOOLS CLI
