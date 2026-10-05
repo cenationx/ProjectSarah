@@ -1,3 +1,23 @@
+## Latest checkpoint: dormant bridge design review (2026-10-06)
+
+Started clean main ab3c548; Codex remains sole checkout editor. User explicitly
+approved the named document export to Gemini3.8 Flash HIGH. Codex reviewed the
+NO-TOOLS requested draft/revision and rejected cached captures, frozen tokens,
+namespace reuse and incomplete native accounting in proposed pseudocode.
+See DORMANT-BRIDGE-DESIGN.md. No bridge/source implementation in this batch.
+Prefer narrowing the next symbol diagnostic contract: exposure evidence must not
+require fabricated spatial captures or claim native liveness/residency/identity.
+Fresh audited observer getters would be a separate broader native diagnostic.
+48 probe +53 caller fixtures rerun PASS. Prior full608 suite +11 runner +19
+preflight baseline unchanged; full suite not rerun for this documentation batch.
+Next Gemini coding: bounded narrowed symbol diagnostic with injected lifecycle
+markers, explicit unassessed capabilities and cancellation fixtures; no runtime
+wiring, token registry or residency simulation. Then stop generic scaffolding.
+Native questions and Follow/rendering await explicitly resumed isolated tests.
+No native invocation, hooks, deployment, game launch or saves/settings changes.
+Stop unchanged; light unknown; external/model AI ON HOLD; deployed baseline5fa6b9c.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: inert caller epoch and accounting (2026-10-06)
 
 Started clean main dac6c1f; Codex remains sole shared-checkout editor. Gemini3.8

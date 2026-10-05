@@ -1,0 +1,10 @@
+Dormant bridge design review, 2026-10-06
+Baseline ab3c548, clean main, Codex sole editor.
+Gemini3.8 Flash HIGH approved-document review; Codex corrected/reviewed design.
+No source implementation or native calls. Raw exports ignored.
+Rerun tools/test_exposure_probe.py:48 PASS; tools/test_caller_context.py:53 PASS.
+Prior full608+11+19 baseline not rerun; unchanged runtime/tools source.
+Design decision: narrow symbol-only evidence contract before a native caller;
+never use repeated cached spatial captures as live lifecycle proof.
+Native acceptance, Follow/rendering, independent lighting remain open.
+No deployment/game launch/save/settings changes. External AI ON HOLD.

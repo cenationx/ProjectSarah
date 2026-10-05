@@ -15,8 +15,10 @@
 - [x] Inert CallerEpoch/CaptureAccounting tools, Gemini coding/Codex review:
   53 caller cases; all608 suite checks/14 suites +11 runner +19 preflight PASS.
   No native token proof or automatic reset propagation.
-- [ ] Review dormant one-shot caller/bridge design: exact token provenance, reset
+- [x] Review dormant one-shot caller/bridge design: exact token provenance, reset
   propagation and per-operation accounting, no native invocation or runtime hooks.
+- [ ] Narrow symbol diagnostic contract/code with injected markers and explicit
+  unassessed native capabilities; no runtime wiring, then stop generic scaffolding.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/
