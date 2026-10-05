@@ -24,13 +24,14 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
-123 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 52 command,
+125 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 54 command,
 19 console). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
 and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
-scoping, production controller contract, and safe context menu routing) implemented and reviewed offline at d93c730,
-hardened against synchronous callbacks, sequence reset, and controller availability (123 automated checks); native
-acceptance of walking, arrival, and live cancellation pending Codex live check per `docs/M1-slice-c-checklist.md`.
+scoping, production controller contract, and safe context menu routing) implemented, hardened against session-reset
+callback collisions (monotonic action tokens, session validation in completeAction, callback pre-checks) and synchronous
+callbacks (125 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
+per `docs/M1-slice-c-checklist.md`.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user. Keep external AI on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
@@ -92,9 +93,9 @@ executes actual Lua source with fake engine adapters and events. It does not
 prove gameplay compatibility. Expected latest result: 29 foundation checks.
 Run `tools/test_render.py`: 15 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 52 command parser/cancellation/movement checks.
+Run `tools/test_commands.py`: 54 command parser/cancellation/movement checks.
 Run `tools/test_console.py`: 19 simulated console UI/key/session checks.
-123 automated checks total. Simulated checks do not prove exceptional native cleanup.
+125 automated checks total. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing

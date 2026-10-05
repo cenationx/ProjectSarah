@@ -1,7 +1,7 @@
 # M1 slice C native acceptance checklist
 
 Updated: 2026-10-05 (Europe/Helsinki).
-Status: IMPLEMENTED and HARDENED offline (123 automated checks: 29 foundation, 15 engine adapter, 8 checkpoint, 52 command, 19 console). Native acceptance PENDING Codex live check.
+Status: IMPLEMENTED and HARDENED offline (125 automated checks: 29 foundation, 15 engine adapter, 8 checkpoint, 54 command, 19 console). Native acceptance PENDING Codex live check.
 
 ## Scope and purpose
 
@@ -69,7 +69,7 @@ This checklist governs the native gameplay acceptance of:
 - [ ] **6. Context menu "Sarah: walk here" routing and visible feedback**
   - **Action**: Stand 3–4 tiles away from Sarah. Close the console (`Escape`). Right-click Sarah in the game world to open the context menu. Select `Sarah: walk here`.
   - **Expected result**:
-    - Player receives visible onscreen feedback (Halo text / Say): `Walking to player.`
+    - Player receives visible onscreen feedback (Halo text / Say): `Walking to (<tx>, <ty>, <tz>).` (matching dispatch response).
     - Sarah visibly walks to the player's square.
     - Open console (`F9`), type `status`: confirms the menu-initiated walk was tracked through dispatch (`Action: #<id> walk here (running)` or `completed`).
     - Type `history`: confirms the menu walk is recorded with request ID and outcome.
@@ -80,8 +80,8 @@ This checklist governs the native gameplay acceptance of:
   - **Action**: In `SarahConsoleNativeCase`, open pause menu -> `Exit to Main Menu`. Return to main menu, then select `Continue`.
   - **Expected result**:
     - Log shows `SESSION_RESET` and clean world reload.
-    - Open console (`F9`): type `history` -> outputs `No command history.`
-    - Type `help` -> output begins at request `#1 help: completed` (sequence counter reset).
+    - Open console (`F9`): type `help` -> output begins at request `#1 help: completed` (sequence counter reset).
+    - Type `history` -> outputs `#1 help: completed` and `#2 history: completed` (confirming pre-reset history cleared and sequence numbering restarts at #1).
     - Sarah and player are intact, one Sarah present, movement functional.
   - **Evidence to record**: Clean log excerpt (`SESSION_RESET`, `RESTORED`), reset history and sequence `#1`.
 

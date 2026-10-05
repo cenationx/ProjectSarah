@@ -165,10 +165,13 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         }
         self.active=action
         addHistory({id=action.id,command=action.command,state='running',summary='Started '..name})
-        return true,{id=action.id,command=action.command,state=action.state,token=action.token}
+        return true,{id=action.id,command=action.command,state=action.state,token=action.token,session=action.session}
     end
-    function self:completeAction(id,token,success,message,owner,npc)
+    function self:completeAction(id,token,success,message,owner,npc,session)
         if not self.active or self.active.id~=id or self.active.token~=token then
+            return false,'stale or cancelled'
+        end
+        if session and self.active.session and session~=self.active.session then
             return false,'stale or cancelled'
         end
         if owner and self.active.owner and owner~=self.active.owner then
@@ -211,7 +214,6 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
         self.active=nil
         self.lastAction=nil
         self.sequence=0
-        self.token=0
         self.session=self.session+1
         self.history={}
     end
@@ -343,30 +345,39 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback)
             addHistory({id=action.id,command=command,state='running',summary=string.format('Walking to (%d, %d, %d)',tx,ty,tz)})
             local actId=action.id
             local actToken=action.token
+            local actSession=action.session
             local function onComplete()
+                if not self.active or self.active.id~=actId or self.active.token~=actToken or (actSession and self.active.session and actSession~=self.active.session) then
+                    self:completeAction(actId,actToken,false,'stale or cancelled',action.owner,action.npc,actSession)
+                    return
+                end
                 local currentOwner,currentNpc=self:getIdentity()
                 if action.owner and currentOwner and action.owner~=currentOwner then
-                    self:completeAction(actId,actToken,false,'stale controller',action.owner,action.npc)
+                    self:completeAction(actId,actToken,false,'stale controller',action.owner,action.npc,actSession)
                     return
                 end
                 if action.npc and currentNpc and action.npc~=currentNpc then
-                    self:completeAction(actId,actToken,false,'stale npc',action.owner,action.npc)
+                    self:completeAction(actId,actToken,false,'stale npc',action.owner,action.npc,actSession)
                     return
                 end
                 local obsOk,obsData=pcall(self.observe,false)
                 if not obsOk or type(obsData)~='table' or obsData.state~='active' or not obsData.npc then
-                    self:completeAction(actId,actToken,false,'Sarah unavailable on arrival',action.owner,action.npc)
+                    self:completeAction(actId,actToken,false,'Sarah unavailable on arrival',action.owner,action.npc,actSession)
                     return
                 end
                 local nx,ny,nz=math.floor(obsData.npc.x),math.floor(obsData.npc.y),math.floor(obsData.npc.z)
                 if nx==tx and ny==ty and nz==tz then
-                    self:completeAction(actId,actToken,true,string.format('Reached target (%d, %d, %d).',tx,ty,tz),action.owner,action.npc)
+                    self:completeAction(actId,actToken,true,string.format('Reached target (%d, %d, %d).',tx,ty,tz),action.owner,action.npc,actSession)
                 else
-                    self:completeAction(actId,actToken,false,string.format('Stopped before target at (%d, %d, %d).',nx,ny,nz),action.owner,action.npc)
+                    self:completeAction(actId,actToken,false,string.format('Stopped before target at (%d, %d, %d).',nx,ny,nz),action.owner,action.npc,actSession)
                 end
             end
             local function onFail(actionObj,reason)
-                self:completeAction(actId,actToken,false,reason or 'Walk failed',action.owner,action.npc)
+                if not self.active or self.active.id~=actId or self.active.token~=actToken or (actSession and self.active.session and actSession~=self.active.session) then
+                    self:completeAction(actId,actToken,false,'stale or cancelled',action.owner,action.npc,actSession)
+                    return
+                end
+                self:completeAction(actId,actToken,false,reason or 'Walk failed',action.owner,action.npc,actSession)
             end
             local walkOk,walkErr=self:invokeWalk(resolvedTarget,onComplete,onFail,action)
             if not walkOk then

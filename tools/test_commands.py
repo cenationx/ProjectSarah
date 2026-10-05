@@ -279,7 +279,7 @@ test('action cancellation on session reset',function()
     d:reset()
     assert(d.active==nil and d.lastAction==nil)
     assert(not d:completeAction(action.id,action.token,true))
-    assert(#d:getHistory()==0 and d.token==0)
+    assert(#d:getHistory()==0 and d.token==action.token and d.sequence==0 and d.session==2)
 end)
 test('action cancellation on unload, death or blocked observation',function()
     local obsState='active'
@@ -711,6 +711,118 @@ test('session reset resets sequence counter and controller unavailable invalidat
     assert(not valid and reason=='controller unavailable')
     assert(d.active==nil and d.lastAction.state=='cancelled')
     assert(not d:completeAction(rWalk.id,d.token,true))
+end)
+test('old failure callback after session reset with same controller and reused visible request ID is rejected',function()
+    local sharedNpc={x=10,y=20,z=0}
+    local ctrl={npc=sharedNpc}
+    local capturedComplete1,capturedFail1=nil,nil
+    local capturedComplete2,capturedFail2=nil,nil
+    local walkCallCount=0
+    local d=Commands.new(function()
+        return {state='active',npc={x=sharedNpc.x,y=sharedNpc.y,z=sharedNpc.z},player={x=12,y=20,z=0}}
+    end,nil,function()
+        return ctrl,ctrl.npc
+    end,function(target,onComplete,onFail,action)
+        walkCallCount=walkCallCount+1
+        if walkCallCount==1 then
+            capturedComplete1=onComplete
+            capturedFail1=onFail
+        else
+            capturedComplete2=onComplete
+            capturedFail2=onFail
+        end
+        return true
+    end)
+    local r1=d:execute('walk here')
+    assert(r1.id==1 and r1.state=='running')
+    assert(capturedFail1~=nil)
+    local token1=d.active.token
+    assert(token1==1)
+
+    d:reset()
+    assert(d.sequence==0 and d.active==nil and #d:getHistory()==0)
+    assert(d.token==1)
+
+    local r2=d:execute('walk here')
+    assert(r2.id==1 and r2.state=='running')
+    assert(d.active and d.active.id==1 and d.active.state=='running')
+    assert(d.active.token==2)
+    assert(d.active.session==2)
+    local h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='running')
+
+    local staleOk1,staleErr1=d:completeAction(1,token1,false,'old error',ctrl,sharedNpc,1)
+    assert(not staleOk1 and staleErr1=='stale or cancelled')
+    local staleOk2,staleErr2=d:completeAction(1,d.active.token,false,'old error',ctrl,sharedNpc,1)
+    assert(not staleOk2 and staleErr2=='stale or cancelled')
+    assert(d.active and d.active.state=='running')
+
+    capturedFail1(nil,'old path failure')
+
+    assert(d.active and d.active.id==1 and d.active.state=='running')
+    h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='running')
+
+    assert(capturedFail2~=nil)
+    capturedFail2(nil,'actual path failure')
+    assert(d.active==nil)
+    assert(d.lastAction.id==1 and d.lastAction.state=='failed' and d.lastAction.reason=='actual path failure')
+    h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='failed' and h[1].summary:find('actual path failure'))
+end)
+test('old completion callback after session reset with same controller and reused visible request ID is rejected',function()
+    local sharedNpc={x=10,y=20,z=0}
+    local ctrl={npc=sharedNpc}
+    local capturedComplete1,capturedFail1=nil,nil
+    local capturedComplete2,capturedFail2=nil,nil
+    local walkCallCount=0
+    local d=Commands.new(function()
+        return {state='active',npc={x=sharedNpc.x,y=sharedNpc.y,z=sharedNpc.z},player={x=12,y=20,z=0}}
+    end,nil,function()
+        return ctrl,ctrl.npc
+    end,function(target,onComplete,onFail,action)
+        walkCallCount=walkCallCount+1
+        if walkCallCount==1 then
+            capturedComplete1=onComplete
+            capturedFail1=onFail
+        else
+            capturedComplete2=onComplete
+            capturedFail2=onFail
+        end
+        return true
+    end)
+    local r1=d:execute('walk here')
+    assert(r1.id==1 and r1.state=='running')
+    assert(capturedComplete1~=nil)
+    local token1=d.active.token
+
+    d:reset()
+    assert(d.sequence==0 and d.active==nil and #d:getHistory()==0)
+
+    local r2=d:execute('walk here')
+    assert(r2.id==1 and r2.state=='running')
+    assert(d.active and d.active.id==1 and d.active.state=='running')
+    assert(d.active.token~=token1)
+    assert(d.active.session==2)
+    local h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='running')
+
+    capturedComplete1()
+
+    assert(d.active and d.active.id==1 and d.active.state=='running')
+    h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='running')
+
+    sharedNpc.x=12
+    sharedNpc.y=20
+    sharedNpc.z=0
+
+    assert(capturedComplete2~=nil)
+    capturedComplete2()
+    assert(d.active==nil)
+    assert(d.lastAction.id==1 and d.lastAction.state=='completed' and d.lastAction.reason:find('Reached target'))
+    h=d:getHistory()
+    assert(#h==1 and h[1].id==1 and h[1].state=='completed' and h[1].summary:find('Reached target'))
 end)
 print('RESULT '..count..' command checks passed')
 ''')

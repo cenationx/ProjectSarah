@@ -2,8 +2,8 @@
 
 IN PROGRESS: slice A native acceptance PASSED; slice B native idle-stop/history/session-reset smoke checks PASSED (active cancellation pending).
 Slice C (bounded "walk here", completion tracking, stop cancellation, timeout, and lifecycle invalidation) IMPLEMENTED,
-hardened against synchronous callbacks, sequence reset, and controller availability; automated suite increased to 123 passing checks
-(29 foundation, 15 engine adapter, 8 checkpoint readback, 52 command, 19 console).
+hardened against session-reset callback collision, synchronous callbacks, sequence reset, and controller availability; automated suite increased to 125 passing checks
+(29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command, 19 console).
 Native acceptance of slice C walking, arrival, and live movement cancellation pending Codex live check per docs/M1-slice-c-checklist.md.
 Commands/Observations/Console implement help, status, inventory, walk here, stop, and history. External AI remains strictly on hold.
 Automated tests do not establish native input.
@@ -271,5 +271,23 @@ Gemini completed the lifecycle audit and hardening of M1 command and action boun
     5. Immediate walk resumption after cancellation.
     6. Context menu "Sarah: walk here" routing and visible onscreen feedback.
     7. Session reset and clean reload (`SESSION_RESET`, history reset, request `#1`).
+
+Checkout ownership is RELEASED to Codex for native testing following `docs/M1-slice-c-checklist.md`. External AI remains strictly ON HOLD.
+
+## M1 slice C session-reset callback collision fix and checklist reconciliation (2026-10-05)
+
+Gemini resolved the session-reset callback collision reproduced by Codex and reconciled native checklist expectations (offline only; no game launches or desktop control):
+- **Defect resolution**:
+  - `Commands:reset()` preserved `self.sequence = 0` so new sessions cleanly begin request numbering at `#1`, while removing `self.token = 0` so action tokens advance monotonically across session boundaries.
+  - `Commands:completeAction(id, token, success, message, owner, npc, session)` validates `session` against `self.active.session`, rejecting stale callbacks across resets.
+  - Pre-checked action token and session in `onComplete` and `onFail` before inspecting controller/NPC identities or querying observations.
+- **Native checklist corrections (`docs/M1-slice-c-checklist.md`)**:
+  - Gate 6: Corrected onscreen feedback expectation to actual dispatch response `Walking to (<tx>, <ty>, <tz>).` (matching `Commands.lua` and `SarahFoundation.lua`).
+  - Gate 7: Adjusted post-reset command sequence to type `help` first (`#1 help: completed`), then `history` (`#1 help: completed` and `#2 history: completed`), since typing `history` first consumed request `#1`.
+- **Automated test suite (125 passing checks)**:
+  - Added 2 new regressions in `tools/test_commands.py` (54 command checks total, 125 total across 5 suites):
+    1. `old failure callback after session reset with same controller and reused visible request ID is rejected`.
+    2. `old completion callback after session reset with same controller and reused visible request ID is rejected`.
+  - All 5 test suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console = 125 checks total.
 
 Checkout ownership is RELEASED to Codex for native testing following `docs/M1-slice-c-checklist.md`. External AI remains strictly ON HOLD.
