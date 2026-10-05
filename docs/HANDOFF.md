@@ -23,9 +23,9 @@ no temporary driver active. User completed physical F9 open/close and physical
 Escape checks (first Escape closes console without menu; second Escape opens menu),
 corroborated by probe samples.
 
-Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
+Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
 153 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-33 console, 14 acceptance driver) plus 11 runner self-tests. Native UI source inspected read-only against PZ 42.21.0
+33 console, 14 acceptance driver) plus 11 runner self-tests and 14 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -35,6 +35,7 @@ bounded native walk, cancellation with sustained halt, and same-process reload r
 Movable console panel implemented offline via title-bar mouse dragging with bounds clamping (normal and small screens),
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping.
+Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
 Keep external AI strictly on hold.
 
@@ -666,3 +667,43 @@ Gemini resolved the small-screen recovery defect where the panel reached y=-70 a
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Baseline backups preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
   - Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.
+
+## Consolidated M1 native acceptance session and preflight tool handoff (latest, 2026-10-05)
+
+Gemini prepared the consolidated M1 native acceptance session plan and implemented the acceptance preflight tool for Codex and the user (offline only; no game launches, desktop automation, or runtime modifications):
+
+### What Was Delivered
+1. **Consolidated session protocol (`docs/M1-batched-acceptance.md`)**:
+   - Reconciles all existing evidence: 12 gates accepted (A1–A6 in slice A, B1–B2 in slice B, C1–C6 in slice C), and focuses on the 8 remaining native acceptance gates (R1: movable console dragging, R2: control click isolation, R3: position retention across close/open, R4: resolution/small-screen adaptation with non-negative title bar clamp, R5: distance refusal via `[Walk Here]` button, R6: red context-menu refusal feedback, R7: post-reload WASD character movement, R8: centered default reset).
+   - Orders checks to minimize operations: exactly 1 game launch, exactly 1 in-process reload (`Quit to Main Menu` -> `Continue`), and exactly 2 user movement phases.
+   - Divides roles cleanly: Codex drives mouse interactions (preflight, dragging, control clicks, close/reopen, command buttons, menu navigation) while the user operates physical WASD movement and observes visual cues.
+   - Resolves small-room constraint: provides setup for `SarahSpaciousCase` (Rosewood Fire Station vehicle bay or Church nave with >= 10-12 clear floor tiles) plus a safe porch exterior step fallback in the existing case.
+2. **Native acceptance preflight tool (`tools/preflight.py`)**:
+   - Read-only pre-flight inspection script that checks Git state, test report status (detecting stale reports), isolated profile configuration, production vs deployed file hashes (SHA-256), temporary probes, backup availability, and game process status (`javaw.exe`/`java.exe`).
+   - Run via:
+     ```powershell
+     $sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+     & $sarahPython tools/preflight.py
+     ```
+   - Automatically detected that `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` needs deployment to `runtime/isolated/mods/SarahFoundation/` before live acceptance.
+3. **Preflight automated test suite (`tools/test_preflight.py`)**:
+   - 14 automated unit tests covering readiness detection, missing files, stale reports, mismatched file hashes, probe detection, active game processes, missing backups, misconfigured mod files, missing saves, read-only file immutability, report formatting, and CLI execution.
+
+### Offline Baseline
+- 153 automated checks pass across 6 suites in `tools/run_tests.py` (0.24s).
+- 11 runner self-tests pass in `tools/test_runner.py` (2.36s).
+- 14 preflight unit tests pass in `tools/test_preflight.py` (0.57s).
+- Total: 178 passing tests across project tools and production modules.
+
+### Next Steps for Codex
+1. Verify game is closed (`javaw.exe` absent).
+2. Deploy reviewed production files (specifically `Console.lua`) from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`.
+3. Run `& $sarahPython tools/preflight.py` and confirm all items pass.
+4. Execute the batched native session following `docs/M1-batched-acceptance.md`.
+
+### State and Ownership
+- Game is CLOSED (SAVED a, GameThread exited, no native window).
+- Isolated saves and runtime untouched.
+- Baseline backup intact at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+- Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+

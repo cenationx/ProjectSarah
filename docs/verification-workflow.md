@@ -120,3 +120,34 @@ Run self-tests with:
 - **Slice C native acceptance remains PENDING** Codex live testing per [`docs/M1-slice-c-checklist.md`](file:///G:/Codex/Project%20Sarah/docs/M1-slice-c-checklist.md).
 
 Self-tests keep temporary fixtures under ignored tools/reports/self-test-tmp and remove them after each test. Git dirty status includes tracked modifications and untracked files; ignored reports do not make the checkout dirty.
+
+---
+
+## 8. Native Acceptance Preflight Tool
+
+Before conducting live gameplay acceptance in Project Zomboid, Codex runs the project-local read-only preflight tool to verify environment readiness:
+
+```powershell
+$sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $sarahPython tools/preflight.py
+```
+
+### What It Checks (Strictly Read-Only)
+- **Git State**: Clean commit, branch name, and dirty working tree status.
+- **Offline Test Report**: Confirms `tools/reports/test-report.json` exists, passed, and matches current repository HEAD commit (detects stale reports).
+- **Isolated Profile**: Verifies `runtime/isolated` configuration, active case existence (`SarahConsoleNativeCase` or `SarahSpaciousCase`), mod selection in `mods/default.txt` (`SarahFoundation` enabled), and key binding (`Sarah Console=key:67`).
+- **File Deployment**: Computes SHA-256 hashes of all 9 required production files versus deployed files in `runtime/isolated/mods/SarahFoundation/` to ensure reviewed source code has been deployed before launching.
+- **Temporary Probes**: Detects any diagnostic probes or temporary drivers in the active mod directory.
+- **Backup Availability**: Confirms recent baseline backup existence in `runtime/backups/`.
+- **Game Processes**: Inspects running processes (`javaw.exe`, `java.exe`, `ProjectZomboid64.exe`) to confirm the game is closed before deployment or pre-test backup.
+
+### Reports Generated
+- Markdown: `tools/reports/preflight-report.md`
+- JSON: `tools/reports/preflight-report.json`
+
+### Preflight Automated Tests
+Unit tests in `tools/test_preflight.py` (14 checks) cover readiness detection, missing files, stale reports, mismatched hashes, probe detection, running processes, and read-only file immutability:
+```powershell
+& $sarahPython tools/test_preflight.py
+```
+

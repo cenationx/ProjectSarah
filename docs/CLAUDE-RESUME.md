@@ -7,7 +7,7 @@ swallow armed and expired).
 
 The user now uses Codex for sustained coding and native testing, with Gemini assisting
 on bounded tasks. Claude is reserved only for explicit user requests. Read `docs/STATUS.md`,
-`docs/HANDOFF.md`, `docs/M1-native-checklist.md`, and `docs/M1-slice-c-checklist.md` for current owner and remaining acceptance gates.
+`docs/HANDOFF.md`, and `docs/M1-batched-acceptance.md` for current owner and remaining acceptance gates.
 External in-game AI remains on hold.
 
 ---
@@ -74,10 +74,18 @@ To test the runner itself (11 unit tests):
 & $sarahPython tools/test_runner.py
 ```
 
-Expected totals across 6 offline suites: 29 + 15 + 8 + 54 + 33 + 14 = 153 checks. These execute actual Lua with simulated
+Run acceptance preflight tool before native testing (read-only inspection):
+```powershell
+& $sarahPython tools/preflight.py
+```
+To test the preflight tool itself (14 unit tests):
+```powershell
+& $sarahPython tools/test_preflight.py
+```
+
+Expected totals across 6 offline suites: 29 + 15 + 8 + 54 + 33 + 14 = 153 checks, plus 11 runner self-tests and 14 preflight tests. These execute actual Lua with simulated
 engine/UI fixtures. They do not establish native game compatibility or input.
-For backed-up live tests, use tools/launch-isolated.ps1 -NoDebug and the exact
-isolated profile in HANDOFF. Bulk Unicode typing and automated function keys were
+For consolidated native acceptance, follow `docs/M1-batched-acceptance.md`. Bulk Unicode typing and automated function keys were
 unreliable in this game; physical/user checks and real observations must be labelled.
 
 ## Permissions and scope

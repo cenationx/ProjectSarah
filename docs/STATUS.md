@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests and 14 preflight tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Consolidated M1 native acceptance session plan authored (docs/M1-batched-acceptance.md) and read-only preflight tool implemented (tools/preflight.py). Remaining native checks (movable dragging, position retention, resolution adaptation, distance refusal, red context-menu refusal, post-reload movement) prepared for single batched acceptance session by Codex.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -10,15 +10,15 @@ Do not have two agents edit this checkout concurrently.
 
 - Game is CLOSED (SAVED a, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
-- Reviewed slice C source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+- Reviewed slice C source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex (pending Console.lua deployment for small-screen fix). Final native case/settings/log preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-c-native-20261005-143139/Final-native`. Key settings F9; Forward W.
-- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py`.
+- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py` and 14 preflight tests in `tools/test_preflight.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
+- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests and 14 preflight tests. Single-entry runner `tools/run_tests.py`, preflight tool `tools/preflight.py`, and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -618,3 +618,36 @@ Gemini resolved the oversized-panel recovery bug on small window sizes (offline 
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime and saves untouched.
   - Checkout ownership is RELEASED to Codex. External AI remains ON HOLD.
+
+### Consolidated M1 native acceptance session plan and acceptance preflight tool (Gemini, 2026-10-05)
+
+Gemini prepared a consolidated M1 native acceptance protocol and implemented a read-only preflight inspection tool to streamline native testing for Codex and the user (offline only; no game launches, desktop automation, or runtime modifications):
+- **Consolidated acceptance session plan (`docs/M1-batched-acceptance.md`)**:
+  - Reconciled existing evidence against checklists: separated 12 passed native gates (A1–A6 in slice A, B1–B2 in slice B, C1–C6 in slice C) from the 8 remaining native acceptance gates (R1: movable console dragging, R2: control click isolation, R3: in-session position retention, R4: resolution/small-screen adaptation with non-negative title bar clamp, R5: distance refusal via `[Walk Here]` button, R6: red context-menu refusal feedback, R7: post-reload WASD character movement, R8: session reset to centered default).
+  - Designed an ordered 6-phase protocol minimizing launches and user keypresses: requires exactly 1 game process launch, exactly 1 in-process reload (`Quit to Main Menu` -> `Continue`), and exactly 2 user movement phases.
+  - Partitioned responsibilities: Codex performs mouse operations (preflight inspection, console dragging, control clicks, close/reopen, button commands, menu navigation), while the user provides physical WASD movement and observes on-screen behavior.
+  - Addressed small-room limitation: proposed `SarahSpaciousCase` (Rosewood Fire Station vehicle bay or Church nave with >= 10-12 open tiles on floor 0) along with a safe exterior porch fallback in the existing case.
+  - Documented strict rollback steps and evidence capture requirements.
+- **Native acceptance preflight tool (`tools/preflight.py`)**:
+  - Built a strictly read-only inspection script verifying pre-test environment readiness:
+    1. *Git State*: Reports clean commit, branch, and dirty tree status.
+    2. *Offline Test Report*: Verifies `tools/reports/test-report.json` exists, passed, and matches current HEAD commit (detects stale test reports).
+    3. *Isolated Profile*: Confirms directory existence, active save case, mod selection (`SarahFoundation` enabled), and key binding (`Sarah Console=key:67`).
+    4. *File Deployment*: Compares SHA-256 hashes of all 9 production source files against deployed copies in `runtime/isolated/mods/SarahFoundation/`. Detects modified or un-deployed files before launch.
+    5. *Temporary Probes*: Scans active mod directory to verify absence of temporary test probes or drivers.
+    6. *Backup Availability*: Verifies baseline backups exist in `runtime/backups/` and identifies the latest backup.
+    7. *Game Processes*: Checks running processes via standard Windows `tasklist` (`javaw.exe`, `java.exe`, `ProjectZomboid64.exe`) to ensure game is closed.
+  - Outputs structured reports in Markdown (`tools/reports/preflight-report.md`) and JSON (`tools/reports/preflight-report.json`).
+  - Implemented `--no-strict` and `--fix-check` CLI options; fails closed with exit code 1 if blockers are detected.
+- **Preflight automated test suite (`tools/test_preflight.py`)**:
+  - 14 automated unit tests covering ready environment, missing reports, stale reports, failed reports, mismatched file hashes, missing deployed files, probe detection, active game processes, missing backups, misconfigured mod files, missing saves, read-only file immutability, report formatting, and CLI execution.
+  - Uses project-local temporary fixtures under `tools/reports/self-test-tmp/` that are cleanly wiped after test runs.
+- **Automated test suite (167 passing checks + 11 runner self-tests)**:
+  - `tools/run_tests.py`: 153 checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 driver = 153 checks).
+  - `tools/test_runner.py`: 11 runner self-tests passing.
+  - `tools/test_preflight.py`: 14 preflight tests passing.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime and saves untouched.
+  - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
