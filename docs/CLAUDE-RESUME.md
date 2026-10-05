@@ -1,3 +1,17 @@
+# Current Codex resume: offline adapter investigation (2026-10-05)
+
+Codex owns G:\Codex\Project Sarah. Read AGENTS, STATUS, ROADMAP, HANDOFF,
+PERCEPTION-V1 and NATIVE-PERCEPTION-ADAPTER-RESEARCH before editing. Verify clean
+Git main/origin and ownership. Offline research establishes registered geometry
+classes, diagonal loaded-square dependencies and an unverified shared-buffer
+lighting candidate. No native adapter implemented/integrated/deployed. All 268
+suite checks +11 runner +19 preflight self-tests passed. Next: conservative
+injected loaded-coverage helper/fixtures; keep lighting unknown. Live testing,
+launches, saves/settings changes and external/model AI stay deferred. Native
+Follow/rendering acceptance remains pending. Gemini CLI dispatch requested login
+in this session; cancelled without edits. Codex retained ownership and completed
+research directly. Historical guidance below is supplementary, not the next task.
+
 # Superseding workflow note (2026-10-04)
 
 The Escape coding fix was completed at `88fbafc`, deployed to the isolated mod,

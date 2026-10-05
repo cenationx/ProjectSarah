@@ -96,6 +96,7 @@ AI is one of the last additions. See [SURVIVOR-CORE-PLAN.md](SURVIVOR-CORE-PLAN.
 for inspected references, slice boundaries, uncertainties and acceptance.
 
 - [ ] Resolve pending foundation/Follow native checks and nearby rendering independence.
+- [x] Offline native adapter investigation: registered geometry APIs, conservative loaded-coverage proposal, independent lighting remains unverified; see NATIVE-PERCEPTION-ADAPTER-RESEARCH.md. No integration or native acceptance.
 - [ ] Independent Sarah sight: offline policy/memory implemented (46 fixtures), native integration/lighting/acceptance pending; see PERCEPTION-V1.md.
 - [ ] Real inventory transfer and supported weapon/clothing equipment.
 - [ ] Bounded self-defense against one threat, with retreat and cancellation policy.

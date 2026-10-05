@@ -110,3 +110,12 @@ and transfers -> bounded defense -> one container/house -> exchange -> one
 native barricade -> separately authorized external AI. Each stage retains native
 acceptance gates. Next offline work is exposure/coverage/lighting investigation,
 not autonomous behaviors or deployment.
+
+## Subsequent offline adapter investigation (2026-10-05)
+
+See [NATIVE-PERCEPTION-ADAPTER-RESEARCH.md](NATIVE-PERCEPTION-ADAPTER-RESEARCH.md)
+for fresh Lua registration, diagonal coverage dependencies and the unverified
+getLightLevel(-1) shared-buffer path. It supersedes earlier exposure/coverage/light
+candidate summaries without establishing native capability. Coverage helper is
+proposed only; lighting remains unknown. No integration/deployment/live tests.
+All 268 suite +11 runner +19 preflight self-tests passed; Codex owns checkout.

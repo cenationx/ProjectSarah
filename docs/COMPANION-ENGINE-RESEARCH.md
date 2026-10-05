@@ -140,3 +140,12 @@ Then audit one equip action and one transfer end-to-end; later one actual melee
 attack and one wood barricade. Each experiment needs success/cancel/failure and
 real inventory/health/object evidence. Keep the existing responsive-Follow
 native regression pending and batch tests when the user resumes gameplay.
+
+## Subsequent offline adapter investigation (2026-10-05)
+
+See [NATIVE-PERCEPTION-ADAPTER-RESEARCH.md](NATIVE-PERCEPTION-ADAPTER-RESEARCH.md)
+for fresh Lua registration, diagonal coverage dependencies and the unverified
+getLightLevel(-1) shared-buffer path. It supersedes earlier exposure/coverage/light
+candidate summaries without establishing native capability. Coverage helper is
+proposed only; lighting remains unknown. No integration/deployment/live tests.
+All 268 suite +11 runner +19 preflight self-tests passed; Codex owns checkout.

@@ -1,0 +1,9 @@
+Offline adapter research verification, 2026-10-05
+Starting HEAD/main/origin: fc9a8f7c4d06e89156cb8998af0e4e853ac62496; clean.
+Installed jar SHA256: E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33
+268 checks across 8 suites PASS; 11 runner self-tests PASS; 19 preflight self-tests PASS.
+Only research/shared notes changed; no production source or runtime deployment changes.
+CFR static inspection only; actual Lua and native light semantics unverified.
+Gemini authentication requested, cancelled before execution; no Gemini edits.
+Game not launched; isolated saves/settings unchanged; no native acceptance.
+Owner: Codex. External/model AI ON HOLD.

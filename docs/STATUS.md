@@ -1,3 +1,24 @@
+## Authoritative resume state: offline adapter investigation (2026-10-05)
+
+Codex owns checkout. Starting main/origin checkpoint fc9a8f7 verified clean.
+Offline exposure/coverage/lighting investigation completed; see
+[NATIVE-PERCEPTION-ADAPTER-RESEARCH.md](NATIVE-PERCEPTION-ADAPTER-RESEARCH.md).
+Geometry classes are registered for Lua; actual invocation remains unverified.
+Diagonal side squares require loaded coverage. Proposed bounded rectangle helper
+is specified, not implemented. No trustworthy independent lighting query found:
+getLightLevel(-1) has suspicious shared-buffer control flow and a square-field
+write; no darkness-aware sight claim. All 268 suite checks across 8 suites,
+11 runner and 19 preflight self-tests independently passed this session.
+No production source changes, integration, deployment, launches or isolated
+saves/settings changes. Native responsive Follow/rendering acceptance pending;
+latest deployed baseline remains 5fa6b9c. External/model AI ON HOLD.
+Gemini CLI requested authentication in both attempts; dispatch cancelled before
+execution, no Gemini edits; Codex reclaimed ownership and completed research.
+Next bounded offline task: injected conservative coverage helper and fixtures,
+then bytecode confirmation of lighting candidate before any later native probe.
+Historical entries below retain earlier counts/runtime state; this block and the
+latest dated handoff supersede them. Live testing remains deferred.
+
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
@@ -973,3 +994,7 @@ Companion-engine research (Codex, 2026-10-05): added docs/COMPANION-ENGINE-RESEA
 
 
 Perception V1 offline checkpoint (Codex, 2026-10-05): implemented pure Perception.lua and Knowledge.lua, injected snapshots/read-only query contract, geometric vs confirmed visual distinction, 32-candidate cap, 32-record/10-second copied memory, explicit reset API. No production tick/engine integration. Added 46 actual-Lua fixture checks; full runner 268 PASS +11 runner +19 preflight self-tests PASS. Initial runner-summary mismatch corrected before passing aggregate verification. docs/PERCEPTION-V1.md records APIs, installed engine candidates/unknowns and later isolated batched checklist. New research claims with unresolved citation tokens remain unverified and were not promoted. Game CLOSED; no launch/deployment/saves/settings changes. Existing Follow/rendering native gates remain open. Codex owns checkout; external AI ON HOLD. Next: bounded offline adapter exposure, loaded coverage and independent lighting investigation.
+
+Offline adapter investigation IN PROGRESS (2026-10-05): clean main/origin verified at fc9a8f7; no agy/Claude/Java/game processes found via Get-Process (CIM query unavailable). Codex releases single-editor ownership to Gemini CLI for one bounded offline research batch. Only docs/NATIVE-PERCEPTION-ADAPTER-RESEARCH.md and ignored runtime/research-adapter-20261005 outputs may be written; no production integration, deployment, launches, saves/settings changes, commits or pushes by Gemini. Codex will review and reclaim ownership before edits. External/model AI ON HOLD; native Follow/rendering acceptance pending.
+
+Gemini dispatch cancelled before task execution: both sandbox and normal CLI attempts requested authentication, contrary to earlier connection baseline. No Gemini edits made. Codex reclaims checkout ownership and continues the same bounded offline investigation directly. No permission bypass or login performed.

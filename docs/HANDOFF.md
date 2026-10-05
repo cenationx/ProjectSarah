@@ -1,3 +1,19 @@
+## Current authoritative handoff (2026-10-05)
+
+Codex owns checkout. Offline adapter research completed; read
+NATIVE-PERCEPTION-ADAPTER-RESEARCH.md. 268 suite checks +11 runner +19 preflight
+self-tests PASS in this session. Research only; no production/deployed changes.
+No agy/Claude/Java/game processes found at initial check; game was not launched.
+Latest disposable case remains Sandbox/2026-10-05_19-04-21; final backup remains
+runtime/backups/batched-follow-20261005-190349/Final-native. No saves/settings
+changed. Historical local-state descriptions below are superseded by this block.
+Gemini CLI now asked for authentication; cancelled before execution. Do not rely
+on the earlier successful login baseline. No global permission bypass used.
+Next: offline injected loaded-coverage helper with bounded rectangle/side-square
+fixtures; lighting stays unknown. No native integration/deployment/test until
+explicitly resumed. Preserve Stop; Follow/rendering native gates remain open;
+external/model AI ON HOLD. See STATUS for current offline evidence.
+
 # Agent handoff and checkpoint workflow
 
 ## Start here
