@@ -1,8 +1,8 @@
 # Project Sarah: Bounded Offline Lighting Candidate Audit
 
-**Checkpoint:** `2cce1d8`  
-**Scope:** Bounded static inspection of supplied source files and confirmed bytecode offsets  
-**Binary Reference:** Installed JAR SHA256 `E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33`  
+**Checkpoint:** `2cce1d8`
+**Scope:** Bounded static inspection of supplied source files and confirmed bytecode offsets
+**Binary Reference:** Installed JAR SHA256 `E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33`
 **Review Authority:** Codex
 
 Gemini 3.8 Flash HIGH drafted/revised through NO-TOOLS CLI exports; Codex
@@ -10,7 +10,7 @@ corrected remaining branch-target, safety and scope statements and verified the
 installed hash plus selected Code attributes. No Gemini checkout edits.
 Source locations below are relative to ignored `runtime/research-adapter-20261005/fresh/`;
 CFR snapshots have unresolved dependencies. No game classes initialized, JNI
-called, native Lua probed, deployment performed or saves/settings changed.  
+called, native Lua probed, deployment performed or saves/settings changed.
 
 ---
 
