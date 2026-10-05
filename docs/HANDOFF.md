@@ -705,3 +705,71 @@ Gemini hardened the preflight acceptance tool against false-ready conditions and
 - Baseline backup intact at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
 
+## Post-M1 Bounded Gameplay Proposal: Follow-Player Command (latest, 2026-10-05)
+
+Gemini authored a concrete technical and operational proposal for the next bounded gameplay feature after M1 native acceptance (`docs/M1-next-feature-proposal.md`). Offline documentation only; no game launches, desktop automation, or runtime modifications:
+
+### Proposal Summary
+1. **Observable player benefit**: Companion navigation without micromanagement. Replaces tedious repetitive `walk here` commands with an active follow mode. Sarah paths toward the player as they explore on the same floor, halts when the player stops, and rests idle within a 2-tile deadzone without pushing into the player.
+2. **Smallest implementation scope**: Reuses Sarah's minimal command dispatcher (`Commands.lua`) and engine adapter (`Engine.lua`). Reuses `Engine.SarahWalkAction` (`ISWalkToTimedAction`), `adapter.walk`, `adapter.stop`, and `adapter.validateTarget`. Avoids all PZNS jobs architecture, vehicle handling, door opening logic, and combat interrupts. Managed as a single active action (`self.active.command == 'follow'`) issuing throttled `adapter.walk` sub-actions.
+3. **Geometry & Limits**:
+   - *Inner deadzone ($r \le 2.0$ tiles)*: Prevents pathing into the player's occupied square, collision pushing, and animation jitter; Sarah remains idle while close.
+   - *Repath band ($2.0 < r \le 8.0$ tiles)*: Dispatches `adapter.walk` to an open adjacent square when the player moves away.
+   - *Leash limit ($r > 8.0$ tiles)*: Fails closed and disengages with feedback (`Player out of range (>8 tiles); follow disengaged.`) if the player sprints away.
+   - *Floor limit ($sz \neq tz$)*: Disengages immediately if the player changes floors (stairs unverified).
+4. **M0 travel suspension interaction**: Disengagement at 8 tiles ensures Sarah is stationary long before reaching the 32-tile boundary where `adapter.shouldUnload` unloads her to checkpoint storage.
+5. **Lifecycle & Teardown**: Volatile in-memory state only. Canceled immediately on Sarah death, player death, unload, controller/NPC replacement, or session reset (`Commands:reset()`). Never saved to disk or binary checkpoints; Sarah restores idle upon reload.
+6. **Native API analysis**: Grounded in verified APIs (`ISWalkToTimedAction`, `ISTimedActionQueue`, `isFree(false)`, `getGridSquare()`). Strictly excludes unverified APIs (`IsoPlayer:setSneaking()`, `PZNS_JobCompanion`, vehicle boarding, automatic door opening, teleportation).
+7. **Strict dependency on remaining M1 gates**: Blocked until gates R1–R8 in `docs/M1-batched-acceptance.md` pass natively in Codex (movable console, click isolation, position retention, resolution adaptation, distance refusal, red context-menu refusal, post-reload movement, and session reset).
+
+### Ready-to-Copy Implementation Prompt for Codex Review
+
+```text
+Implement bounded post-M1 manual follow-player command for Project Sarah from docs/M1-next-feature-proposal.md.
+
+Context & Rules:
+- Read AGENTS.md, docs/STATUS.md, docs/ROADMAP.md, and docs/M1-next-feature-proposal.md.
+- Confirm that M1 native acceptance gates R1–R8 have passed before editing code.
+- External AI remains strictly ON HOLD. Do not implement any LLM or external AI layer.
+- Keep installed game files and normal profile strictly read-only.
+- Implement only the bounded 'follow' command in Commands.lua (and optional shortcut in Console.lua).
+- Reuse existing Engine.SarahWalkAction, adapter.walk, adapter.stop, and adapter.validateTarget. Do not create new action classes or job managers.
+
+Requirements:
+1. Commands.lua:
+   - Add 'follow' command to execute().
+   - Maintain active follow state in self.active (command = 'follow').
+   - In self:tick(), throttle distance evaluation (every 20-30 ticks or when idle).
+   - Inner deadzone: if player within 2.0 tiles, remain idle (no walk dispatched).
+   - Repath: if player 2.0 < r <= 8.0 tiles, find free adjacent tile to player and dispatch adapter.walk.
+   - Leash break: if r > 8.0 tiles, cancelActive('Player out of range (>8 tiles); follow disengaged.').
+   - Floor limit: if player floor ~= npc floor, cancelActive('Player changed floors; follow disengaged.').
+   - Lifecycle: cancelActive immediately on death, unload, or controller/npc replacement.
+   - Stop integration: user 'stop' command cancels follow immediately and halts engine walking.
+   - Volatile: follow state is never persisted across save/reload or session reset.
+2. Console.lua (Optional UI convenience):
+   - Add 'follow' to help command text.
+   - Optionally add [Follow] toolbar button if layout permits, or rely on typed command.
+3. Tests:
+   - Add offline unit tests in tools/test_commands.py covering: parsing, busy rejection, deadzone idle, repath dispatch, leash break (>8 tiles), floor change, stop cancellation, lifecycle invalidation, and session reset.
+   - Ensure all existing and new checks pass via tools/run_tests.py, test_runner.py, and test_preflight.py.
+4. Update STATUS.md and HANDOFF.md, commit, and push.
+```
+
+### Current Offline Baseline
+- 153 automated checks pass across 6 suites in `tools/run_tests.py` (0.24s).
+- 11 runner self-tests pass in `tools/test_runner.py` (2.34s).
+- 19 preflight unit tests pass in `tools/test_preflight.py` (0.66s).
+- Total: 183 passing tests across project tools and production modules.
+
+### Next Steps for Codex
+1. Verify game is closed (`javaw.exe` absent).
+2. Execute the batched native session for remaining M1 gates R1–R8 following `docs/M1-batched-acceptance.md`.
+3. Review `docs/M1-next-feature-proposal.md` and user authorization before considering post-M1 follow-player implementation.
+
+### State and Ownership
+- Game is CLOSED (SAVED a, GameThread exited, no native window).
+- Isolated saves and runtime untouched.
+- Baseline backup intact at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+- Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
