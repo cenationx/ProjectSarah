@@ -1,24 +1,24 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (146 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Native UI source inspected read-only against PZ 42.21.0 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and stop accessibility verified; no code defects). Acceptance checklist updated in docs/M1-slice-c-checklist.md for mouse-operated workflow (Codex operates console buttons; user controls movement and visually confirms NPC movement/arrival/halting). Production mod deployment requirements and recovery checklists documented for Codex. Temporary acceptance driver in tools/FoundationWalkStopDriver.lua confirmed optional. Single next task: native M1 slice C and console-button acceptance by Codex following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping (normal and small screens), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
 
 ## Current local runtime state
 
-- Game is CLOSED (SAVED b, GameThread exited, no native window).
+- Game is CLOSED (SAVED a, GameThread exited, no native window).
 - Continue selects `SarahConsoleNativeCase` under `runtime/isolated/Saves/Rising/`. Only `SarahFoundation` enabled.
-- Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
+- Reviewed slice C source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
-- Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
-- Automated tests: 146 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py`.
+- Backups: Latest final case/settings/logs: `runtime/backups/slice-c-native-20261005-143139/Final-native`. Key settings F9; Forward W.
+- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 146 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 26 simulated console UI/key/shortcut/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
+- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -551,3 +551,48 @@ runtime/backups/slice-c-native-20261005-143139/Final-native.
 F9 key:67 and Forward key:17 retained. No temporary probes deployed.
 Codex owns checkout. Next: safe disposable spacious case for native refusal checks,
 or bounded offline work while those checks remain explicitly pending. AI ON HOLD.
+
+### Movable Sarah Console panel and window size robustness (Gemini, 2026-10-05)
+
+Gemini implemented title-bar mouse dragging, screen boundary clamping, and in-session position retention for Sarah Console (offline only; no game launches, desktop automation, or runtime modifications):
+- **Mouse dragging via title bar (`Console.lua`)**:
+  - Implemented `Panel:onMouseDown`, `Panel:onMouseMove`, `Panel:onMouseMoveOutside`, `Panel:onMouseUp`, `Panel:onMouseUpOutside` following native PZ ISUI conventions (`ISModalDialog`, `ISCollapsableWindow`).
+  - Title bar drag zone: bounded strictly to `0 <= y < 40 and 0 <= x < self.width` and `x < self.btnClose.x`.
+  - Control click isolation: clicks on `btnClose` (`x >= btnClose.x`), toolbar buttons (`Help`, `Status`, `Inventory`, `History`, `Walk Here`, `Stop` at `y = 296`), text entry / `Run` (`y = 330`), history listbox (`y = 42`), or between-control margins never initiate dragging (`self.moving` remains falsy) and never fire duplicate commands.
+- **Bounds clamping algorithm across window sizes**:
+  - `state.clampPosition(x, y, w, h)` computes:
+    - `minX = math.min(0, sw - w); maxX = math.max(0, sw - w)`
+    - `minY = math.min(0, sh - h); maxY = math.max(0, sh - h)`
+    - `cx = math.max(minX, math.min(maxX, x or minX))`
+    - `cy = math.max(minY, math.min(maxY, y or minY))`
+  - On standard screens (`sw >= 560, sh >= 370`): clamps strictly to `[0, sw - w]` and `[0, sh - h]`. The console is kept 100% onscreen, controls are never clipped, and the console can be freely moved aside to give an unobstructed view of Sarah.
+  - On small screens (`sw < 560` or `sh < 370`): clamps to `[sw - w, 0]` and `[sh - h, 0]`. The panel slides between screen boundaries, allowing access to both left and right controls (Close, Run) without escaping into the void or becoming unrecoverable.
+  - Set `self.keepOnScreen = false` on `SarahConsolePanel` to bypass naive native `ISUIElement:setX/setY` clamping which breaks on screens smaller than panel dimensions.
+- **In-session position retention & session reset**:
+  - In-session retention: chosen position is saved in `state.pos` upon dragging, mouse up, and `state.close()`. Reopening within the same session re-opens at `state.pos` (re-clamped against current screen size).
+  - World exit reset: `state.reset()` (hooked to `Events.OnGameStart` and `Events.OnMainMenuEnter`) clears `state.pos = nil`. Reopening after a session reset restores the default centered position.
+  - No disk persistence, no new dependencies, no external AI.
+- **Resolution change handling**:
+  - Registered `Events.OnResolutionChange.Add(state.resolution)`.
+  - If screen resolution changes while panel is open, immediately re-clamps `state.panel` to valid onscreen coordinates. If closed, re-clamps `state.pos`.
+- **Automated test suite (153 passing checks)**:
+  - Added 7 new regression tests in `tools/test_console.py` (33 console checks total):
+    1. Title bar mouse dragging moves panel and updates coordinates and `state.pos`.
+    2. Dragging bounds clamped on standard screen (`1280x720`) and keeps entire panel onscreen.
+    3. Dragging bounds clamped on small screens (`500x300`) and keeps panel accessible without getting lost.
+    4. Clicking controls (`btnClose`, shortcut buttons, `entry`, `btnRun`, history) does not start drag, modify coordinates, or duplicate commands.
+    5. Position is preserved across close and reopen within same world session.
+    6. Session reset clears position and re-centers console on next open.
+    7. `OnResolutionChange` immediately re-clamps open panel and closed position.
+  - All 6 suites pass: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 driver = 153 checks total.
+  - All 11 runner self-tests in `tools/test_runner.py` pass.
+- **Native verification checklist for Codex**:
+  1. Launch isolated game (`SarahConsoleNativeCase`). Open Sarah Console (F9 / context menu).
+  2. Drag console aside by grabbing the title bar ("Sarah Console" area); verify Sarah is visible in the game scene.
+  3. Verify all controls remain fully functional while moved: click shortcut buttons, enter text, click Run, click Stop.
+  4. Close console (Escape / mouse Close) and reopen (F9 / context menu); verify console reopens at the chosen moved position.
+  5. Quit to main menu and Continue; verify console resets to default centered position.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime and saves untouched.
+  - Checkout ownership is RELEASED to Codex.

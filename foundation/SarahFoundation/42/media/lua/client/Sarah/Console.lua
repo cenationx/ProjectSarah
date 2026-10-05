@@ -26,11 +26,15 @@ if old then
     Events.OnGameStart.Remove(old.reset)
     Events.OnMainMenuEnter.Remove(old.reset)
     Events.OnFillWorldObjectContextMenu.Remove(old.menu)
+    if old.resolution and Events.OnResolutionChange then
+        Events.OnResolutionChange.Remove(old.resolution)
+    end
 end
 SarahConsole={}
 local state=SarahConsole
 state.menuOriginal=menuOriginal
 state.dispatch=old and old.dispatch or nil
+state.pos=old and old.pos or nil
 local function stopSarah(reason,action)
     if SarahFoundation and SarahFoundation.controller and SarahFoundation.controller.npc then
         local controller=SarahFoundation.controller
@@ -106,8 +110,20 @@ function state.conflict(key)
         end
     end
 end
+function state.clampPosition(x,y,w,h)
+    w=w or 560; h=h or 370
+    local core=getCore()
+    local sw=(core and core.getScreenWidth and core:getScreenWidth()) or 1280
+    local sh=(core and core.getScreenHeight and core:getScreenHeight()) or 720
+    local minX=math.min(0,sw-w); local maxX=math.max(0,sw-w)
+    local minY=math.min(0,sh-h); local maxY=math.max(0,sh-h)
+    local cx=math.max(minX,math.min(maxX,x or minX))
+    local cy=math.max(minY,math.min(maxY,y or minY))
+    return cx,cy
+end
 function state.close()
     if state.panel then
+        state.pos={x=state.panel.x,y=state.panel.y}
         state.panel.entry:unfocus(); state.panel:setVisible(false); state.panel:removeFromUIManager()
         state.panel=nil
     end
@@ -128,6 +144,7 @@ function Panel:onShortcutStop() self:executeCommand('stop') end
 function Panel:initialise()
     ISPanel.initialise(self)
     self:setWantKeyEvents(true)
+    self.keepOnScreen=false
     self.history=ISScrollingListBox:new(12,42,self.width-24,self.height-124)
     self.history:initialise(); self.history:instantiate(); self:addChild(self.history)
     self.history:setFont(UIFont.Small,4)
@@ -193,11 +210,58 @@ function Panel:prerender()
     self:drawText('Sarah Console',12,14,0.9,0.95,1,1,UIFont.Medium)
 end
 function Panel:isKeyConsumed(key) return self.entry:isFocused() or key==getCore():getKey(binding) end
+function Panel:onMouseDown(x,y)
+    if self.getIsVisible and not self:getIsVisible() then return end
+    if y<0 or y>=40 or x<0 or x>=self.width then return end
+    if self.btnClose and x>=self.btnClose.x then return end
+    self.downX=x; self.downY=y; self.moving=true
+    if self.bringToTop then self:bringToTop() end
+end
+function Panel:onMouseMove(dx,dy)
+    self.mouseOver=true
+    if self.moving then
+        local nx,ny=state.clampPosition(self.x+dx,self.y+dy,self.width,self.height)
+        if self.setX then self:setX(nx) else self.x=nx end
+        if self.setY then self:setY(ny) else self.y=ny end
+        state.pos={x=self.x,y=self.y}
+        if self.bringToTop then self:bringToTop() end
+    end
+end
+function Panel:onMouseMoveOutside(dx,dy)
+    self.mouseOver=false
+    if self.moving then
+        local nx,ny=state.clampPosition(self.x+dx,self.y+dy,self.width,self.height)
+        if self.setX then self:setX(nx) else self.x=nx end
+        if self.setY then self:setY(ny) else self.y=ny end
+        state.pos={x=self.x,y=self.y}
+        if self.bringToTop then self:bringToTop() end
+    end
+end
+function Panel:onMouseUp(x,y)
+    if self.getIsVisible and not self:getIsVisible() then return end
+    self.moving=false
+    state.pos={x=self.x,y=self.y}
+end
+function Panel:onMouseUpOutside(x,y)
+    if self.getIsVisible and not self:getIsVisible() then return end
+    self.moving=false
+    state.pos={x=self.x,y=self.y}
+end
 function state.open()
     if not allowed() then return end
     if state.panel then state.panel.entry:focus(); return end
     local w,h=560,370
-    local panel=Panel:new(math.max(0,(getCore():getScreenWidth()-w)/2),math.max(0,(getCore():getScreenHeight()-h)/2),w,h)
+    local x,y
+    if state.pos then
+        x,y=state.clampPosition(state.pos.x,state.pos.y,w,h)
+    else
+        local core=getCore()
+        local sw=(core and core.getScreenWidth and core:getScreenWidth()) or 1280
+        local sh=(core and core.getScreenHeight and core:getScreenHeight()) or 720
+        x,y=state.clampPosition(math.max(0,(sw-w)/2),math.max(0,(sh-h)/2),w,h)
+    end
+    state.pos={x=x,y=y}
+    local panel=Panel:new(x,y,w,h)
     panel.backgroundColor={r=0.05,g=0.07,b=0.10,a=0.97}
     panel:initialise(); panel:addToUIManager(); state.panel=panel; panel.entry:focus()
 end
@@ -240,7 +304,19 @@ state.guard=function(key)
 end
 state.reset=function()
     state.close(); state.held=false; state.escapeHeld=false; state.swallow=false
+    state.pos=nil
     if state.dispatch then state.dispatch:reset() end
+end
+state.resolution=function(oldw,oldh,neww,newh)
+    if state.panel then
+        local cx,cy=state.clampPosition(state.panel.x,state.panel.y,state.panel.width,state.panel.height)
+        if state.panel.setX then state.panel:setX(cx) else state.panel.x=cx end
+        if state.panel.setY then state.panel:setY(cy) else state.panel.y=cy end
+        state.pos={x=state.panel.x,y=state.panel.y}
+    elseif state.pos then
+        local cx,cy=state.clampPosition(state.pos.x,state.pos.y,560,370)
+        state.pos={x=cx,y=cy}
+    end
 end
 state.menu=function(playerIndex,context,objects,test)
     if not test and playerIndex==0 and allowed() then context:addOption('Sarah: console',nil,state.open) end
@@ -255,4 +331,7 @@ end
 Events.OnGameStart.Add(state.reset)
 Events.OnMainMenuEnter.Add(state.reset)
 Events.OnFillWorldObjectContextMenu.Add(state.menu)
+if Events.OnResolutionChange then
+    Events.OnResolutionChange.Add(state.resolution)
+end
 return state

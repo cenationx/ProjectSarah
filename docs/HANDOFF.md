@@ -24,18 +24,18 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
-146 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-26 console, 14 acceptance driver) plus 11 runner self-tests. Native UI source inspected read-only against PZ 42.21.0
+153 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+33 console, 14 acceptance driver) plus 11 runner self-tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
 scoping, production controller contract, safe context menu routing, and console mouse buttons toolbar) implemented and hardened offline;
-native acceptance prepared in `docs/M1-slice-c-checklist.md` using the mouse context menu (`Sarah: console`) and 7 console buttons
-([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]).
-The temporary driver in `tools/FoundationWalkStopDriver.lua` is optional; native acceptance proceeds via production console buttons
-and direct human observation.
-Single next task: native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
+bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session.
+Movable console panel implemented offline via title-bar mouse dragging with bounds clamping (normal and small screens),
+control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
+and OnResolutionChange re-clamping.
+Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
 Keep external AI strictly on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
@@ -84,7 +84,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (146 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (153 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -102,9 +102,9 @@ Individual suites can also still be executed directly:
 - `tools/test_render.py`: 15 engine adapter/render checks.
 - `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
-- `tools/test_console.py`: 26 simulated console UI/key/shortcut/session checks.
+- `tools/test_console.py`: 33 simulated console UI/key/shortcut/dragging/bounds/session checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-146 automated checks total (across 6 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
+153 automated checks total (across 6 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -612,3 +612,31 @@ runtime/backups/slice-c-native-20261005-143139/Final-native.
 F9 key:67 and Forward key:17 retained. No temporary probes deployed.
 Codex owns checkout. Next: safe disposable spacious case for native refusal checks,
 or bounded offline work while those checks remain explicitly pending. AI ON HOLD.
+
+### Movable Sarah Console panel and window size robustness handoff (2026-10-05)
+
+Gemini implemented and verified title-bar mouse dragging and window size robustness in `Console.lua` (offline only; game closed, runtime/saves untouched):
+- **Implemented changes**:
+  - `Panel:onMouseDown`, `onMouseMove`, `onMouseMoveOutside`, `onMouseUp`, `onMouseUpOutside`: Standard native PZ ISUI dragging pattern (`ISModalDialog`, `ISCollapsableWindow`).
+  - Title bar hit zone: Dragging starts only on header area `0 <= y < 40 and 0 <= x < self.width` and `x < self.btnClose.x`. All controls (`btnClose`, shortcut toolbar, text entry, `Run`, history listbox) and margins never start drags and never fire duplicate commands.
+  - Screen boundary clamping (`state.clampPosition(x, y, w, h)`): On standard displays (`sw >= 560, sh >= 370`), clamps within `[0, sw - w]` and `[0, sh - h]`. Entire panel is kept 100% onscreen and controls are never clipped. On small displays (`sw < 560, sh < 370`), clamps within `[sw - w, 0]` and `[sh - h, 0]`, allowing panel to slide between screen edges so that both left and right controls are accessible without the panel getting lost. `self.keepOnScreen = false` set on panel to bypass naive native clamping.
+  - In-session position retention: Preserves moved coordinates in `state.pos` across panel close/reopen within the same world session.
+  - Session reset: Quitting to main menu or loading a new session clears `state.pos = nil`, resetting the console to default centered position.
+  - `Events.OnResolutionChange`: Re-clamps open panel and saved coordinates upon screen resolution changes.
+  - No disk persistence, no new dependencies, no AI layer.
+- **Verification status**:
+  - 153 checks passing across 6 suites in `tools/run_tests.py` (0.24s).
+  - 11 runner self-tests passing in `tools/test_runner.py` (2.33s).
+  - Dragging, bounds, small screens, control isolation, position retention, session reset, and resolution changes tested in `tools/test_console.py`.
+- **Codex native test checklist for movable console**:
+  1. Deploy updated `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/Sarah/Console.lua` with game closed.
+  2. Launch isolated game with `SarahConsoleNativeCase`.
+  3. Open Sarah Console (F9 / context menu).
+  4. Click and drag the title bar ("Sarah Console" area) to move the panel aside; verify Sarah in the game world is visible and not obscured.
+  5. Click controls while panel is moved: test shortcut buttons, text entry, Run, Stop; verify each operates normally without starting a drag.
+  6. Close console (Escape / mouse Close) and reopen; verify console reopens at the chosen moved position.
+  7. Quit to main menu and Continue; verify console resets to default centered position.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Baseline backups preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+  - Checkout ownership is RELEASED to Codex. AI remains ON HOLD.

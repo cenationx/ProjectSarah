@@ -17,11 +17,16 @@ local function event()
     e.Remove=function(fn) for i=#e.callbacks,1,-1 do if e.callbacks[i]==fn then table.remove(e.callbacks,i) end end end
     return e
 end
-Events={OnKeyPressed=event(),OnTick=event(),OnGameStart=event(),OnMainMenuEnter=event(),OnFillWorldObjectContextMenu=event()}
+Events={OnKeyPressed=event(),OnTick=event(),OnGameStart=event(),OnMainMenuEnter=event(),OnFillWorldObjectContextMenu=event(),OnResolutionChange=event()}
 local Base={}
 function Base:derive() local c={}; c.__index=c; return setmetatable(c,{__index=self}) end
-function Base:new(x,y,w,h) return setmetatable({x=x,y=y,width=w,height=h,items={}}, {__index=self}) end
-for _,name in ipairs({'initialise','instantiate','setWantKeyEvents','addChild','addToUIManager','removeFromUIManager','setVisible','setMaxTextLength','prerender','drawText','setFont'}) do Base[name]=function() end end
+function Base:new(x,y,w,h) return setmetatable({x=x,y=y,width=w,height=h,items={},visible=true}, {__index=self}) end
+for _,name in ipairs({'initialise','instantiate','setWantKeyEvents','addChild','addToUIManager','removeFromUIManager','setMaxTextLength','prerender','drawText','setFont'}) do Base[name]=function() end end
+function Base:setVisible(v) self.visible=v end
+function Base:getIsVisible() return self.visible~=false end
+function Base:setX(x) self.x=x end
+function Base:setY(y) self.y=y end
+function Base:bringToTop() self.top=true end
 function Base:addItem(text) self.items[#self.items+1]={text=text} end
 function Base:setYScroll(v) self.scroll=v end
 function Base:setFont() self.itemheight=24 end
@@ -48,7 +53,8 @@ keyBinding={{value='Forward',key=17}}
 local keys={['Sarah Console']=67,Forward=17}; local alts={}
 local raw={}; local eaten={}
 GameKeyboard={isKeyDownRaw=function(k) return raw[k] or false end,isKeyDown=function(k) return not focused and (raw[k] or false) end,eatKeyPress=function(k) eaten[k]=true end}
-local core={getKey=function(_,n) return keys[n] or 0 end,getAltKey=function(_,n) return alts[n] or 0 end,isKey=function(_,n,k) return keys[n]==k or alts[n]==k end,getScreenWidth=function() return 1280 end,getScreenHeight=function() return 720 end}
+local screenW=nil; local screenH=nil
+local core={getKey=function(_,n) return keys[n] or 0 end,getAltKey=function(_,n) return alts[n] or 0 end,isKey=function(_,n,k) return keys[n]==k or alts[n]==k end,getScreenWidth=function() return screenW or 1280 end,getScreenHeight=function() return screenH or 720 end}
 getCore=function() return core end
 local root='G:/Codex/Project Sarah/runtime/isolated'; local client=false
 Core={getMyDocumentFolder=function() return root end}
@@ -94,7 +100,7 @@ test('history stays bounded and reset unfocuses/removes the panel',function()
 end)
 test('module reload closes old UI and retains one callback per event',function()
     s.open(); local p=s.panel; s=reload(); assert(not p.entry:isFocused() and not s.panel)
-    for _,name in ipairs({'OnTick','OnGameStart','OnMainMenuEnter','OnFillWorldObjectContextMenu'}) do assert(#Events[name].callbacks==1) end
+    for _,name in ipairs({'OnTick','OnGameStart','OnMainMenuEnter','OnFillWorldObjectContextMenu','OnResolutionChange'}) do assert(#Events[name].callbacks==1) end
     assert(#Events.OnKeyPressed.callbacks==0)
 end)
 local function fire(key) for _,cb in ipairs({table.unpack(Events.OnKeyPressed.callbacks)}) do cb(key) end end
@@ -545,6 +551,244 @@ test('typed command entry and session reset remain fully operational alongside s
     s.open()
     assert(s.panel and s.panel.dispatch.sequence==0)
     s.close()
+    s.reset()
+end)
+test('title bar mouse dragging moves panel and updates coordinates and state.pos',function()
+    s.open()
+    local p=s.panel
+    -- Default centered position on 1280x720: (1280-560)/2 = 360, (720-370)/2 = 175
+    assert(p.x==360 and p.y==175)
+    assert(s.pos and s.pos.x==360 and s.pos.y==175)
+    assert(not p.moving)
+
+    -- Mouse down in title bar (y < 40 and x < 480)
+    p:onMouseDown(100, 20)
+    assert(p.moving==true and p.top==true)
+    p.top=nil
+
+    -- Move mouse: dx = 50, dy = 30
+    p:onMouseMove(50, 30)
+    assert(p.x==410 and p.y==205)
+    assert(s.pos.x==410 and s.pos.y==205)
+    assert(p.top==true)
+    p.top=nil
+
+    -- Move mouse outside during drag: dx = 20, dy = -15
+    p:onMouseMoveOutside(20, -15)
+    assert(p.x==430 and p.y==190)
+    assert(s.pos.x==430 and s.pos.y==190)
+    assert(p.top==true)
+
+    -- Mouse up outside ends drag
+    p:onMouseUpOutside(430, 190)
+    assert(p.moving==false)
+    assert(s.pos.x==430 and s.pos.y==190)
+
+    -- Further mouse move when not moving does not alter position
+    p:onMouseMove(100, 100)
+    assert(p.x==430 and p.y==190)
+
+    s.close()
+    s.reset()
+end)
+test('dragging bounds clamped on standard screen and keeps entire panel onscreen',function()
+    s.open()
+    local p=s.panel
+    assert(p.x==360 and p.y==175)
+
+    -- Start drag
+    p:onMouseDown(50, 15)
+    assert(p.moving==true)
+
+    -- Drag far beyond top-left screen edge
+    p:onMouseMove(-2000, -2000)
+    assert(p.x==0 and p.y==0)
+    assert(s.pos.x==0 and s.pos.y==0)
+
+    -- Drag far beyond bottom-right screen edge
+    -- maxX = 1280 - 560 = 720; maxY = 720 - 370 = 350
+    p:onMouseMove(5000, 5000)
+    assert(p.x==720 and p.y==350)
+    assert(s.pos.x==720 and s.pos.y==350)
+
+    -- Release
+    p:onMouseUp(100, 20)
+    assert(p.moving==false)
+    assert(p.x==720 and p.y==350)
+
+    s.close()
+    s.reset()
+end)
+test('dragging bounds clamped on small screens and keeps panel accessible without getting lost',function()
+    -- Small screen: 500x300 (smaller than panel 560x370)
+    screenW=500; screenH=300
+    s.open()
+    local p=s.panel
+    -- Clamped between [500-560, 0] = [-60, 0] and [300-370, 0] = [-70, 0]
+    assert(p.x<=0 and p.x>=-60)
+    assert(p.y<=0 and p.y>=-70)
+
+    p:onMouseDown(50, 15)
+    assert(p.moving==true)
+
+    -- Drag right/down to max bounds: (0, 0)
+    p:onMouseMove(200, 200)
+    assert(p.x==0 and p.y==0)
+
+    -- Drag left/up to min bounds: (-60, -70)
+    p:onMouseMove(-200, -200)
+    assert(p.x==-60 and p.y==-70)
+
+    -- Mid-range drag: (-30, -35)
+    p:onMouseMove(30, 35)
+    assert(p.x==-30 and p.y==-35)
+
+    p:onMouseUp(10, 10)
+    assert(p.moving==false)
+
+    s.close()
+    s.reset()
+    screenW=nil; screenH=nil
+end)
+test('clicking controls does not start drag, modify coordinates, or duplicate commands',function()
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+    local origX,origY=p.x,p.y
+
+    -- 1. Clicking on Close button (x = 480..548, y = 10..34)
+    p:onMouseDown(p.btnClose.x + 5, p.btnClose.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    -- 2. Clicking in History listbox (y >= 40)
+    p:onMouseDown(200, 100)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    -- 3. Clicking on shortcut buttons (y >= 40)
+    p:onMouseDown(p.btnHelp.x + 5, p.btnHelp.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnStatus.x + 5, p.btnStatus.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnInventory.x + 5, p.btnInventory.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnHistory.x + 5, p.btnHistory.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnWalkHere.x + 5, p.btnWalkHere.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnStop.x + 5, p.btnStop.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    -- 4. Clicking on Entry box and Run button (y >= 40)
+    p:onMouseDown(p.entry.x + 10, p.entry.y + 10)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnRun.x + 5, p.btnRun.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    -- 5. Clicking outside bottom of panel
+    p:onMouseDown(100, 400)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    -- 6. Triggering buttons executes command exactly once without drag
+    local seqBefore=p.dispatch.sequence
+    p.btnHelp:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    p.btnStatus:click()
+    assert(p.dispatch.sequence==seqBefore+2)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+
+    s.close()
+    s.reset()
+end)
+test('position is preserved across close and reopen within same world session',function()
+    s.open()
+    local p=s.panel
+    p:onMouseDown(50, 15)
+    p:onMouseMove(-160, 75)
+    p:onMouseUp(50, 15)
+    -- Initial was (360, 175) -> -160, +75 => (200, 250)
+    assert(p.x==200 and p.y==250)
+    assert(s.pos.x==200 and s.pos.y==250)
+
+    -- Close via close()
+    s.close()
+    assert(s.panel==nil)
+    assert(s.pos.x==200 and s.pos.y==250)
+
+    -- Reopen in same session
+    s.open()
+    p=s.panel
+    assert(p and p.x==200 and p.y==250)
+    assert(s.pos.x==200 and s.pos.y==250)
+
+    -- Close via btnClose click
+    p.btnClose:click()
+    assert(s.panel==nil)
+    assert(s.pos.x==200 and s.pos.y==250)
+
+    -- Reopen again
+    s.open()
+    assert(s.panel.x==200 and s.panel.y==250)
+
+    s.close()
+    s.reset()
+end)
+test('session reset clears position and re-centers console on next open',function()
+    s.open()
+    local p=s.panel
+    p:onMouseDown(50, 15)
+    p:onMouseMove(100, 100)
+    p:onMouseUp(50, 15)
+    assert(p.x==460 and p.y==275)
+    assert(s.pos.x==460 and s.pos.y==275)
+
+    -- Session reset (e.g. OnMainMenuEnter or OnGameStart)
+    s.reset()
+    assert(s.panel==nil)
+    assert(s.pos==nil)
+
+    -- Reopen in new session
+    s.open()
+    assert(s.panel and s.panel.x==360 and s.panel.y==175)
+    assert(s.pos.x==360 and s.pos.y==175)
+
+    s.close()
+    s.reset()
+end)
+test('OnResolutionChange immediately re-clamps open panel and closed position',function()
+    s.open()
+    local p=s.panel
+    -- Move to bottom-right of 1280x720: (720, 350)
+    p:onMouseDown(50, 15)
+    p:onMouseMove(500, 500)
+    p:onMouseUp(50, 15)
+    assert(p.x==720 and p.y==350)
+
+    -- Shrink resolution to 1024x768 while open
+    screenW=1024; screenH=768
+    -- Fire OnResolutionChange
+    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1280, 720, 1024, 768) end
+    -- Clamped to max X = 1024 - 560 = 464; Y = 350 (<= 768 - 370 = 398)
+    assert(s.panel.x==464 and s.panel.y==350)
+    assert(s.pos.x==464 and s.pos.y==350)
+
+    -- Close panel
+    s.close()
+
+    -- Shrink resolution further while closed to 800x600
+    screenW=800; screenH=600
+    for _,cb in ipairs(Events.OnResolutionChange.callbacks) do cb(1024, 768, 800, 600) end
+    -- Clamped pos to maxX = 800 - 560 = 240, maxY = 600 - 370 = 230
+    assert(s.pos.x==240 and s.pos.y==230)
+
+    -- Reopen after resolution change
+    s.open()
+    assert(s.panel.x==240 and s.panel.y==230)
+
+    s.close()
+    s.reset()
+    screenW=nil; screenH=nil
 end)
 print('RESULT '..count..' simulated console checks passed')
 ''')
