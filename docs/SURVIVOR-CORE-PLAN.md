@@ -133,3 +133,5 @@ Keep rendering independence and Sarah's own vision as two separate tasks.
 Then implement the smallest approved sight slice with fixtures, followed by
 isolated native checks. Reuse the existing single-writer Gemini/Codex workflow:
 Gemini can take bounded offline work; Codex alone deploys and launches tests.
+
+Detailed engine follow-up: [COMPANION-ENGINE-RESEARCH.md](COMPANION-ENGINE-RESEARCH.md), including fresh installed control/vision inspection and pinned reference evidence.
