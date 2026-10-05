@@ -503,3 +503,6 @@ Gemini built and verified a dependable, single-entry offline verification workfl
   - Offline tooling complete. Native walking, arrival, and live cancellation acceptance remain **PENDING** live check per `docs/M1-slice-c-checklist.md`.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+### Verification runner correction (2026-10-05)
+Runner dirty status includes untracked files. Self-tests use ignored tools/reports/self-test-tmp and clean their temporary directories. Verified 139 project checks plus 11 runner self-tests; native acceptance remains pending.

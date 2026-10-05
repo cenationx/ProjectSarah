@@ -118,3 +118,5 @@ Run self-tests with:
 - **Offline policy checks** (139 passing checks across 6 suites) exercise Lua modules, commands, state machines, and engine adapters within isolated Lupa runtimes against mock engine objects. They verify contracts, memory boundaries, lifecycle invalidation, error handling, and state preservation.
 - **Native gameplay acceptance** requires launching the actual Project Zomboid 42.21.0 engine process in the isolated test case (`SarahConsoleNativeCase`), exercising physical key input, real Java thread scheduling, and engine timed action queues.
 - **Slice C native acceptance remains PENDING** Codex live testing per [`docs/M1-slice-c-checklist.md`](file:///G:/Codex/Project%20Sarah/docs/M1-slice-c-checklist.md).
+
+Self-tests keep temporary fixtures under ignored tools/reports/self-test-tmp and remove them after each test. Git dirty status includes tracked modifications and untracked files; ignored reports do not make the checkout dirty.

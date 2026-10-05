@@ -124,7 +124,7 @@ def get_git_info(repo_root):
             timeout=5,
         )
         if r_st.returncode == 0:
-            lines = [l for l in r_st.stdout.splitlines() if not l.startswith("??")]
+            lines = [l for l in r_st.stdout.splitlines() if l.strip()]
             info["dirty"] = len(lines) > 0
     except (subprocess.SubprocessError, OSError):
         pass

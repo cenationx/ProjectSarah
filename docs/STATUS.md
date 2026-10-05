@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) plus 9 passing runner self-tests. Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) plus 11 passing runner self-tests. Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -464,3 +464,10 @@ Gemini built and verified a dependable, single-entry offline verification workfl
   - Documents exact operating command, interpreter resolution and overrides, report formats, troubleshooting, and the explicit distinction between offline fixture checks and native gameplay acceptance.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+
+### Codex verification runner correction (2026-10-05)
+- Git dirty reporting now includes untracked files as well as tracked modifications.
+- Runner self-test temporary files are created and cleaned under tools/reports/self-test-tmp, independent of system TEMP settings.
+- Verified: 139 project checks and 11 runner self-tests pass. Two regressions cover project-local temporary files and clean/tracked/untracked Git status.
+- Offline only; runtime and saves untouched. Native slice C remains pending. Ownership: Codex.

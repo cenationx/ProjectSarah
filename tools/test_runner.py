@@ -12,7 +12,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
+import run_tests
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNNER_SCRIPT = REPO_ROOT / "tools/run_tests.py"
@@ -22,12 +24,30 @@ class TestRunner(unittest.TestCase):
     """Test suite for tools/run_tests.py."""
 
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
+        temp_root = REPO_ROOT / "tools/reports/self-test-tmp"
+        temp_root.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = tempfile.TemporaryDirectory(dir=temp_root)
         self.temp_path = Path(self.temp_dir.name)
         self.python_bin = sys.executable
 
     def tearDown(self):
         self.temp_dir.cleanup()
+
+    def test_temporary_files_stay_in_project(self):
+        self.assertTrue(self.temp_path.resolve().is_relative_to(REPO_ROOT.resolve()))
+        self.assertTrue(self.temp_path.is_dir())
+
+    def test_git_dirty_includes_untracked_files(self):
+        for status, expected in (("?? new-source.py\n", True), (" M tracked.py\n", True), ("", False)):
+            with self.subTest(status=status):
+                responses = [subprocess.CompletedProcess([], 0, "abc123\n", ""),
+                             subprocess.CompletedProcess([], 0, "main\n", ""),
+                             subprocess.CompletedProcess([], 0, status, "")]
+                with patch.dict(os.environ, {"SARAH_GIT": str(Path(sys.executable))}), \
+                     patch.object(run_tests.subprocess, "run", side_effect=responses):
+                    info = run_tests.get_git_info(REPO_ROOT)
+                self.assertTrue(info["available"])
+                self.assertEqual(info["dirty"], expected)
 
     def _run_runner(self, args, cwd=None, env=None):
         cmd = [self.python_bin, str(RUNNER_SCRIPT)] + args
