@@ -1,6 +1,16 @@
 -- Command parser, validation, dispatch and action boundary.
 -- No mutable engine handles are exposed to callers.
 local Commands={}
+local function isPlayerDead(data)
+    if not data then return false end
+    if data.playerDead~=nil then return data.playerDead==true end
+    if data.player then
+        if data.player.dead~=nil then return data.player.dead==true end
+        if data.player.isDead~=nil then return data.player.isDead==true end
+        if data.player.alive~=nil then return data.player.alive==false end
+    end
+    return false
+end
 function Commands.new(observe,stopCallback,identityProvider,walkCallback,validateCallback)
     local self={
         sequence=0,
@@ -145,6 +155,16 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             self:cancelActive('npc unavailable')
             return false,'npc unavailable'
         end
+        if self.active and self.active.command=='follow' then
+            if not data.player then
+                self:cancelActive('player unavailable')
+                return false,'player unavailable'
+            end
+            if isPlayerDead(data) then
+                self:cancelActive('player dead')
+                return false,'player dead'
+            end
+        end
         return true,data
     end
     function self:dispatchFollowStep(data,nx,ny,nz,px,py,pz)
@@ -197,23 +217,55 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         local actId=act.id
         local actToken=act.token
         local actSession=act.session
+        local stepRetired=false
 
-        local function onStepComplete()
-            if not self.active or self.active.id~=actId or self.active.token~=actToken or (actSession and self.active.session and actSession~=self.active.session) then
-                return
+        local function checkStepCallback()
+            if stepRetired then
+                return false,'retired'
             end
-            if self.active.stepGen~=curStepGen then
-                return
+            if not self.active or self.active.id~=actId or self.active.token~=actToken then
+                return false,'stale'
+            end
+            if actSession and self.active.session and actSession~=self.active.session then
+                return false,'stale'
+            end
+            if self.active.stepGen~=curStepGen or self.active.stepState~='walking' then
+                return false,'stale step'
             end
             local currentOwner,currentNpc=self:getIdentity()
             if self.active.owner and currentOwner and self.active.owner~=currentOwner then
+                stepRetired=true
                 self:cancelActive('controller replaced')
-                return
+                return false,'controller replaced'
+            end
+            if self.active.owner and currentOwner==nil then
+                stepRetired=true
+                self:cancelActive('controller unavailable')
+                return false,'controller unavailable'
             end
             if self.active.npc and currentNpc and self.active.npc~=currentNpc then
+                stepRetired=true
                 self:cancelActive('npc replaced')
-                return
+                return false,'npc replaced'
             end
+            if self.active.npc and currentNpc==nil then
+                stepRetired=true
+                self:cancelActive('npc unavailable')
+                return false,'npc unavailable'
+            end
+            local valid,reason=self:checkLifecycle()
+            if not valid then
+                stepRetired=true
+                return false,reason
+            end
+            return true
+        end
+
+        local function onStepComplete()
+            local ok,reason=checkStepCallback()
+            if not ok then return end
+            stepRetired=true
+            self.active.stepGen=self.active.stepGen+1
             self.active.stepState='idle'
             self.active.stepTicks=0
             self.active.currentTarget=nil
@@ -223,17 +275,21 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
 
         local function onStepFail(actionObj,reason)
-            if not self.active or self.active.id~=actId or self.active.token~=actToken or (actSession and self.active.session and actSession~=self.active.session) then
-                return
-            end
-            if self.active.stepGen~=curStepGen then
-                return
+            local ok,failReason=checkStepCallback()
+            if not ok then return end
+            stepRetired=true
+            if self.active then
+                self.active.stepGen=self.active.stepGen+1
             end
             self:cancelActive(reason or 'path failed')
         end
 
         local walkOk,walkErr=self:invokeWalk(chosenTarget,onStepComplete,onStepFail,act)
         if not walkOk then
+            stepRetired=true
+            if self.active then
+                self.active.stepGen=self.active.stepGen+1
+            end
             self:cancelActive(walkErr or 'walk failed to start')
             return false,walkErr
         end
@@ -259,6 +315,10 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         if not data.player then
             self:cancelActive('player unavailable')
             return false,'player unavailable'
+        end
+        if isPlayerDead(data) then
+            self:cancelActive('player dead')
+            return false,'player dead'
         end
 
         local nx,ny,nz=data.npc.x,data.npc.y,math.floor(data.npc.z)
@@ -622,6 +682,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 result.state='rejected'
                 result.lines={'Player position unavailable.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='Player position missing'})
+                return result
+            end
+            if isPlayerDead(data) then
+                result.state='rejected'
+                result.lines={'Player is dead; cannot follow.'}
+                addHistory({id=result.id,command=command,state='rejected',summary='Player dead'})
                 return result
             end
             local nx,ny,nz=data.npc.x,data.npc.y,math.floor(data.npc.z)

@@ -75,10 +75,18 @@ local function makeFixture(opts)
         if npcState ~= 'active' then
             return {state = npcState, inventory = nil}
         end
+        local dead = (opts.playerDead == true) or (playerPos.dead == true) or (playerPos.isDead == true)
         return {
             state = 'active',
             npc = {x = npcPos.x, y = npcPos.y, z = npcPos.z},
-            player = {x = playerPos.x, y = playerPos.y, z = playerPos.z},
+            player = {
+                x = playerPos.x, y = playerPos.y, z = playerPos.z,
+                dead = dead,
+                isDead = dead,
+                alive = not dead
+            },
+            playerDead = dead,
+            playerAlive = not dead,
             inventory = inv and {total = 1, items = {{type = 'Base.Bandage', count = 1}}} or nil
         }
     end
@@ -554,19 +562,19 @@ test('stale callbacks from superseded steps cannot mutate active follow', functi
     d:tick()
     assert(step == 2)
     assert(d.active.stepState == 'walking')
-    assert(d.active.stepGen == 2)
+    assert(d.active.stepGen == 3)
 
-    -- Late cb1_fail from Step 1 fires: must be ignored by stepGen guard
+    -- Late cb1_fail from Step 1 fires: must be ignored by stepGen guard and retirement flag
     cb1_fail(nil, 'late failure')
-    assert(d.active ~= nil and d.active.stepGen == 2 and d.active.stepState == 'walking')
+    assert(d.active ~= nil and d.active.stepGen == 3 and d.active.stepState == 'walking')
 
     -- Late cb1_complete from Step 1 fires: must be ignored
     cb1_complete()
-    assert(d.active ~= nil and d.active.stepGen == 2 and d.active.stepState == 'walking')
+    assert(d.active ~= nil and d.active.stepGen == 3 and d.active.stepState == 'walking')
 
     -- Current Step 2 completion works
     cb2_complete()
-    assert(d.active ~= nil and d.active.stepState == 'idle')
+    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.stepGen == 4)
 end)
 
 -- 25. Synchronous step completion during start is handled safely
@@ -633,6 +641,281 @@ test('requestFollow programmatic method executes follow command directly', funct
     local res = d:requestFollow()
     assert(res.state == 'running')
     assert(d.active and d.active.command == 'follow')
+end)
+
+-- 29. Follow activation is rejected when player is dead
+test('follow activation is rejected when player is dead', function()
+    local f = makeFixture({playerDead = true})
+    local d = Commands.new(f.observe, nil, f.identityProvider)
+    local res = d:execute('follow')
+    assert(res.state == 'rejected')
+    assert(res.lines[1] == 'Player is dead; cannot follow.')
+    assert(d.active == nil)
+    local h = d:getHistory()
+    assert(#h == 1 and h[1].state == 'rejected' and h[1].summary == 'Player dead')
+end)
+
+-- 30. Player death during walking cancels follow and halts engine
+test('player death during walking step cancels follow and halts engine', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local stopped = false
+    local d = Commands.new(f.observe, function() stopped = true; return true end, f.identityProvider, function() return true end)
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(d.active and d.active.stepState == 'walking')
+
+    -- Player dies mid-stride
+    f.playerPos.dead = true
+    local ok, reason = d:tick()
+    assert(ok == false)
+    assert(reason == 'player dead')
+    assert(d.active == nil)
+    assert(stopped == true)
+    local h = d:getHistory()
+    assert(h[#h].state == 'cancelled' and h[#h].summary:find('player dead'))
+end)
+
+-- 31. Player death during close-range waiting cancels follow
+test('player death during close-range waiting cancels follow', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 11, y = 10, z = 0}})
+    local d = Commands.new(f.observe, nil, f.identityProvider)
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(d.active and d.active.stepState == 'idle')
+
+    -- Player dies while Sarah is idling in deadzone
+    f.playerPos.dead = true
+    local ok, reason = d:tick()
+    assert(ok == false)
+    assert(reason == 'player dead')
+    assert(d.active == nil)
+    local h = d:getHistory()
+    assert(h[#h].state == 'cancelled' and h[#h].summary:find('player dead'))
+end)
+
+-- 32. Step completion followed by late failure during cooldown is defused
+test('step completion followed by late failure during cooldown is defused', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local capturedComplete, capturedFail
+    local d = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete, onFail)
+        capturedComplete = onComplete
+        capturedFail = onFail
+        return true
+    end)
+    d:execute('follow')
+    assert(d.active and d.active.stepState == 'walking')
+
+    -- Step 1 completes normally
+    capturedComplete()
+    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 15)
+
+    -- Late failure from completed Step 1 arrives during cooldown
+    capturedFail(nil, 'late path error')
+    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 15)
+    local h = d:getHistory()
+    assert(h[#h].state == 'running')
+end)
+
+-- 33. Duplicate step completion during cooldown does not reset cooldown
+test('duplicate step completion during cooldown does not reset cooldown', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local capturedComplete
+    local d = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete)
+        capturedComplete = onComplete
+        return true
+    end)
+    d:execute('follow')
+    capturedComplete()
+    assert(d.active and d.active.cooldown == 15)
+
+    -- Cooldown decrements on tick
+    d:tick()
+    assert(d.active.cooldown == 14)
+
+    -- Duplicate completion arrives: must NOT reset cooldown to 15
+    capturedComplete()
+    assert(d.active.cooldown == 14)
+
+    d:tick()
+    assert(d.active.cooldown == 13)
+end)
+
+-- 34. Callback identity disappearance and replacement cancel follow consistently on both callbacks
+test('callback identity disappearance and replacement cancel follow consistently on both callbacks', function()
+    -- 34a. Controller replacement on onStepComplete
+    local f1 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local cb1_complete
+    local currentOwner1 = f1.controller
+    local d1 = Commands.new(f1.observe, function() return true end, function() return currentOwner1, f1.npc end, function(t, onC) cb1_complete = onC; return true end)
+    d1:execute('follow')
+    currentOwner1 = {npc = f1.npc, adapter = f1.adapter} -- replaced controller
+    cb1_complete()
+    assert(d1.active == nil)
+    local h1 = d1:getHistory()
+    assert(h1[#h1].state == 'cancelled' and h1[#h1].summary:find('controller replaced'))
+
+    -- 34b. Controller disappearance on onStepComplete
+    local f2 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local cb2_complete
+    local currentOwner2 = f2.controller
+    local d2 = Commands.new(f2.observe, function() return true end, function() return currentOwner2, f2.npc end, function(t, onC) cb2_complete = onC; return true end)
+    d2:execute('follow')
+    currentOwner2 = nil -- disappeared controller
+    cb2_complete()
+    assert(d2.active == nil)
+    local h2 = d2:getHistory()
+    assert(h2[#h2].state == 'cancelled' and h2[#h2].summary:find('controller unavailable'))
+
+    -- 34c. NPC replacement on onStepFail
+    local f3 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local cb3_fail
+    local currentNpc3 = f3.npc
+    local d3 = Commands.new(f3.observe, function() return true end, function() return f3.controller, currentNpc3 end, function(t, onC, onF) cb3_fail = onF; return true end)
+    d3:execute('follow')
+    currentNpc3 = {getX = function() return 10 end, getY = function() return 10 end, getZ = function() return 0 end} -- replaced NPC
+    cb3_fail(nil, 'some error')
+    assert(d3.active == nil)
+    local h3 = d3:getHistory()
+    assert(h3[#h3].state == 'cancelled' and h3[#h3].summary:find('npc replaced'))
+
+    -- 34d. NPC disappearance on onStepFail
+    local f4 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local cb4_fail
+    local currentNpc4 = f4.npc
+    local d4 = Commands.new(f4.observe, function() return true end, function() return f4.controller, currentNpc4 end, function(t, onC, onF) cb4_fail = onF; return true end)
+    d4:execute('follow')
+    currentNpc4 = nil -- disappeared NPC
+    cb4_fail(nil, 'some error')
+    assert(d4.active == nil)
+    local h4 = d4:getHistory()
+    assert(h4[#h4].state == 'cancelled' and h4[#h4].summary:find('npc unavailable'))
+end)
+
+-- 35. Stale callbacks after stop/restart and session reset cannot affect new actions
+test('stale callbacks after stop/restart and session reset cannot affect new actions', function()
+    -- 35a. Stale callbacks after user stop and restarted follow
+    local f1 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local old_complete, old_fail
+    local stepCount = 0
+    local d1 = Commands.new(f1.observe, function() return true end, f1.identityProvider, function(t, onC, onF)
+        stepCount = stepCount + 1
+        if stepCount == 1 then
+            old_complete = onC
+            old_fail = onF
+        end
+        return true
+    end)
+    d1:execute('follow') -- action #1
+    assert(d1.active and d1.active.id == 1)
+    d1:execute('stop')   -- action #1 stopped
+    assert(d1.active == nil)
+
+    d1:execute('follow') -- action #3 (stop consumed sequence #2)
+    assert(d1.active and d1.active.id == 3 and d1.active.stepState == 'walking')
+
+    -- Stale callbacks from action #1 fire: must not touch action #3
+    old_complete()
+    assert(d1.active and d1.active.id == 3 and d1.active.stepState == 'walking')
+    old_fail(nil, 'old fail')
+    assert(d1.active and d1.active.id == 3 and d1.active.stepState == 'walking')
+
+    -- 35b. Stale callbacks after session reset
+    local f2 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local s1_complete, s1_fail
+    local s2_complete, s2_fail
+    local walks = 0
+    local d2 = Commands.new(f2.observe, function() return true end, f2.identityProvider, function(t, onC, onF)
+        walks = walks + 1
+        if walks == 1 then
+            s1_complete = onC
+            s1_fail = onF
+        else
+            s2_complete = onC
+            s2_fail = onF
+        end
+        return true
+    end)
+    d2:execute('follow') -- session 1, action #1
+    assert(d2.active and d2.active.session == 1)
+    d2:reset()
+    assert(d2.active == nil)
+
+    -- Stale callbacks fire on reset dispatcher: must do nothing
+    s1_complete()
+    assert(d2.active == nil)
+    s1_fail(nil, 's1 fail')
+    assert(d2.active == nil)
+
+    -- New follow in session 2: stale callbacks from session 1 must not touch it
+    d2:execute('follow') -- session 2, action #1
+    assert(d2.active and d2.active.session == 2 and d2.active.stepState == 'walking')
+    s1_complete()
+    assert(d2.active and d2.active.session == 2 and d2.active.stepState == 'walking')
+    s1_fail(nil, 's1 fail')
+    assert(d2.active and d2.active.session == 2 and d2.active.stepState == 'walking')
+
+    -- Active session 2 callback functions normally
+    s2_complete()
+    assert(d2.active and d2.active.session == 2 and d2.active.stepState == 'idle')
+end)
+
+-- 36. Observations.read extracts player liveness safely for alive and dead player
+test('Observations.read extracts player liveness safely for alive and dead player', function()
+    local mockNpc = {
+        getX = function() return 10 end,
+        getY = function() return 10 end,
+        getZ = function() return 0 end
+    }
+    local mockAdapter = {
+        meta = {},
+        isDead = function() return false end,
+        isResident = function() return true end,
+        isIncomplete = function() return false end,
+        listNPCs = function() return {mockNpc} end
+    }
+    local controller = {npc = mockNpc, adapter = mockAdapter}
+
+    -- Alive player (with isDead function)
+    local alivePlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end
+    }
+    local dataAlive = Observations.read(controller, alivePlayer, false)
+    assert(dataAlive.state == 'active')
+    assert(dataAlive.player ~= nil)
+    assert(dataAlive.player.x == 12 and dataAlive.player.y == 12 and dataAlive.player.z == 0)
+    assert(dataAlive.player.dead == false)
+    assert(dataAlive.player.isDead == false)
+    assert(dataAlive.player.alive == true)
+    assert(dataAlive.playerDead == false)
+    assert(dataAlive.playerAlive == true)
+
+    -- Dead player (with isDead function returning true)
+    local deadPlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return true end
+    }
+    local dataDead = Observations.read(controller, deadPlayer, false)
+    assert(dataDead.state == 'active')
+    assert(dataDead.player ~= nil)
+    assert(dataDead.player.x == 12 and dataDead.player.y == 12 and dataDead.player.z == 0)
+    assert(dataDead.player.dead == true)
+    assert(dataDead.player.isDead == true)
+    assert(dataDead.player.alive == false)
+    assert(dataDead.playerDead == true)
+    assert(dataDead.playerAlive == false)
+
+    -- Dead player (with boolean dead = true table)
+    local deadTable = {x = 14, y = 14, z = 0, dead = true}
+    local dataTableDead = Observations.read(controller, deadTable, false)
+    assert(dataTableDead.player ~= nil)
+    assert(dataTableDead.player.dead == true)
+    assert(dataTableDead.playerDead == true)
+    assert(dataTableDead.playerAlive == false)
 end)
 
 print('RESULT ' .. count .. ' follow checks passed')

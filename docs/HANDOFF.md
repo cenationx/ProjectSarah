@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-181 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-33 console, 14 acceptance driver, 28 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+189 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+33 console, 14 acceptance driver, 36 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -35,7 +35,7 @@ bounded native walk, cancellation with sustained halt, and same-process reload r
 Movable console panel implemented offline via title-bar mouse dragging with bounds clamping (normal and small screens),
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
-Bounded manual follow-player command implemented offline (28 checks in `tools/test_follow.py`) with 2-tile deadzone, 8-tile leash, floor check, adjacent candidate targeting, stop mid-stride cancellation, and stop failure blocking.
+Bounded manual follow-player command implemented offline and hardened against Codex review (36 checks in `tools/test_follow.py`): safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
