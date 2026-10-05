@@ -1,11 +1,11 @@
 # Consolidated M1 Native Acceptance Session Plan
 
 Updated: 2026-10-05 (Europe/Helsinki).
-Status: **PREPARED** for consolidated native execution by Codex and the user.
+Status: **IN PROGRESS** in the backed-up isolated sandbox; see current results below.
 Offline verification: **202 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
-> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented and hardened offline (46 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
+> **Notice**: Partial native results are recorded below; remaining gates are not yet accepted. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented and hardened offline (46 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`) with partial native follow results recorded below. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
 
 ---
 
@@ -357,3 +357,21 @@ If any test step fails or requires repetition:
    Copy-Item -Path "runtime/backups/slice-c-native-20261005-143139/Previous-mod/*" -Destination "runtime/isolated/mods/SarahFoundation/" -Recurse -Force
    ```
 5. Re-run `tools/preflight.py` to verify restored baseline state before repeating tests.
+
+## Current native results (Codex and user, 2026-10-05)
+
+Source baseline: 5fa6b9c. Case: Sandbox/2026-10-05_19-04-21.
+Evidence: evidence/batched-follow-native.txt; backup: runtime/backups/batched-follow-20261005-190349/Prepared-spacious.
+
+- R1 PASS, physical user title drag; automated drag did not move the panel.
+- R3 PASS, moved position retained across mouse Close/context-menu reopen.
+- R5 PASS, button refused a target beyond 8 tiles.
+- R6 PASS, visible red context-menu distance refusal.
+- R2 partial: tested mouse controls preserved position; full control coverage remains pending.
+- R4, R7 and R8 pending in this batch.
+- Native follow movement PASS by user observation; initial catch-up and in-range waiting also observed by Codex.
+- F2 partial: in-range waiting observed; out-of-range cooldown distinction pending.
+- F3 PASS: Status showed disengaged (player out of range (>8 tiles)), action idle.
+- Follow mid-stride Stop and no automatic resumption PASS by user report; no independent screenshot of transition.
+- F1, F4, F5 and F6 remain unverified natively. Do not induce an engine stop failure solely for this test.
+- User noted slow tracking; responsiveness concern retained for later refinement, no source adjustment.
