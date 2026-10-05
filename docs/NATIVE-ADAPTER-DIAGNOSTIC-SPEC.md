@@ -1,3 +1,11 @@
+## Subsequent inert symbol-inspection artifact (2026-10-06)
+
+tools/NativeExposureProbe.lua now implements a bounded injected symbol-reference
+inspection subset, not a native resolver or adapter. See EXPOSURE-PROBE-OFFLINE.md.
+It stays outside production and does not invoke returned functions. All555 suite
+checks/13 suites +11 runner +19 preflight PASS, including48 probe checks.
+Actual native bindings/overloads/enum wrappers and live gates below remain open.
+
 # Native adapter diagnostic specification
 
 2026-10-06. Reviewed design, based on offline checkpoint aa7595f.

@@ -1,0 +1,16 @@
+Project Sarah - inert symbol exposure policy, 2026-10-06
+Starting checkpoint:40bc5aa94c3d9833e15391c13636629f9ccf6296,main,clean.
+Sole checkout editor:Codex. Gemini 3.8 Flash HIGH:NO-TOOLS source/base fixtures.
+Actual Lua source executed by Lupa Lua55, no native classes or engine bridge.
+run_tests.py:PASS,555 checks across13 suites; exposure probe48.
+test_runner.py:PASS,11. test_preflight.py:PASS,19.
+Fixed13 symbol aliases, paired reads max26, lifecycle captures max54.
+Sweep54 reset stages and26 cancellation-after-read stages; empty abort output.
+Returned functions not called; hostile table metadata not read/invoked.
+Opaque userdata fixtures validate type/reference handling, not game wrappers.
+Lua weak-reference checks validate fixture references only, not Java GC.
+Guarded environment checks no engine/global/import/event registration access.
+Exposed/distinct_references describe injected values, not native acceptance.
+No native resolver, lighting query, gameplay wiring, deployment/game launch,
+save/settings changes or Stop modifications. Lightingunknown/nativeAcceptancefalse.
+Deployed baseline5fa6b9c unchanged; native identity/exposure/light/Follow/render open.

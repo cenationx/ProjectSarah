@@ -34,6 +34,7 @@ DEFAULT_SUITES = [
     "tools/test_collector.py",
     "tools/test_adapter_boundary.py",
     "tools/test_sampler.py",
+    "tools/test_exposure_probe.py",
 ]
 
 DISCLAIMER = "These are offline fixture checks and do not establish native gameplay acceptance."

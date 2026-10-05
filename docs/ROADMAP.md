@@ -7,8 +7,11 @@
   across 12 suites +11 runner +19 preflight self-tests PASS.
 - [x] Bounded independent-light evidence audit: no suitable supplied query
   established. See INDEPENDENT-LIGHTING-AUDIT.md; this is not exhaustive API proof.
-- [ ] Prepare inert native exposure diagnostic artifact offline with Gemini,
-  Codex review/tests, no lighting query/wiring/deployment/live invocation.
+- [x] Inert tools/NativeExposureProbe.lua, Gemini authoring/Codex review:
+  48 probe checks; full555 checks/13 suites +11 runner +19 preflight PASS.
+  No native resolver/invocation; symbol/enum reference fixtures are not engine proof.
+- [ ] Review concrete native caller/resolver mapping and lifecycle-token evidence,
+  then deferred overload/enum/reset acceptance cases. No deployment/live testing.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/

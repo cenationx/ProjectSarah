@@ -1,3 +1,10 @@
+## Latest offline baseline (2026-10-06, exposure probe)
+
+Default runner includes13 suites and555 checks including48 exposure probe cases.
+Runner self-tests:11; preflight self-tests:19. See EXPOSURE-PROBE-OFFLINE.md.
+Actual Lua55 fixture execution remains distinct from native Kahlua acceptance.
+Earlier totals below are historical.
+
 ## Latest offline baseline (2026-10-06, diagnostic sampler)
 
 Default runner includes 12 suites and 507 checks, including 57 sampler fixtures.

@@ -1,3 +1,25 @@
+## Latest checkpoint: inert symbol exposure probe (2026-10-06)
+
+Started clean main40bc5aa; Codex retains sole shared-checkout editing ownership.
+Gemini 3.8 Flash HIGH authored NO-TOOLS source/base fixtures; Codex reviewed,
+applied and strengthened actual-stage/privacy/reference regressions.
+tools/NativeExposureProbe.lua is implemented/tested OFFLINE ONLY, with fixed
+13 aliases, at most26 symbol reads/54 lifecycle captures. It never invokes
+resolved methods or enum metadata and returns scalar diagnostics only.
+No native resolver/engine bridge is included. Exposed/distinct_references are
+statements about supplied fixture references, NOT verified engine compatibility.
+Lighting stays unknown; nativeAcceptance=false. No production imports/wiring,
+deployment, game launches, actions or saves/settings changes. Stop untouched.
+48 probe checks; all555 checks/13 suites +11 runner +19 preflight PASS.
+See EXPOSURE-PROBE-OFFLINE.md and evidence/exposure-probe-offline-20261006.txt.
+Next bounded offline step: review concrete native caller/resolver mapping and
+lifecycle-token evidence; prepare deferred overload/enum/reset acceptance cases.
+Do not infer native symbol availability or wrapper stability from these fixtures.
+Codex alone reviews/applies/tests/commits/pushes and later deploys/launches.
+Live tests stay here and deferred. Deployed baseline remains5fa6b9c; external/model
+AI ON HOLD. Native Follow/rendering, identity/exposure/light remain pending.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: bounded independent-light audit (2026-10-06)
 
 Codex owns the shared checkout; clean main2cce1d8 verified at start. Gemini
@@ -1135,3 +1157,8 @@ Historical review during completed collector batch: two visible drafts rejected 
 Historical sampler batch start (now completed) (2026-10-06): clean main2391581 verified, Codex sole editor. Gemini NO-TOOLS code/fixtures for inert one-shot DiagnosticSampler with injected existing modules/shared budgets/lifecycle discard. Lighting forced unknown; no gameplay wiring or native/saves/settings changes.
 
 Historical sampler review (now completed): first Gemini draft rejected for unvisited-target fixtures/nil-hole skipped cases, bindings copied after capture, LOS despite invalid bindings, revision precheck/cleanup gaps and eager coverage before cone filtering. No sampler source applied. Gemini revising; local drafts in ignored runtime/sampler-gemini-20261006.
+
+Historical exposure batch start (now completed) (2026-10-06): clean main40bc5aa verified;
+Codex sole checkout editor. Gemini NO-TOOLS fixed13-symbol policy/fixtures draft
+pending. Artifact under tools only; no returned methods invoked, native lighting
+queries, game/deployment/save/settings changes. Live acceptance remains deferred.
