@@ -842,3 +842,19 @@ Gemini completed offline hardening of follow status reporting during cooldown an
 
 
 
+
+Batched follow native session IN PROGRESS: Codex owns checkout. Game confirmed closed before backup/deployment. Backup: runtime\backups\batched-follow-20261005-190349 (existing world, Previous-mod, keys/options/selection). Reviewed five changed production files deployed from 5fa6b9c. Next: prepare fresh isolated zero-zombie case through native sandbox UI. No native acceptance claimed. Restore only game-closed after preserving latest state.
+
+Fresh isolated Sandbox/2026-10-05_19-04-21 created through native UI; Zombie Count None and Respawn None visually confirmed. Game running, player inside starting house; Sarah not yet spawned. Next user positions player on clear flat space, then clean exit/backup of prepared case before acceptance.
+
+Prepared Sandbox/2026-10-05_19-04-21 saved a and GameThread exited. Sarah ACTIVE npc=true localPlayerPreserved=true logged after manual spawn, but not visibly rendered before exit. Prepared-spacious backup preserved game-closed at runtime/backups/batched-follow-20261005-190349. Next reload/inspect visibility then UI gates.
+
+Reloaded prepared case: Status #1 Sarah active/idle, player (8314.66,11690.41,0), NPC (8305.50,11689.50,0). Sarah was already spawned nearer the house, explaining absence from current view; no rendering failure established. Walk Here #2 correctly rejected target beyond 8 tiles. Automated title drag did not move panel; user drag needed to distinguish input limitation from UI defect.
+
+Native batch progress: physical title drag passed (user); moved panel close/reopen retained position approximately (53,187). Context-menu distance refusal visibly displayed red Target is too far (maximum 8 tiles). Game running; next bring player nearer Sarah for follow activation. Future longer-range catch-up is desired by user, not implemented in this batch.
+
+Native follow progress (Codex, 2026-10-05): Follow #5 accepted; Status #6 showed active follow waiting within range after Sarah moved from (8305.50,11689.50,0) to (8310.50,11689.50,0), near player (8311.31,11690.81,0). User subsequently walked and confirmed Sarah followed, with noticeable tracking delay. Implementation waits beyond 2 tiles, completes each current walk target before retargeting, and waits 15 eligible ticks between steps. Responsiveness concern recorded; no timing measurement or source adjustment. Follow remains engaged in running isolated sandbox; next verify Stop and no automatic resumption. Full native acceptance pending. Codex retains checkout ownership.
+
+Native Stop #8 cancelled follow #7 and reported Sarah stopped. Status #9 confirmed Action idle (last #7 cancelled), Follow disengaged (stopped by user), player (8301.84,11678.75,0), NPC (8302.50,11679.50,0). Game was paused at initial capture; resumed via normal play before console/Stop. Sarah had reached player before Stop, so mid-stride cancellation is NOT established by this attempt. Console closed; next user movement checks no automatic follow resumption. Game remains running, Codex owns checkout.
+
+Native batch update (Codex, 2026-10-05): user confirmed Sarah stayed put after manual Stop while player moved away; no automatic resumption observed. User then restarted Follow and moved beyond leash. Console visually inspected: Status #11 reports Sarah active, Action idle (last #10 cancelled), Follow disengaged (player out of range (>8 tiles)); player (8281.83,11679.61,0), NPC (8291.88,11679.50,0), approximately 10.05 tiles apart. Native leash cancellation/status PASS. Automatic notice timing, one-time delivery and no-replay are not established by this status screenshot. Game remains running PAUSED, console open at (53,187), Follow inactive. Mid-stride Stop and remaining batched gates pending; Codex retains ownership. No source or normal-save changes.

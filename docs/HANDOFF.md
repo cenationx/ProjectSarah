@@ -814,3 +814,15 @@ Gemini completed offline implementation and automated verification of user-facin
 - Baseline backup intact at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
 
+
+Codex batched native session IN PROGRESS. Pre-deployment backup: runtime\backups\batched-follow-20261005-190349. Five reviewed source changes deployed; no temporary probes. Fresh zero-zombie sandbox case setup next; native gates pending.
+
+Active setup world: Sandbox/2026-10-05_19-04-21, zero-zombie selection visually verified. Game window 54068060; no Sarah spawned yet. Awaiting user positioning; preserve and back up new case game-closed before acceptance.
+
+Prepared-spacious snapshot now preserved game-closed in batched-follow-20261005-190349; SAVED a and exit verified. Continue selects Sandbox/2026-10-05_19-04-21. Native session not yet accepted.
+
+Native follow progress (Codex, 2026-10-05): Follow #5 accepted; Status #6 showed active follow waiting within range after Sarah moved from (8305.50,11689.50,0) to (8310.50,11689.50,0), near player (8311.31,11690.81,0). User subsequently walked and confirmed Sarah followed, with noticeable tracking delay. Implementation waits beyond 2 tiles, completes each current walk target before retargeting, and waits 15 eligible ticks between steps. Responsiveness concern recorded; no timing measurement or source adjustment. Follow remains engaged in running isolated sandbox; next verify Stop and no automatic resumption. Full native acceptance pending. Codex retains checkout ownership.
+
+Native Stop #8 cancelled follow #7 and reported Sarah stopped. Status #9 confirmed Action idle (last #7 cancelled), Follow disengaged (stopped by user), player (8301.84,11678.75,0), NPC (8302.50,11679.50,0). Game was paused at initial capture; resumed via normal play before console/Stop. Sarah had reached player before Stop, so mid-stride cancellation is NOT established by this attempt. Console closed; next user movement checks no automatic follow resumption. Game remains running, Codex owns checkout.
+
+Native batch update (Codex, 2026-10-05): user confirmed Sarah stayed put after manual Stop while player moved away; no automatic resumption observed. User then restarted Follow and moved beyond leash. Console visually inspected: Status #11 reports Sarah active, Action idle (last #10 cancelled), Follow disengaged (player out of range (>8 tiles)); player (8281.83,11679.61,0), NPC (8291.88,11679.50,0), approximately 10.05 tiles apart. Native leash cancellation/status PASS. Automatic notice timing, one-time delivery and no-replay are not established by this status screenshot. Game remains running PAUSED, console open at (53,187), Follow inactive. Mid-stride Stop and remaining batched gates pending; Codex retains ownership. No source or normal-save changes.
