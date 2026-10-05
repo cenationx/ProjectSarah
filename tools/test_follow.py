@@ -307,45 +307,25 @@ test('follow repaths on tick when player moves away', function()
     assert(d.active.stepState == 'walking')
 end)
 
--- 14. Sequential steps, step completion, and cooldown throttling
-test('step completion sets idle and cooldown throttles next dispatch', function()
+-- 14. Normal arrival waits in range, then follows on the first departure tick
+test('normal arrival resumes on first departure tick without cooldown', function()
     local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
-    local capturedComplete, capturedFail
+    local capturedComplete
     local walkCount = 0
-    local d = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete, onFail)
+    local d = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete)
         walkCount = walkCount + 1
         capturedComplete = onComplete
-        capturedFail = onFail
         return true
     end)
     d:execute('follow')
-    assert(walkCount == 1)
-    assert(d.active.stepState == 'walking')
-
-    -- Step arrives
     f.npcPos.x = 13
     capturedComplete()
-
-    assert(d.active.stepState == 'idle')
-    assert(d.active.cooldown == 15)
-
-    -- Player moves further to (16, 10)
+    assert(d.active.stepState == 'idle' and d.active.cooldown == 0)
+    for _ = 1, 20 do d:tick() end
+    assert(walkCount == 1 and d.active.stepState == 'idle')
     f.playerPos.x = 16
-
-    -- Tick during cooldown: should decrement without dispatching new walk
     d:tick()
-    assert(walkCount == 1)
-    assert(d.active.cooldown == 14)
-
-    -- Run down remaining cooldown
-    for _ = 1, 14 do d:tick() end
-    assert(d.active.cooldown == 0)
-    assert(walkCount == 1)
-
-    -- Next tick dispatches subsequent walk
-    d:tick()
-    assert(walkCount == 2)
-    assert(d.active.stepState == 'walking')
+    assert(walkCount == 2 and d.active.stepState == 'walking')
 end)
 
 -- 15. Leash limit (> 8 tiles) cancels follow immediately mid-stride
@@ -707,11 +687,11 @@ test('step completion followed by late failure during cooldown is defused', func
 
     -- Step 1 completes normally
     capturedComplete()
-    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 15)
+    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 0)
 
     -- Late failure from completed Step 1 arrives during cooldown
     capturedFail(nil, 'late path error')
-    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 15)
+    assert(d.active ~= nil and d.active.stepState == 'idle' and d.active.cooldown == 0)
     local h = d:getHistory()
     assert(h[#h].state == 'running')
 end)
@@ -726,9 +706,10 @@ test('duplicate step completion during cooldown does not reset cooldown', functi
     end)
     d:execute('follow')
     capturedComplete()
-    assert(d.active and d.active.cooldown == 15)
+    assert(d.active and d.active.cooldown == 0)
 
-    -- Cooldown decrements on tick
+    -- An explicit cooldown fixture still protects against duplicate completion.
+    d.active.cooldown = 15
     d:tick()
     assert(d.active.cooldown == 14)
 
@@ -1648,7 +1629,7 @@ test('stale callbacks from step 1 are defused after mid-walk retargeting', funct
     -- Legitimate step 2 completion works normally
     capturedStep2Comp()
     assert(d.active.stepState == 'idle')
-    assert(d.active.cooldown == 15)
+    assert(d.active.cooldown == 0)
 end)
 
 -- 51. Synchronous callbacks during retarget dispatch are handled safely
@@ -1670,7 +1651,7 @@ test('synchronous callbacks during retarget dispatch are handled safely', functi
     assert(walkCount == 2)
     assert(d.active ~= nil)
     assert(d.active.stepState == 'idle')
-    assert(d.active.cooldown == 15)
+    assert(d.active.cooldown == 0)
 
     -- Part B: synchronous failure during retarget dispatch
     walkCount = 0
@@ -1837,6 +1818,33 @@ test('deadzone entry mid-walk halts engine cleanly and transitions to idle in ra
     assert(walkCount == 2)
     assert(d.active.stepState == 'walking')
     assert(d.active.currentTarget.x == 14 and d.active.currentTarget.y == 10)
+end)
+
+
+-- 56. Native stop may fire old callbacks synchronously before returning.
+test('retarget retires callbacks before synchronous engine stop notifications', function()
+    local oldComplete, oldFail
+    local walks, stops = 0, 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason)
+        if reason == 'retarget' then
+            stops = stops + 1
+            oldFail(nil, 'stopped')
+            oldComplete()
+        end
+        return true
+    end, f.identityProvider, function(target, onComplete, onFail)
+        walks = walks + 1
+        oldComplete, oldFail = onComplete, onFail
+        return true
+    end)
+    d:execute('follow')
+    f.playerPos.x = 16
+    for _ = 1, 6 do d:tick() end
+    assert(stops == 1 and walks == 2)
+    assert(d.active and d.active.stepState == 'walking')
+    assert(d.active.currentTarget.x == 15)
+    assert(d.stopFailed == nil and #d.noticeQueue == 0)
 end)
 
 print('RESULT ' .. count .. ' follow checks passed')

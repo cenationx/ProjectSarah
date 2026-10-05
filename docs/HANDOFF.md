@@ -858,7 +858,7 @@ Gemini completed offline implementation and automated regression coverage for Fo
   3. Failure to halt upon reaching the 2-tile deadzone mid-walk.
 - **Implemented changes**:
   - `findFollowTarget(nx, ny, nz, px, py, pz)` helper extracted for shared candidate generation and validation.
-  - Safe mid-walk retargeting in `tickFollow()`: bounded frequency (`minRetargetTicks = 6` / ~100ms), triggers when player shifts >= 2 tiles (`playerShiftSq >= 4.0`) or target distance > 2 tiles (`targetDistSq > 4.0`).
+  - Safe mid-walk retargeting in `tickFollow()`: bounded frequency (`minRetargetTicks = 6`; real-time interval unmeasured), triggers when player shifts >= 2 tiles (`playerShiftSq >= 4.0`) or target distance > 2 tiles (`targetDistSq > 4.0`).
   - Pre-retirement of step callbacks (`act.retireStep()`) and generation increment *before* invoking `self:invokeStop('retarget')`.
   - Confirmed stop success required before dispatching new step; stop failure sets `self.stopFailed` and blocks further movement until recovery.
   - Mid-walk deadzone halting: halts cleanly via `invokeStop('in range')` when within 2 tiles after at least 6 ticks; immediate resumption when player leaves deadzone without artificial cooldown.
@@ -868,13 +868,13 @@ Gemini completed offline implementation and automated regression coverage for Fo
 ### Codex native test checklist for Follow responsiveness
 When ready for native testing in the isolated zero-zombie sandbox:
 1. Ensure game is CLOSED (`javaw.exe` absent).
-2. Create fresh backup of `runtime/isolated/Saves/Rising/Sandbox/2026-10-05_19-04-21` and isolated settings.
+2. Create fresh backup of `runtime/isolated/Saves/Sandbox/2026-10-05_19-04-21` and isolated settings.
 3. Deploy reviewed production file `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`.
 4. Launch isolated test game (`Sandbox/2026-10-05_19-04-21`).
 5. Position player 3–4 tiles from Sarah on clear ground.
 6. Open Sarah Console via context menu or key (F9), click [Follow]. Verify Sarah begins following.
 7. **Forward tracking**: Walk steadily in one direction. Verify Sarah adjusts path and tracks player smoothly without stopping at old squares or falling far behind.
-8. **Turning tracking**: Make a 90-degree turn. Verify Sarah redirects her path toward the player's new heading within ~0.5s instead of completing the old heading.
+8. **Turning tracking**: Make a 90-degree turn. Verify Sarah redirects her path toward the player's new heading promptly instead of completing the old heading; measure rather than assume latency.
 9. **Deadzone arrival**: Stop and let Sarah approach within 2 tiles. Verify Sarah halts cleanly into idle stance without orbiting or overshooting.
 10. **Immediate resumption**: Walk away beyond 2 tiles. Verify Sarah immediately begins following without an extended pause.
 11. **Mid-stride stop**: While Sarah is actively walking, click [Stop]. Verify Sarah halts immediately, stays stopped, and does not automatically resume when player walks away.
@@ -882,3 +882,7 @@ When ready for native testing in the isolated zero-zombie sandbox:
 13. Close console, save and exit cleanly.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+Codex review of Gemini ba25804 (2026-10-05): checkout released back to Codex; independently reran 211 suite checks +11 runner +19 preflight, all PASS. Review found normal step completion still installed a 15-eligible-tick cooldown despite responsiveness intent; changed that path to cooldown=0. Revised normal-arrival regression verifies sustained idle inside deadzone and first-tick dispatch when player departs. Existing callback tests adjusted for no automatic cooldown; explicit cooldown fixture retained. Added synchronous engine-stop callback regression proving old completion/failure events are retired before retarget replacement starts. Final 212 suite checks (56 follow) +11 runner +19 preflight PASS. Corrected unsupported milliseconds/turn-latency claims and erroneous nested Rising/Sandbox backup path. Six game ticks are a bound, not a verified real-time interval.
+
+Game CLOSED; deployed runtime, save and settings unchanged. Source reviewed offline only; native responsiveness remains pending. Next single batched native test: forward and turning follow, no jitter/starvation, halt within deadzone, resume after both normal arrival and deadzone halt, mid-stride Stop/no restart, leash feedback and reload idle. Preserve fresh game-closed backup and previous Commands.lua before deployment. Backup baseline runtime/backups/batched-follow-20261005-190349/Final-native remains intact. Codex owns checkout; external AI ON HOLD.

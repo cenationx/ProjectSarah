@@ -357,7 +357,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 self.active.stepState='idle'
                 self.active.stepTicks=0
                 self.active.currentTarget=nil
-                self.active.cooldown=15
+                self.active.cooldown=0
                 self.active.summary='Following player (in range)'
                 self:updateHistory(self.active.id,'running',self.active.summary)
             end

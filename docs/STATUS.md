@@ -892,7 +892,7 @@ Gemini completed offline implementation and automated verification of manual Fol
   - *Extracted `findFollowTarget(nx, ny, nz, px, py, pz)` helper*: Shared between initial step dispatch and mid-walk retargeting. Generates adjacent candidate squares around the player, sorts by distance to Sarah, and validates via `invokeValidate`.
   - *Safe mid-walk retargeting in `tickFollow()`*:
     - Tracks `act.targetPlayer = {x=px, y=py, z=pz}`.
-    - Bounded frequency: enforced via `act.stepTicks >= (act.minRetargetTicks or 6)` (default 6 ticks / ~100ms) to prevent thrashing, path restarts, or movement jitter while the player is in motion.
+    - Bounded frequency: enforced via `act.stepTicks >= (act.minRetargetTicks or 6)` (default 6 game ticks; real-time interval unmeasured) to prevent thrashing, path restarts, or movement jitter while the player is in motion.
     - Evaluates retarget when `playerShiftSq >= 4.0` (player shifted >= 2 tiles from previous reference) or `targetDistSq > 4.0` (current target tile is > 2 tiles from player).
     - Checks `newTarget`: if `newTarget == act.currentTarget`, updates `targetPlayer` reference and continues walking without restart. If `newTarget` differs:
       1. Retires previous step callbacks via `act.retireStep()` and increments `act.stepGen` *before* stopping the engine.
@@ -920,3 +920,7 @@ Gemini completed offline implementation and automated verification of manual Fol
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime and saves untouched.
   - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+Codex review of Gemini ba25804 (2026-10-05): checkout released back to Codex; independently reran 211 suite checks +11 runner +19 preflight, all PASS. Review found normal step completion still installed a 15-eligible-tick cooldown despite responsiveness intent; changed that path to cooldown=0. Revised normal-arrival regression verifies sustained idle inside deadzone and first-tick dispatch when player departs. Existing callback tests adjusted for no automatic cooldown; explicit cooldown fixture retained. Added synchronous engine-stop callback regression proving old completion/failure events are retired before retarget replacement starts. Final 212 suite checks (56 follow) +11 runner +19 preflight PASS. Corrected unsupported milliseconds/turn-latency claims and erroneous nested Rising/Sandbox backup path. Six game ticks are a bound, not a verified real-time interval.
+
+Game CLOSED; deployed runtime, save and settings unchanged. Source reviewed offline only; native responsiveness remains pending. Next single batched native test: forward and turning follow, no jitter/starvation, halt within deadzone, resume after both normal arrival and deadzone halt, mid-stride Stop/no restart, leash feedback and reload idle. Preserve fresh game-closed backup and previous Commands.lua before deployment. Backup baseline runtime/backups/batched-follow-20261005-190349/Final-native remains intact. Codex owns checkout; external AI ON HOLD.

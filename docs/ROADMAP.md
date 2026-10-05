@@ -107,3 +107,6 @@ backup guidance, regression checklist, third-party notices and a limited release
 No multiplayer or broad PZNS modernization commitment is implied.
 
 Native slice C update (2026-10-05): nearby arrival, already-at-target, sustained cancellation/resumption, mouse toolbar and context-menu success, same-process history reset verified. Distance refusal/red feedback and post-reload user movement remain pending. See evidence/slice-c-native-partial.txt; no full native acceptance claim.
+
+Follow responsiveness review: 212 offline suite checks plus 11 runner/19 preflight pass after Codex normal-arrival cooldown correction; native regression pending. See latest STATUS/HANDOFF.
+
