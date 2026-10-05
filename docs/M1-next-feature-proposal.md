@@ -1,14 +1,14 @@
 # Project Sarah: Post-M1 Bounded Gameplay Proposal — Manual "Follow Player" Command
 
 Updated: 2026-10-05 (Europe/Helsinki).
-Status: **PROPOSAL ONLY** (Drafted for Codex and user review; **NOT** approved or authorized for implementation; M1 native acceptance gates R1–R8 remain pending).
+Status: **OFFLINE IMPLEMENTATION AUTHORIZED** (Offline implementation authorized by user; native acceptance remains pending Codex batched testing alongside M1 gates R1–R8).
 Offline verification baseline: **153 automated checks pass across 6 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
 > **Policy & Safeguards Notice**:
-> 1. **Do not implement yet**: This document is an architectural and operational proposal only. No gameplay or production code has been modified.
-> 2. **Strict M1 Dependency**: Implementation must **not** begin until all remaining M1 native acceptance gates (R1–R8 in `docs/M1-batched-acceptance.md`) pass natively in Codex with verified logs.
-> 3. **External AI On Hold**: The external AI layer remains strictly **ON HOLD** by explicit user directive. No LLMs, dialogue systems, or background autonomous agents are proposed.
+> 1. **Offline Implementation Authorized**: The user authorized implementing bounded manual follow-player behavior OFFLINE. Remaining M1 native checks do not block offline coding; all native acceptance claims remain pending.
+> 2. **Native Testing Boundary**: Native acceptance of follow behavior will be evaluated by Codex in batched acceptance sessions alongside remaining M1 gates (R1–R8 in `docs/M1-batched-acceptance.md`).
+> 3. **External AI On Hold**: The external AI layer remains strictly **ON HOLD** by explicit user directive. No LLMs, dialogue systems, or background autonomous agents are proposed or implemented.
 > 4. **No Broad PZNS Modernization**: Unmodified PZNS is incompatible with Build 42.21.0. This feature builds exclusively on Sarah's minimal, verified foundation (`Commands.lua`, `Engine.lua`, `Lifecycle.lua`).
 
 ---
@@ -40,10 +40,10 @@ A manual `follow` command introduces companion navigation without autonomy or mi
 
 ### 2.1 Why PZNS Companion Job Failed in Build 42
 In unmodified PZNS (`vendor/PZNS/PZNS_Framework/media/lua/client/07_npc_ai/PZNS_JobsCompanion.lua`), companion following was bundled into a heavy, monolithic subsystem that included:
-- Continuous clearing of native action queues every 30 ticks (`PZNS_ClearQueuedNPCActions`), causing animation jerking and pathfinder crashes.
+- Continuous clearing of native action queues every 30 ticks (`PZNS_ClearQueuedNPCActions`), which is incompatible with B42 action queue lifecycles.
 - Unverified vehicle boarding and passenger logic (`jobCompanion_EnterCar`, `PZNS_ExitVehicle`).
 - Sneaking synchronization, weapon aiming manipulation, and combat interrupts (`PZNS_IsNPCBusyCombat`).
-- Automatic door opening and closing during movement (`tempdoor:ToggleDoor`), causing desynchronization and clipping through locked doors.
+- Automatic door opening and closing during movement (`tempdoor:ToggleDoor`), which is unverified in Build 42 and outside minimal companion scope.
 - Random tile offsets (`ZombRand(1, CompanionFollowRange)`), causing erratic routing and collisions.
 
 ### 2.2 Sarah's Minimal Bounded Follow Architecture
@@ -92,9 +92,9 @@ The follow proposal requires **zero changes** to `Engine.lua` and **zero changes
 ## 4. Geometry, Distance Boundaries, and Travel Suspension
 
 ### 4.1 Inner Deadzone ($r \le 2.0$ tiles)
-- **Problem**: In PZ, a tile occupied by the local player is not free (`square:isFree(false)` returns `false`). If Sarah paths directly to the player's coordinate ($r = 0$), pathfinding fails or Sarah pushes into the player's collision volume. Additionally, continuous repathing while the player is standing still causes frame stutter and character jitter.
-- **Policy**: An inner deadzone radius of $r_{inner} = 2.0$ tiles ($dx^2 + dy^2 \le 4.0$).
-- **Behavior**: When Sarah is within 2 tiles of the player on the same floor, no new walk action is dispatched. If Sarah was walking and reaches this radius, she finishes her step and rests in an idle state.
+- **Problem**: Pathing Sarah directly to the player's exact square ($r = 0$) causes physical pushing into the player's collision volume, awkward character overlap, and visual crowding. Additionally, continuously dispatching repaths while the player stands nearby causes redundant action churn, animation stutter, and character jitter.
+- **Policy**: An intentional spacing policy establishing an inner deadzone radius of $r_{inner} = 2.0$ tiles ($dx^2 + dy^2 \le 4.0$).
+- **Behavior**: When Sarah is within 2 tiles of the player on the same floor, no new walk action is dispatched; Sarah remains comfortably idle in follow mode. If Sarah was walking and reaches this radius, she finishes her step and rests in an idle state.
 
 ### 4.2 Repath Band ($2.0 < r \le 8.0$ tiles)
 - **Policy**: When the Euclidean distance between Sarah and the player exceeds 2.0 tiles but remains $\le 8.0$ tiles, Sarah repaths.
@@ -174,7 +174,7 @@ To prevent regressions, the proposal distinguishes verified engine capabilities 
 - `IsoPlayer:setSneaking()`: Synchronization of stance is unverified in B42 and risks animation locks; excluded.
 - `PZNS_EnterVehicleAsPassenger`: Vehicle boarding is completely unverified for NPCs in Build 42; excluded.
 - `PZNS_IsNPCBusyCombat`: Combat integration is deferred; Sarah does not participate in combat.
-- `tempdoor:ToggleDoor()`: Automatic door opening during walks is unverified and risks clipping; excluded.
+- `tempdoor:ToggleDoor()`: Automatic door opening during walks is unverified in B42 and out of scope; excluded.
 - Teleportation / direct coordinate overrides (`setX`, `setY`): Strictly prohibited; Sarah must physically navigate using native pathfinding.
 
 ---

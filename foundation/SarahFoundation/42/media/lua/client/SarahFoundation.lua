@@ -93,6 +93,30 @@ state.menu=function(playerIndex,context,objects,test)
                 state.notify(player,msg,false)
             end
         end)
+        context:addOption("Sarah: follow",nil,function()
+            local player=getSpecificPlayer(0)
+            if not SarahConsole or not SarahConsole.getDispatch then
+                state.notify(player,"Sarah Console unavailable; cannot follow.",true)
+                return
+            end
+            local dispatch=SarahConsole.getDispatch()
+            if not dispatch then
+                state.notify(player,"Sarah dispatch unavailable; cannot follow.",true)
+                return
+            end
+            local res=dispatch:execute("follow")
+            if not res then
+                state.notify(player,"Follow request returned no outcome.",true)
+                return
+            end
+            if res.state=="rejected" or res.state=="failed" then
+                local reason=(res.lines and res.lines[1]) or ("Follow " .. res.state)
+                state.notify(player,reason,true)
+            elseif res.state=="running" then
+                local msg=(res.lines and res.lines[1]) or "Following player."
+                state.notify(player,msg,false)
+            end
+        end)
     end
 end
 Events.OnTick.Add(state.tick)

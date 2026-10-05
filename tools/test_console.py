@@ -277,20 +277,21 @@ test('console dispatch rejects controller replacement with same NPC and leaves r
     assert(stopped2==nil)
     dispatch:reset()
 end)
-test('console panel creates all 6 shortcut buttons with valid labels and non-overlapping geometry',function()
+test('console panel creates all 7 shortcut buttons with valid labels and non-overlapping geometry',function()
     s.open()
     local p=s.panel
-    assert(p and p.btnHelp and p.btnStatus and p.btnInventory and p.btnHistory and p.btnWalkHere and p.btnStop)
+    assert(p and p.btnHelp and p.btnStatus and p.btnInventory and p.btnHistory and p.btnWalkHere and p.btnFollow and p.btnStop)
     assert(p.btnRun and p.btnClose)
     assert(p.btnHelp.title=='Help' and p.btnHelp.command=='help')
     assert(p.btnStatus.title=='Status' and p.btnStatus.command=='status')
     assert(p.btnInventory.title=='Inventory' and p.btnInventory.command=='inventory')
     assert(p.btnHistory.title=='History' and p.btnHistory.command=='history')
     assert(p.btnWalkHere.title=='Walk Here' and p.btnWalkHere.command=='walk here')
+    assert(p.btnFollow.title=='Follow' and p.btnFollow.command=='follow')
     assert(p.btnStop.title=='Stop' and p.btnStop.command=='stop')
     assert(p.btnRun.title=='Run' and p.btnClose.title=='Close')
 
-    local btns={p.btnHelp,p.btnStatus,p.btnInventory,p.btnHistory,p.btnWalkHere,p.btnStop}
+    local btns={p.btnHelp,p.btnStatus,p.btnInventory,p.btnHistory,p.btnWalkHere,p.btnFollow,p.btnStop}
     for i,b in ipairs(btns) do
         assert(b.width>0 and b.height>0)
         assert(b.x>=12 and (b.x+b.width)<=p.width-12)
@@ -390,6 +391,22 @@ test('each shortcut button invokes its command once through normal output path a
         if item.text:find('Cancelled #'..walkActId) and item.text:find('%(walk here%)') then foundStopRes=true end
     end
     assert(foundStopCmd and foundStopRes)
+    assert(p.dispatch.active==nil)
+
+    -- 7. Follow shortcut
+    seqBefore=p.dispatch.sequence
+    p.btnFollow:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundFollowCmd,foundFollowRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> follow' then foundFollowCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' running') then foundFollowRes=true end
+    end
+    assert(foundFollowCmd and foundFollowRes)
+    assert(p.dispatch.active and p.dispatch.active.command=='follow')
+
+    -- Stop follow
+    p.btnStop:click()
     assert(p.dispatch.active==nil)
 
     s.close()
@@ -658,8 +675,10 @@ test('small-screen layout adapts height and keeps title bar, drag handle, Close,
     assert(closeScreenX==420 and closeScreenX + 68 <= 500)
     local runScreenX = p.x + p.btnRun.x
     assert(runScreenX==424 and runScreenX + 64 <= 500)
+    local followScreenX = p.x + p.btnFollow.x
+    assert(followScreenX==350 and followScreenX + 72 <= 500)
     local stopScreenX = p.x + p.btnStop.x
-    assert(stopScreenX==416 and stopScreenX + 72 <= 500)
+    assert(stopScreenX==428 and stopScreenX + 60 <= 500)
 
     -- Release mouse at x = -60
     p:onMouseUp(50, 15)
@@ -674,7 +693,7 @@ test('small-screen layout adapts height and keeps title bar, drag handle, Close,
     p:onMouseMove(200, 0)
     assert(p.x==0 and p.y==0)
     local helpScreenX = p.x + p.btnHelp.x
-    assert(helpScreenX==12 and helpScreenX + 72 <= 500)
+    assert(helpScreenX==12 and helpScreenX + 60 <= 500)
     local entryScreenX = p.x + p.entry.x
     assert(entryScreenX==12 and entryScreenX + 464 <= 500)
     p:onMouseUp(50, 15)
@@ -726,6 +745,8 @@ test('clicking controls does not start drag, modify coordinates, or duplicate co
     p:onMouseDown(p.btnHistory.x + 5, p.btnHistory.y + 5)
     assert((not p.moving) and p.x==origX and p.y==origY)
     p:onMouseDown(p.btnWalkHere.x + 5, p.btnWalkHere.y + 5)
+    assert((not p.moving) and p.x==origX and p.y==origY)
+    p:onMouseDown(p.btnFollow.x + 5, p.btnFollow.y + 5)
     assert((not p.moving) and p.x==origX and p.y==origY)
     p:onMouseDown(p.btnStop.x + 5, p.btnStop.y + 5)
     assert((not p.moving) and p.x==origX and p.y==origY)

@@ -9,7 +9,7 @@ before adding broader features. Multiplayer is outside the initial scope.
 |---|---|---|
 | M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
 | M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
-| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B smoke passed, slice C implemented offline |
+| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B smoke passed, slice C implemented offline, follow command implemented offline |
 | M2: Minimal AI vertical slice | One bounded model-to-action loop | ON HOLD; explicit user approval required |
 | M3: Sarah behavior and continuity | Personality, limited memory and useful behaviors | PROPOSED |
 | M4: Release candidate | Installation, regression checks and user documentation | PROPOSED |
@@ -77,6 +77,7 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
 - [x] Slice B: stop, cancellation and bounded request/result history; 94 automated checks and native idle-stop/history/session-reset smoke checks passed. Native active-action cancellation remains required alongside slice C.
 - [x] Slice C: walk here, initially nearby/same-floor; one action, true completion
   tracking, timeout, busy/invalid-target rejection, synchronous callback hardening, session-reset collision protection, console mouse buttons toolbar, movable console dragging with bounds clamping, and sustained halt acceptance verification (153 automated checks pass across 6 suites plus 11 runner self-tests and 19 preflight tests; bounded native live walk, cancellation, and reload reset passed; remaining native checks prepared for batched acceptance per docs/M1-batched-acceptance.md and docs/HANDOFF.md).
+- [x] Manual follow command: bounded offline follow-player behavior reusing existing dispatcher, 2-tile deadzone, 8-tile leash, floor checking, adjacent candidate targeting, stop mid-stride cancellation, stop failure blocking, and console Follow mouse button (181 automated checks pass across 7 suites; native acceptance strictly pending Codex live verification).
 - [x] Reset/invalidate actions on unload, death, controller change and world switch.
 - [ ] Native live command/focus/rebind/movement/restart tests in backed-up
   isolated cases; one Sarah and local player preserved.

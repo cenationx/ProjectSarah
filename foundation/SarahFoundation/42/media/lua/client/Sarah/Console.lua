@@ -81,6 +81,16 @@ local function walkSarah(target,onComplete,onFail,action)
     if not ok then return false,tostring(ret) end
     return true,ret
 end
+local function validateSarah(target)
+    if not SarahFoundation or not SarahFoundation.controller or not SarahFoundation.controller.npc then
+        return false,'Sarah controller or NPC unavailable'
+    end
+    local controller=SarahFoundation.controller
+    if not controller.adapter or not controller.adapter.validateTarget then
+        return true
+    end
+    return controller.adapter.validateTarget(controller.npc,target)
+end
 local function getDispatch()
     if not state.dispatch then
         state.dispatch=Commands.new(function(inventory)
@@ -89,7 +99,7 @@ local function getDispatch()
             -- Private identity provider contract: returns (controller, npc) references directly.
             local ctrl=SarahFoundation and SarahFoundation.controller
             return ctrl,ctrl and ctrl.npc
-        end,walkSarah)
+        end,walkSarah,validateSarah)
     end
     return state.dispatch
 end
@@ -145,6 +155,7 @@ function Panel:onShortcutStatus() self:executeCommand('status') end
 function Panel:onShortcutInventory() self:executeCommand('inventory') end
 function Panel:onShortcutHistory() self:executeCommand('history') end
 function Panel:onShortcutWalkHere() self:executeCommand('walk here') end
+function Panel:onShortcutFollow() self:executeCommand('follow') end
 function Panel:onShortcutStop() self:executeCommand('stop') end
 function Panel:initialise()
     ISPanel.initialise(self)
@@ -157,12 +168,13 @@ function Panel:initialise()
     local btnY=self.height-74
     local btnH=26
     local buttons={
-        {key='btnHelp',cmd='help',label=tr('UI_SarahConsole_Help','Help'),x=12,w=72,fn=Panel.onShortcutHelp},
-        {key='btnStatus',cmd='status',label=tr('UI_SarahConsole_Status','Status'),x=90,w=80,fn=Panel.onShortcutStatus},
-        {key='btnInventory',cmd='inventory',label=tr('UI_SarahConsole_Inventory','Inventory'),x=176,w=96,fn=Panel.onShortcutInventory},
-        {key='btnHistory',cmd='history',label=tr('UI_SarahConsole_History','History'),x=279,w=82,fn=Panel.onShortcutHistory},
-        {key='btnWalkHere',cmd='walk here',label=tr('UI_SarahConsole_WalkHere','Walk Here'),x=368,w=102,fn=Panel.onShortcutWalkHere},
-        {key='btnStop',cmd='stop',label=tr('UI_SarahConsole_Stop','Stop'),x=476,w=72,fn=Panel.onShortcutStop},
+        {key='btnHelp',cmd='help',label=tr('UI_SarahConsole_Help','Help'),x=12,w=60,fn=Panel.onShortcutHelp},
+        {key='btnStatus',cmd='status',label=tr('UI_SarahConsole_Status','Status'),x=78,w=68,fn=Panel.onShortcutStatus},
+        {key='btnInventory',cmd='inventory',label=tr('UI_SarahConsole_Inventory','Inventory'),x=152,w=84,fn=Panel.onShortcutInventory},
+        {key='btnHistory',cmd='history',label=tr('UI_SarahConsole_History','History'),x=242,w=72,fn=Panel.onShortcutHistory},
+        {key='btnWalkHere',cmd='walk here',label=tr('UI_SarahConsole_WalkHere','Walk Here'),x=320,w=84,fn=Panel.onShortcutWalkHere},
+        {key='btnFollow',cmd='follow',label=tr('UI_SarahConsole_Follow','Follow'),x=410,w=72,fn=Panel.onShortcutFollow},
+        {key='btnStop',cmd='stop',label=tr('UI_SarahConsole_Stop','Stop'),x=488,w=60,fn=Panel.onShortcutStop},
     }
     for _,b in ipairs(buttons) do
         local btn=ISButton:new(b.x,btnY,b.w,btnH,b.label,self,b.fn)
@@ -187,7 +199,7 @@ function Panel:initialise()
     self.btnClose=close
 
     self.dispatch=getDispatch()
-    self:append('Commands: help, status, inventory, walk here, stop, history. Enter submits.')
+    self:append('Commands: help, status, inventory, walk here, follow, stop, history. Enter submits.')
     local conflict=state.conflict(getCore():getKey(binding))
     self:append(conflict or 'Toggle: '..getKeyName(getCore():getKey(binding))..' (Options > Key bindings)')
 end
@@ -199,7 +211,7 @@ function Panel:setPanelHeight(newH)
         if self.history.setHeight then self.history:setHeight(histH) else self.history.height=histH end
     end
     local btnY=newH-74
-    local btnKeys={'btnHelp','btnStatus','btnInventory','btnHistory','btnWalkHere','btnStop'}
+    local btnKeys={'btnHelp','btnStatus','btnInventory','btnHistory','btnWalkHere','btnFollow','btnStop'}
     for _,k in ipairs(btnKeys) do
         local btn=self[k]
         if btn then

@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline (153 automated checks across 6 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver, plus 11 runner self-tests and 19 preflight tests). Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Consolidated M1 native acceptance session plan authored (docs/M1-batched-acceptance.md) and read-only preflight tool hardened against false-ready conditions (tools/preflight.py). Remaining native checks (movable dragging, position retention, resolution adaptation, distance refusal, red context-menu refusal, post-reload movement) prepared for single batched acceptance session by Codex. Post-M1 bounded gameplay proposal for manual "follow player" command authored (docs/M1-next-feature-proposal.md) covering companion navigation benefit, minimal dispatcher architecture reusing existing walk/stop callbacks, 2-tile deadzone and 8-tile leash geometry, same-floor constraint, volatile save/reload lifecycle, offline/native acceptance protocol, and gate R1–R8 dependencies; implementation deferred until M1 native acceptance passes.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation tested natively alongside slice C. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented and hardened offline. Mouse-operated shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop], [Close]). Movable console panel implemented via title-bar mouse dragging with bounds clamping, small-screen layout adaptation (dynamic panel and history height scaling, non-negative title bar clamp minY=0, full control access), control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world, and OnResolutionChange dynamic re-clamping. Bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session. Consolidated M1 native acceptance session plan authored (docs/M1-batched-acceptance.md) and read-only preflight tool hardened against false-ready conditions (tools/preflight.py). Bounded manual follow-player command implemented offline in Commands.lua, Console.lua, and SarahFoundation.lua with 2-tile inner deadzone, 8-tile leash, floor check, adjacent candidate targeting, stop mid-stride cancellation, and stop failure blocking (181 automated checks across 7 suites: 29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver + 28 follow, plus 11 runner self-tests and 19 preflight tests). All native acceptance claims strictly pending Codex live verification.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,12 +13,12 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice C source deployed to `runtime/isolated/mods/SarahFoundation/` by Codex (pending Console.lua deployment for small-screen fix). Final native case/settings/log preserved at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-c-native-20261005-143139/Final-native`. Key settings F9; Forward W.
-- Automated tests: 153 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py` and 19 preflight tests in `tools/test_preflight.py`.
+- Automated tests: 181 automated checks passing across 7 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 acceptance driver + 28 follow) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py` and 19 preflight tests in `tools/test_preflight.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 153 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests and 19 preflight tests. Single-entry runner `tools/run_tests.py`, hardened preflight tool `tools/preflight.py`, and documentation `docs/verification-workflow.md` verified.
+- **Automated policy checks**: 181 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 33 simulated console UI/key/shortcut/dragging/bounds/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases, 28 follow companion navigation cases) plus 11 runner self-tests and 19 preflight tests. Single-entry runner `tools/run_tests.py`, hardened preflight tool `tools/preflight.py`, and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -701,5 +701,44 @@ Gemini authored a concrete technical and operational proposal for the next bound
   - Game is CLOSED (SAVED a, GameThread exited, no native window).
   - Runtime and saves untouched.
   - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+### Bounded manual follow-player implementation and offline verification (Gemini, 2026-10-05)
+
+Gemini implemented bounded manual follow-player behavior offline across `Commands.lua`, `Console.lua`, `SarahFoundation.lua`, and `UI.json`, corrected `docs/M1-next-feature-proposal.md`, added dedicated test suite `tools/test_follow.py` (28 checks), and updated the unified test runner (offline only; no game launches, desktop automation, or runtime modifications):
+- **Follow dispatcher architecture (`Commands.lua`)**:
+  - *`follow` command*: Executes via existing dispatcher. Registers active follow action with session `token`, `session`, `stepGen` counter, and private controller/NPC ownership.
+  - *Inner deadzone ($r \le 2.0$ tiles)*: When Sarah is within 2.0 tiles of the player on the same floor, remains idle in follow mode without dispatching redundant walk actions.
+  - *Adjacent candidate targeting ($2.0 < r \le 8.0$ tiles)*: Evaluates all 8 adjacent neighbors to player square. Candidate sorting calculates distance from candidate tile center to Sarah with integer tile-center alignment (`snx, sny`), selecting the closest valid candidate. Fails cleanly if all adjacent squares are blocked.
+  - *Step generation guard (`stepGen`)*: Monotonic step counter prevents late callbacks from superseded or cancelled steps from mutating active state.
+  - *Sequential steps & cooldown*: Sub-walk steps complete into idle stance with 15-tick cooldown before subsequent step dispatch.
+  - *Leash limit ($r > 8.0$ tiles)*: Evaluated every tick independently of throttling; cancels follow immediately with `player out of range (>8 tiles)` and halts engine timed action.
+  - *Floor boundary ($nz \neq pz$)*: Cancels follow immediately mid-stride if player changes floors.
+  - *Lifecycle invalidation*: Sarah death, player death, unload, controller/NPC replacement, or observation failure cancels follow immediately.
+  - *Stop integration & mid-stride cancellation*: User `stop` command immediately cancels follow and halts engine movement.
+  - *Stop failure safety*: If engine stop fails, sets `self.stopFailed` and blocks replacement movement until stop recovers or session resets.
+  - *Synchronous callback hardening*: Handles immediate step completion and immediate step failure safely without nil indexing or false running states.
+  - *Session reset*: Cancels active follow, increments session token, resets visible request sequence counter to 0, and clears history.
+- **Console integration (`Console.lua`, `UI.json`)**:
+  - Added `[Follow]` shortcut button between `[Walk Here]` and `[Stop]` in Sarah Console panel.
+  - Toolbar geometry updated to 7 non-overlapping buttons across 560px width with 6px gaps: `Help` (60px), `Status` (68px), `Inventory` (84px), `History` (72px), `Walk Here` (84px), `Follow` (72px), `Stop` (60px).
+  - Small-screen layout and click isolation updated to ensure all 7 buttons remain fully reachable and never initiate accidental dragging.
+  - Added `"UI_SarahConsole_Follow": "Follow"` to `Translate/EN/UI.json`.
+- **Context menu integration (`SarahFoundation.lua`)**:
+  - Added world context menu option `Sarah: follow` routing through `SarahConsole.getDispatch():execute("follow")` with visible notifications.
+- **Proposal corrections (`docs/M1-next-feature-proposal.md`)**:
+  - Updated status to OFFLINE IMPLEMENTATION AUTHORIZED while keeping native acceptance strictly pending.
+  - Corrected Section 4.1: removed claim that player-occupied tiles fail `isFree(false)`; framed adjacent targeting and 2-tile deadzone as an intentional spatial spacing policy.
+  - Corrected Sections 2.1 & 7.2: removed unsupported crash/clipping claims, noting unverified status in B42 and out-of-scope boundaries.
+- **Follow automated test suite (`tools/test_follow.py`)**:
+  - 28 automated offline unit tests covering: help listing, busy rejection against walk and follow, inactive Sarah rejection, missing coordinate rejection, floor difference rejection, initial leash rejection, deadzone idle stance, repath dispatch, candidate sorting with blocked fallback, no-valid-target failure, read-only commands during follow, repath on tick, sequential steps and cooldown, leash break mid-stride, floor change mid-stride, Sarah death/unload invalidation, controller replacement invalidation, stop cancellation mid-stride, idle stop cancellation, stop failure blocking and recovery, path failure callback cancellation, 600-tick step timeout, stale callback defusing, synchronous completion/failure safety, session reset, and `requestFollow` method.
+- **Automated test suite (211 total passing checks)**:
+  - `tools/run_tests.py`: 181 checks passing across 7 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 33 console + 14 driver + 28 follow = 181 checks in 0.28s).
+  - `tools/test_runner.py`: 11 runner self-tests passing.
+  - `tools/test_preflight.py`: 19 preflight tests passing.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime and saves untouched.
+  - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
 
 

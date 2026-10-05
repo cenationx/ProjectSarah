@@ -2,10 +2,10 @@
 
 Updated: 2026-10-05 (Europe/Helsinki).
 Status: **PREPARED** for consolidated native execution by Codex and the user.
-Offline verification: **153 automated checks pass across 6 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
+Offline verification: **181 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
-> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
+> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented offline (28 checks in `tools/test_follow.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
 
 ---
 

@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-153 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-33 console, 14 acceptance driver) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+181 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+33 console, 14 acceptance driver, 28 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -34,9 +34,10 @@ scoping, production controller contract, safe context menu routing, and console 
 bounded native walk, cancellation with sustained halt, and same-process reload reset PASSED in Codex live session.
 Movable console panel implemented offline via title-bar mouse dragging with bounds clamping (normal and small screens),
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
-and OnResolutionChange re-clamping.
+and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
+Bounded manual follow-player command implemented offline (28 checks in `tools/test_follow.py`) with 2-tile deadzone, 8-tile leash, floor check, adjacent candidate targeting, stop mid-stride cancellation, and stop failure blocking.
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
-Native distance refusal, context-menu refusal feedback, and movable console dragging remain pending live check by Codex.
+Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
 
 Latest backup group runtime/backups/console-before-20261004 preserves original
@@ -85,7 +86,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (153 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (181 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -105,7 +106,8 @@ Individual suites can also still be executed directly:
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
 - `tools/test_console.py`: 33 simulated console UI/key/shortcut/dragging/bounds/session checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-153 automated checks total (across 6 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
+- `tools/test_follow.py`: 28 manual follow-player companion navigation checks.
+181 automated checks total (across 7 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing

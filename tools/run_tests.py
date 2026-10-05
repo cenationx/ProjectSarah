@@ -28,6 +28,7 @@ DEFAULT_SUITES = [
     "tools/test_commands.py",
     "tools/test_console.py",
     "tools/test_driver.py",
+    "tools/test_follow.py",
 ]
 
 DISCLAIMER = "These are offline fixture checks and do not establish native gameplay acceptance."
