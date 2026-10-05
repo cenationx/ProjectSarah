@@ -1,11 +1,16 @@
 ## Current offline next step (2026-10-06)
 
-Caller-token registry and exact-reference obstruction policies implemented/tested
-OFFLINE; see ADAPTER-BOUNDARY-OFFLINE.md. All 450 suite +11 runner +19 preflight
-checks PASS. Next: injected one-shot coordinator contract and independent-light
-runtime evidence audit, no native wiring. Identity/exposure/light and native
-Follow/rendering gates remain open. Gemini drafts code; Codex applies/reviews/tests.
-Live tests stay in this chat, deferred; external/model AI ON HOLD.
+- [x] Caller-token identity and exact-reference obstruction policies: inert/offline.
+- [x] Injected one-shot DiagnosticSampler: shared coverage budget, lifecycle
+  invalidation, unknown lighting, scalar-only results and abort cursor reset.
+  Gemini authored; Codex reviewed/applied. 57 sampler checks; all 507 suite checks
+  across 12 suites +11 runner +19 preflight self-tests PASS.
+- [ ] Sarah-independent lighting evidence audit, with actual exposure/lifecycle
+  limitations preserved. No native wiring or live testing authorized by this step.
+- [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
+
+See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/
+tests/commits/pushes. Live tests remain here and deferred. Model AI ON HOLD.
 
 # Project Sarah roadmap
 

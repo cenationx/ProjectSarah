@@ -1,3 +1,24 @@
+## Latest checkpoint: inert diagnostic sampler (2026-10-06)
+
+Gemini 3.8 Flash HIGH authored the sampler/base fixtures through NO-TOOLS CLI
+exports; Codex remains sole checkout editor and applied/reviewed/corrected/tested
+this batch. DiagnosticSampler.lua composes the actual existing Collector,
+Coverage, Perception and ObstructionNormalizer through injected read-only APIs.
+It is OFFLINE ONLY: no production import, native binding, tick/event integration,
+deployment or game launch. Lighting is deliberately unknown; scalar diagnostics
+publish no positions and cannot add confirmed observations to Knowledge.
+57 sampler checks; all 507 checks across 12 suites +11 runner +19 preflight PASS.
+See SAMPLER-OFFLINE.md and evidence/sampler-offline-20261006.txt for boundaries.
+Codex corrected forged-enum expectations/63-square fixture assumptions and added
+cleanup protection, abort cursor reset and actual-stage/Knowledge regressions.
+Started from clean main 2391581. Shared checkout remains owned by Codex.
+Live tests remain deferred and stay in this chat. Saves/settings untouched;
+deployed isolated baseline remains 5fa6b9c. External/model AI remains ON HOLD.
+Next bounded offline task: Sarah-independent lighting evidence audit. Native
+identity/Lua exposure, loaded-world lifecycle proof, Follow/rendering acceptance
+remain open. Do not wire or deploy this sampler until those gates are resolved.
+Older checkpoint and workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: inert adapter boundary policies (2026-10-06)
 
 Gemini handles coding drafts; Codex alone applies/reviews/tests/commits/pushes.

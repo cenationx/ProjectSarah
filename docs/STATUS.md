@@ -1,3 +1,24 @@
+## Latest checkpoint: inert diagnostic sampler (2026-10-06)
+
+Gemini 3.8 Flash HIGH authored the sampler/base fixtures through NO-TOOLS CLI
+exports; Codex remains sole checkout editor and applied/reviewed/corrected/tested
+this batch. DiagnosticSampler.lua composes the actual existing Collector,
+Coverage, Perception and ObstructionNormalizer through injected read-only APIs.
+It is OFFLINE ONLY: no production import, native binding, tick/event integration,
+deployment or game launch. Lighting is deliberately unknown; scalar diagnostics
+publish no positions and cannot add confirmed observations to Knowledge.
+57 sampler checks; all 507 checks across 12 suites +11 runner +19 preflight PASS.
+See SAMPLER-OFFLINE.md and evidence/sampler-offline-20261006.txt for boundaries.
+Codex corrected forged-enum expectations/63-square fixture assumptions and added
+cleanup protection, abort cursor reset and actual-stage/Knowledge regressions.
+Started from clean main 2391581. Shared checkout remains owned by Codex.
+Live tests remain deferred and stay in this chat. Saves/settings untouched;
+deployed isolated baseline remains 5fa6b9c. External/model AI remains ON HOLD.
+Next bounded offline task: Sarah-independent lighting evidence audit. Native
+identity/Lua exposure, loaded-world lifecycle proof, Follow/rendering acceptance
+remain open. Do not wire or deploy this sampler until those gates are resolved.
+Older checkpoint and workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: inert adapter boundary policies (2026-10-06)
 
 Gemini handles coding drafts; Codex alone applies/reviews/tests/commits/pushes.
@@ -1089,3 +1110,7 @@ Historical start of completed collector implementation (2026-10-06): clean main 
 User clarified coding delegation: Gemini now authors complete collector implementation and Lua fixtures via NO-TOOLS live session. Codex initial untested collector draft is superseded pending Gemini output; Codex retains sole application/review/testing ownership.
 
 Historical review during completed collector batch: two visible drafts rejected for mutable state/reset rollback/incorrect Lua fixtures; exported draft failed first actual-Lua budget assertion and omitted explicit unknown reasons. Gemini revising module and stronger fixtures; no proposed module applied to production source. Ignored runtime/collector-gemini-20261006 holds drafts/responses. No native or save changes.
+
+Historical sampler batch start (now completed) (2026-10-06): clean main2391581 verified, Codex sole editor. Gemini NO-TOOLS code/fixtures for inert one-shot DiagnosticSampler with injected existing modules/shared budgets/lifecycle discard. Lighting forced unknown; no gameplay wiring or native/saves/settings changes.
+
+Historical sampler review (now completed): first Gemini draft rejected for unvisited-target fixtures/nil-hole skipped cases, bindings copied after capture, LOS despite invalid bindings, revision precheck/cleanup gaps and eager coverage before cone filtering. No sampler source applied. Gemini revising; local drafts in ignored runtime/sampler-gemini-20261006.

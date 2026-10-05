@@ -1,3 +1,10 @@
+## Latest offline baseline (2026-10-06, diagnostic sampler)
+
+Default runner includes 12 suites and 507 checks, including 57 sampler fixtures.
+Runner self-tests:11; preflight self-tests:19. See SAMPLER-OFFLINE.md for evidence
+limits. These run the actual Lua modules through Lupa; native Kahlua/Java/runtime
+acceptance remains separate. Earlier counts and examples below are historical.
+
 ## Latest offline baseline (2026-10-06, adapter boundary)
 
 Default runner includes 11 suites and 450 checks, including 49 adapter boundary

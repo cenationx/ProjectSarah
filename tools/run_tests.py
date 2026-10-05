@@ -33,6 +33,7 @@ DEFAULT_SUITES = [
     "tools/test_coverage.py",
     "tools/test_collector.py",
     "tools/test_adapter_boundary.py",
+    "tools/test_sampler.py",
 ]
 
 DISCLAIMER = "These are offline fixture checks and do not establish native gameplay acceptance."

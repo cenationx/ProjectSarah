@@ -1,0 +1,16 @@
+Project Sarah - inert sampler offline checkpoint, 2026-10-06
+Starting checkpoint:2391581d871fc27e9d609d6e02c35bcea2e21c0b, main, clean.
+Checkout editor:Codex. Gemini 3.8 Flash HIGH authored NO-TOOLS source/fixtures;
+Codex reviewed/applied/corrected and added regressions. No Gemini checkout edits.
+Actual Lua modules executed with project-local Lupa Lua55.
+run_tests.py:PASS,507 checks,12 suites; sampler57.
+test_runner.py:PASS,11 self-tests. test_preflight.py:PASS,19 self-tests.
+Review corrected forged-enum and63-square assumptions; actual Knowledge
+composition and coverage-stage reset verified. Protected cleanup/abort resets
+verified including dependency failure after enumeration cursor commit.
+Shared coverage budget fixture:32 candidates,144-square rectangles;
+28 covered,4032 reads; remaining four refused at remaining64, zero extra reads.
+Lighting:forced unknown; api.lighting never queried; no confirmed memory update.
+No gameplay deployment/launch, native invocation, save/settings modification.
+Native Follow/rendering, identity/exposure and independent lighting remain open.
+This is fixture evidence only, not native acceptance.
