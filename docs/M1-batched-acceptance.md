@@ -2,10 +2,10 @@
 
 Updated: 2026-10-05 (Europe/Helsinki).
 Status: **PREPARED** for consolidated native execution by Codex and the user.
-Offline verification: **181 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
+Offline verification: **197 automated checks pass across 7 suites** (`tools/run_tests.py`), **11 runner self-tests pass** (`tools/test_runner.py`), and **19 preflight tests pass** (`tools/test_preflight.py`).
 
 > [!IMPORTANT]
-> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented offline (28 checks in `tools/test_follow.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
+> **Notice**: No remaining native acceptance check is marked passed. This document consolidates all outstanding M1 items into a single, cohesive, ordered session plan. Bounded manual follow-player behavior has also been implemented and hardened offline (41 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`) with all native acceptance claims strictly pending. Completing acceptance in a single game process launch is an operational goal conditional on having the spacious test case prepared in advance, rather than an unconditional guarantee.
 
 ---
 
@@ -65,6 +65,18 @@ The following 8 items remain pending native live acceptance:
 | **R6** | Distance Refusal (Menu) | Right-click `Sarah: walk here` > 8 tiles shows visible red halo refusal text | User right-clicks Sarah |
 | **R7** | Post-Reload Movement | Physical character movement (WASD) verified working after Continue | User operates WASD |
 | **R8** | Center Reset on Reload | Console reopens at default centered position after world reload (`pos = nil`) | Codex opens console |
+
+### 2.3 Post-M1 Follow Feature Smoke Checks (Follow Status & Asynchronous Feedback)
+These checks cover the newly implemented offline manual companion behavior and user-facing feedback without affecting M1 baseline gates R1–R8:
+
+| Gate | Target Feature | Specific Acceptance Criterion | Execution Actor |
+|---|---|---|---|
+| **F1** | Follow Status: Walking | While walking toward player, `[Status]` outputs `Follow: following while walking to (x, y, z)` | Codex clicks `[Status]` while Sarah walks |
+| **F2** | Follow Status: In Range | Within 2 tiles of player, `[Status]` outputs `Follow: follow engaged but waiting within range` | Codex clicks `[Status]` with player in range |
+| **F3** | Follow Status: Disengaged | After leash break / disengagement, `[Status]` outputs `Follow: disengaged (<reason>)` | Codex clicks `[Status]` after disengagement |
+| **F4** | Stop Failure Warning | If engine stop fails, `[Status]` warns `Warning: engine stop failed (<reason>); movement blocked pending recovery.` | Codex inspects status if stop fails |
+| **F5** | Asynchronous Disengagement Feedback | Leash break (> 8 tiles) immediately outputs `Follow disengaged: player out of range (>8 tiles).` to open panel and triggers in-world halo text without manual polling | User walks > 8 tiles while following; Codex/User observes feedback |
+| **F6** | Closed-Console Feedback & No Replay | Disengagement while console is closed displays in-world halo text; subsequent console opening starts clean without replaying notices | User closes console, triggers disengagement, reopens console |
 
 ---
 
@@ -249,7 +261,35 @@ Executing the following steps in sequence has the goal of completing acceptance 
 
 ---
 
-### Phase 6: Clean Shutdown & Evidence Preservation
+### Phase 6: Post-M1 Follow Status & Feedback Smoke Checks (Optional / Non-Blocking)
+*Note: These steps verify follow companion status distinctions and asynchronous feedback if tested within the same live session. Failure of these steps does not invalidate M1 gates R1–R8.*
+
+1. **Gate F1 & F2 (Follow Status: Walking vs In-Range Waiting)**:
+   - Codex clicks `[Follow]` while player is 4–6 tiles away from Sarah on the same floor.
+   - While Sarah is walking, Codex clicks `[Status]`:
+     - **Verification**: Status displays `Action: #<id> follow (running)` and `Follow: following while walking to (x, y, z)`.
+   - Sarah reaches within 2 tiles of player and halts. Codex clicks `[Status]`:
+     - **Verification**: Status displays `Action: #<id> follow (running)` and `Follow: follow engaged but waiting within range`.
+
+2. **Gate F5 & F3 (Asynchronous Leash Break Feedback & Disengaged Status)**:
+   - With console open and follow active, user walks rapidly > 8 tiles away.
+   - **Verification**:
+     - Without typing or clicking, console panel history immediately receives `Follow disengaged: player out of range (>8 tiles).` and `#<id> cancelled`.
+     - In-world red halo text floats above the player (`Follow disengaged: player out of range (>8 tiles).`).
+     - Codex clicks `[Status]`: outputs `Action: idle (last: #<id> cancelled)` and `Follow: disengaged (player out of range (>8 tiles))`.
+
+3. **Gate F6 (Closed-Console Disengagement & Clean Reopen)**:
+   - User re-engages follow via `[Follow]`, then closes the console via mouse `[Close]` or F9.
+   - User walks > 8 tiles away to trigger leash break while console is closed.
+   - **Verification**:
+     - In-world red halo text floats above the player (`Follow disengaged: player out of range (>8 tiles).`).
+     - Codex opens Sarah Console via context menu or F9.
+     - Console opens clean: no replayed notification messages, no spurious command execution.
+     - Codex clicks `[Status]`: accurately reflects `Follow: disengaged (player out of range (>8 tiles))`.
+
+---
+
+### Phase 7: Clean Shutdown & Evidence Preservation
 1. Open pause menu -> select **Quit to Desktop**.
 2. Verify clean shutdown in game log:
    - `SAVED a` or `SAVED b`
@@ -286,6 +326,10 @@ For acceptance sign-off, record the following concrete evidence items in `eviden
    - Console output showing request `#1 help: completed` and clean history reset.
 8. **Process & Log Verification**:
    - Process PID and clean exit evidence (`SAVED a` / `b`, `GameThread exited`).
+9. **Gates F1–F6 (Follow Status & Asynchronous Feedback - Post-M1 Smoke Checks)**:
+   - Console status lines showing `following while walking`, `waiting within range`, and `disengaged (<reason>)`.
+   - Observation of automatic console history append and in-world halo text on leash break without manual polling.
+   - Confirmation of clean reopen without notice replay.
 
 ---
 

@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-189 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-33 console, 14 acceptance driver, 36 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+197 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+36 console, 14 acceptance driver, 41 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -35,7 +35,8 @@ bounded native walk, cancellation with sustained halt, and same-process reload r
 Movable console panel implemented offline via title-bar mouse dragging with bounds clamping (normal and small screens),
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
-Bounded manual follow-player command implemented offline and hardened against Codex review (36 checks in `tools/test_follow.py`): safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
+Bounded manual follow-player command implemented offline and hardened against Codex review: safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
+User-facing follow status distinctions (following while walking, waiting in range, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (console panel append and in-world halo notifications without polling or replay) implemented and verified offline (41 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
@@ -86,7 +87,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (181 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (197 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -104,10 +105,10 @@ Individual suites can also still be executed directly:
 - `tools/test_render.py`: 15 engine adapter/render checks.
 - `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
-- `tools/test_console.py`: 33 simulated console UI/key/shortcut/dragging/bounds/session checks.
+- `tools/test_console.py`: 36 simulated console UI/key/shortcut/dragging/bounds/session/feedback checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-- `tools/test_follow.py`: 28 manual follow-player companion navigation checks.
-181 automated checks total (across 7 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
+- `tools/test_follow.py`: 41 manual follow-player companion navigation/status/notice checks.
+197 automated checks total (across 7 suites) plus 11 runner self-tests and 19 preflight tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -759,15 +760,53 @@ Requirements:
 ```
 
 ### Current Offline Baseline
-- 153 automated checks pass across 6 suites in `tools/run_tests.py` (0.24s).
-- 11 runner self-tests pass in `tools/test_runner.py` (2.34s).
+- 197 automated checks pass across 7 suites in `tools/run_tests.py` (0.28s).
+- 11 runner self-tests pass in `tools/test_runner.py` (2.35s).
 - 19 preflight unit tests pass in `tools/test_preflight.py` (0.66s).
-- Total: 183 passing tests across project tools and production modules.
+- Total: 227 passing tests across project tools and production modules.
 
 ### Next Steps for Codex
 1. Verify game is closed (`javaw.exe` absent).
 2. Execute the batched native session for remaining M1 gates R1–R8 following `docs/M1-batched-acceptance.md`.
-3. Review `docs/M1-next-feature-proposal.md` and user authorization before considering post-M1 follow-player implementation.
+3. Follow-player companion status distinctions and asynchronous failure feedback smoke checks (Gates F1–F6 in Phase 6) are prepared for optional verification alongside M1 acceptance.
+
+### State and Ownership
+- Game is CLOSED (SAVED a, GameThread exited, no native window).
+- Isolated saves and runtime untouched.
+- Baseline backup intact at `runtime/backups/slice-c-native-20261005-143139/Final-native`.
+- Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+## Follow-Player Status Distinctions and Asynchronous Feedback Handoff (latest, 2026-10-05)
+
+Gemini completed offline implementation and automated verification of user-facing follow status distinctions and asynchronous failure feedback across `Commands.lua`, `Console.lua`, and `Observations.lua` (offline only; no game launches, desktop automation, or runtime modifications):
+
+### What Was Delivered
+1. **Follow Status Distinctions (`Commands.lua`)**:
+   - `status` command explicitly differentiates companion states:
+     - *Following while walking*: `Action: #<id> follow (running)` followed by `Follow: following while walking to (x, y, z)`.
+     - *Follow engaged but waiting within range*: `Action: #<id> follow (running)` followed by `Follow: follow engaged but waiting within range` (when within 2 tiles on same floor).
+     - *Follow disengaged with reason*: `Action: idle (last: #<id> cancelled)` followed by `Follow: disengaged (<reason>)` (e.g. leash break >8 tiles, floor change, player death, path failure).
+     - *Engine stop failure warning*: `Warning: engine stop failed (<reason>); movement blocked pending recovery.` displayed if `self.stopFailed` is set; blocks subsequent movement commands until engine stop succeeds.
+     - *Stop failure recovery confirmation*: When a subsequent stop succeeds, output explicitly confirms `Prior engine stop failure cleared; movement recovered.` and never falsely states "Sarah stopped" while a failure persists.
+2. **Asynchronous One-Time Failure Feedback (`Commands.lua`, `Console.lua`)**:
+   - *Notice queueing*: Out-of-band follow terminations (leash break >8 tiles, player death, path failure, lifecycle invalidation) enqueue structured notices `{id, command, state, message, isBad}` via `self.noticeQueue` in `Commands.lua`. User-initiated stops do not enqueue notices.
+   - *Immediate delivery on tick*: `Console.lua` drains notices via `state.dispatch:consumeNotices()` during `state.tick()`:
+     - Open console: appends notification message and `#<id> cancelled` to history without requiring user polling via `status` or `history`.
+     - In-world feedback: triggers halo text via `SarahFoundation.notify(player, notice.message, notice.isBad)` if available.
+   - *Single reporting & no replay*: Notice queue is emptied upon consumption. Closed console delivers in-world halo feedback; reopening the panel later starts clean without replaying notifications or executing commands.
+   - *Session reset cleanup*: Quitting to main menu or session reset clears `self.noticeQueue = {}`, preventing notification leakage into new sessions.
+   - *Safe query commands*: `status` and `history` remain strictly read-only and free of gameplay side effects.
+3. **Defensive Safety & Coordinate Validation (`Observations.lua`, `Commands.lua`)**:
+   - *Player liveness query safety*: `checkCharacterLiveness(char)` inspects `isDead()` via `pcall` and safely checks boolean properties; returns `'unknown'` if queries fail or throw. Follow activation and ticks require confirmed `isPlayerAlive(data)`; unconfirmed liveness rejects activation and cancels active follow with `player liveness unknown`.
+   - *Non-finite & invalid coordinate rejection*: `isValidNumber(n)` and `isValidCoord(x, y, z)` validate finite numbers (`n == n and n ~= math.huge and n ~= -math.huge`), safely rejecting `NaN`, infinite, missing, or non-numeric coordinates without arithmetic runtime errors.
+4. **Batched Acceptance Plan Updated (`docs/M1-batched-acceptance.md`)**:
+   - Documented Gates F1–F6 in Section 2.3 and execution steps in Phase 6 as optional post-M1 companion smoke checks without altering M1 baseline gates R1–R8.
+5. **Automated Test Coverage**:
+   - `tools/test_follow.py` (41 checks): added tests 37–41 covering status distinctions, unknown liveness rejection, non-finite/NaN coordinate rejection, stop failure warning & recovery, and notice queueing.
+   - `tools/test_console.py` (36 checks): added tests 34–36 covering open-panel notice append and in-world feedback, closed-console feedback with non-replaying reopen, and session reset notice clearing.
+   - All 197 automated checks pass across 7 suites in `tools/run_tests.py` (0.28s).
+   - All 11 runner self-tests pass in `tools/test_runner.py` (2.35s).
+   - All 19 preflight tests pass in `tools/test_preflight.py` (0.66s).
 
 ### State and Ownership
 - Game is CLOSED (SAVED a, GameThread exited, no native window).

@@ -918,5 +918,294 @@ test('Observations.read extracts player liveness safely for alive and dead playe
     assert(dataTableDead.playerAlive == false)
 end)
 
+local function hasLine(lines, pattern)
+    for _, l in ipairs(lines) do
+        if l:find(pattern) then return true end
+    end
+    return false
+end
+
+-- 37. Follow status clearly distinguishes walking, waiting in range, and disengaged with reason
+test('follow status clearly distinguishes walking, waiting in range, and disengaged with reason', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+
+    -- Case A: Following while walking
+    local followRes = d:execute('follow')
+    assert(followRes.state == 'running')
+    assert(d.active and d.active.command == 'follow' and d.active.stepState == 'walking')
+    local statusWalking = d:execute('status')
+    assert(statusWalking.state == 'completed')
+    assert(statusWalking.lines[2] == 'Action: #1 follow (running)')
+    assert(statusWalking.lines[3]:find('^Follow: following while walking to %('))
+    -- Query commands have no gameplay side effects
+    local seqBefore = d.sequence
+    local histRes = d:execute('history')
+    assert(histRes.state == 'completed')
+    assert(d.active and d.active.stepState == 'walking')
+
+    -- Case B: Follow engaged but waiting within range
+    f.playerPos.x = 11; f.playerPos.y = 10
+    d.active.stepState = 'idle'
+    d.active.currentTarget = nil
+    local statusWaiting = d:execute('status')
+    assert(statusWaiting.state == 'completed')
+    assert(statusWaiting.lines[2]:find('Action: #1 follow %(running%)'))
+    assert(statusWaiting.lines[3] == 'Follow: follow engaged but waiting within range')
+
+    -- Case C: Follow disengaged, with its reason
+    f.playerPos.x = 25; f.playerPos.y = 10
+    d:tick()
+    assert(d.active == nil)
+    assert(d.lastAction and d.lastAction.state == 'cancelled')
+    local statusDisengaged = d:execute('status')
+    assert(statusDisengaged.state == 'completed')
+    assert(statusDisengaged.lines[2]:find('Action: idle %(last: #1 cancelled%)'))
+    assert(statusDisengaged.lines[3] == 'Follow: disengaged (player out of range (>8 tiles))')
+end)
+
+-- 38. Unknown player liveness is rejected at activation and disengages follow on tick without assuming alive
+test('unknown player liveness is rejected at activation and disengages follow on tick without assuming alive', function()
+    local mockNpc = {
+        getX = function() return 10 end,
+        getY = function() return 10 end,
+        getZ = function() return 0 end
+    }
+    local mockAdapter = {
+        meta = {},
+        isDead = function() return false end,
+        isResident = function() return true end,
+        isIncomplete = function() return false end,
+        listNPCs = function() return {mockNpc} end
+    }
+    local controller = {npc = mockNpc, adapter = mockAdapter}
+
+    -- 38a. Observations.read handles player with throwing isDead without assuming alive
+    local errorPlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() error('native isDead crash') end
+    }
+    local dataUnknown = Observations.read(controller, errorPlayer, false)
+    assert(dataUnknown.state == 'active')
+    assert(dataUnknown.player ~= nil)
+    assert(dataUnknown.player.liveness == 'unknown')
+    assert(dataUnknown.player.dead == false)
+    assert(dataUnknown.player.alive == false)
+    assert(dataUnknown.playerDead == false)
+    assert(dataUnknown.playerAlive == false)
+    assert(dataUnknown.playerLiveness == 'unknown')
+
+    -- 38b. Follow activation is rejected when player liveness is unknown
+    local f1 = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d1 = Commands.new(function()
+        return {
+            state = 'active',
+            npc = {x = 10, y = 10, z = 0},
+            player = {x = 14, y = 10, z = 0, liveness = 'unknown', dead = false, alive = false},
+            playerDead = false,
+            playerAlive = false,
+            playerLiveness = 'unknown'
+        }
+    end, function() return true end, f1.identityProvider, function() return true end)
+    local actRes = d1:execute('follow')
+    assert(actRes.state == 'rejected')
+    assert(actRes.lines[1] == 'Player liveness query failed; cannot follow.')
+    local h1 = d1:getHistory()
+    assert(h1[#h1].state == 'rejected' and h1[#h1].summary == 'Player liveness unknown')
+    assert(d1.active == nil)
+
+    -- 38c. Active follow disengages when player liveness query fails on tick
+    local livenessState = 'alive'
+    local d2 = Commands.new(function()
+        local isAlive = (livenessState == 'alive')
+        local isUnknown = (livenessState == 'unknown')
+        local isDead = (livenessState == 'dead')
+        return {
+            state = 'active',
+            npc = {x = 10, y = 10, z = 0},
+            player = {x = 14, y = 10, z = 0, liveness = livenessState, dead = isDead, alive = isAlive},
+            playerDead = isDead,
+            playerAlive = isAlive,
+            playerLiveness = livenessState
+        }
+    end, function() return true end, f1.identityProvider, function() return true end)
+    local startRes = d2:execute('follow')
+    assert(startRes.state == 'running' and d2.active ~= nil)
+
+    -- Transition liveness to unknown
+    livenessState = 'unknown'
+    d2:tick()
+    assert(d2.active == nil)
+    assert(d2.lastAction and d2.lastAction.state == 'cancelled' and d2.lastAction.reason == 'player liveness unknown')
+    local statusRes = d2:execute('status')
+    assert(statusRes.lines[3] == 'Follow: disengaged (player liveness unknown)')
+end)
+
+-- 39. Invalid and nonfinite coordinates are rejected without arithmetic errors
+test('invalid and nonfinite coordinates are rejected without arithmetic errors', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+
+    -- 39a. Observations.read rejects NaN and infinite coordinates in position
+    local nanNpc = {
+        getX = function() return 0/0 end,
+        getY = function() return 10 end,
+        getZ = function() return 0 end
+    }
+    local infNpc = {
+        getX = function() return math.huge end,
+        getY = function() return 10 end,
+        getZ = function() return 0 end
+    }
+    assert(Observations.read({adapter = f.adapter, npc = nanNpc}, nil, false).npc == nil)
+    assert(Observations.read({adapter = f.adapter, npc = infNpc}, nil, false).npc == nil)
+
+    -- 39b. Follow activation rejects NaN and infinite player coordinates
+    local badCoordType = 'nan'
+    local d = Commands.new(function()
+        local px = (badCoordType == 'nan' and 0/0) or (badCoordType == 'inf' and math.huge) or (badCoordType == 'str' and 'invalid') or 14
+        return {
+            state = 'active',
+            npc = {x = 10, y = 10, z = 0},
+            player = {x = px, y = 10, z = 0, alive = true, dead = false},
+            playerAlive = true,
+            playerDead = false
+        }
+    end, function() return true end, f.identityProvider, function() return true end)
+
+    badCoordType = 'nan'
+    local nanRes = d:execute('follow')
+    assert(nanRes.state == 'rejected' and nanRes.lines[1] == 'Player position unavailable.')
+
+    badCoordType = 'inf'
+    local infRes = d:execute('follow')
+    assert(infRes.state == 'rejected' and infRes.lines[1] == 'Player position unavailable.')
+
+    badCoordType = 'str'
+    local strRes = d:execute('follow')
+    assert(strRes.state == 'rejected' and strRes.lines[1] == 'Player position unavailable.')
+
+    -- 39c. Active follow tick disengages cleanly if coordinates become NaN/infinite without arithmetic error
+    badCoordType = 'valid'
+    local okStart = d:execute('follow')
+    assert(okStart.state == 'running')
+    badCoordType = 'nan'
+    local tickOk, tickReason = d:tick()
+    assert(tickOk == false)
+    assert(d.active == nil)
+    assert(d.lastAction.state == 'cancelled' and d.lastAction.reason == 'player unavailable')
+
+    -- 39d. dispatchFollowStep directly rejects invalid coords
+    local d2 = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+    d2:execute('follow')
+    local dispOk, dispErr = d2:dispatchFollowStep({}, 0/0, 10, 0, 14, 10, 0)
+    assert(dispOk == false and dispErr == 'invalid coordinates')
+    assert(d2.active == nil)
+end)
+
+-- 40. Engine stop failure status warning blocks movement until recovery clears it
+test('engine stop failure status warning blocks movement until recovery clears it', function()
+    local stopShouldFail = false
+    local stopCount = 0
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(reason, act)
+        stopCount = stopCount + 1
+        if stopShouldFail then return false, 'engine jammed' end
+        return true
+    end, f.identityProvider, function() return true end)
+
+    -- Start follow
+    local startRes = d:execute('follow')
+    assert(startRes.state == 'running')
+
+    -- Stop fails
+    stopShouldFail = true
+    local stopFailRes = d:execute('stop')
+    assert(stopFailRes.state == 'failed')
+    assert(stopFailRes.lines[1] == 'Cancelled #1 (follow).')
+    assert(stopFailRes.lines[2] == 'Engine stop failed: engine jammed.')
+    assert(not hasLine(stopFailRes.lines, 'Sarah stopped'))
+    assert(d.stopFailed == 'engine jammed')
+
+    -- Status reports stop failure warning
+    local statusWarn = d:execute('status')
+    assert(statusWarn.state == 'completed')
+    assert(hasLine(statusWarn.lines, 'Warning: engine stop failed %(engine jammed%); movement blocked pending recovery%.'))
+
+    -- Subsequent follow and walk here are rejected
+    local followBlock = d:execute('follow')
+    assert(followBlock.state == 'rejected')
+    assert(followBlock.lines[1]:find('Prior engine stop failed %(engine jammed%); movement blocked until stop recovers%.'))
+
+    local walkBlock = d:execute('walk here')
+    assert(walkBlock.state == 'rejected')
+    assert(walkBlock.lines[1]:find('Prior engine stop failed %(engine jammed%); movement blocked until stop recovers%.'))
+
+    -- Stop recovery: engine stop succeeds
+    stopShouldFail = false
+    local recoverStopRes = d:execute('stop')
+    assert(recoverStopRes.state == 'completed')
+    assert(hasLine(recoverStopRes.lines, 'Prior engine stop failure cleared; movement recovered%.'))
+    assert(hasLine(recoverStopRes.lines, 'Sarah stopped; nothing active%.'))
+    assert(d.stopFailed == nil)
+
+    -- Status warning is gone
+    local statusClean = d:execute('status')
+    assert(not hasLine(statusClean.lines, 'Warning: engine stop failed'))
+
+    -- Movement is recovered and succeeds
+    local followRecovered = d:execute('follow')
+    assert(followRecovered.state == 'running')
+    assert(d.active and d.active.command == 'follow')
+end)
+
+-- 41. Asynchronous follow disengagement enqueues one-time notice and user stop does not spam
+test('asynchronous follow disengagement enqueues one-time notice and user stop does not spam', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function() return true end, f.identityProvider, function() return true end)
+
+    -- 41a. User stop does NOT enqueue notice into noticeQueue
+    d:execute('follow')
+    assert(d.active ~= nil)
+    d:execute('stop')
+    assert(d.active == nil)
+    local userNotices = d:consumeNotices()
+    assert(#userNotices == 0)
+
+    -- 41b. Asynchronous disengagement enqueues exactly one notice
+    d:execute('follow')
+    assert(d.active ~= nil)
+    -- Leash break (>8 tiles)
+    f.playerPos.x = 25; f.playerPos.y = 10
+    d:tick()
+    assert(d.active == nil)
+    assert(d.lastAction.state == 'cancelled')
+
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    assert(notices[1].id == 3)
+    assert(notices[1].command == 'follow')
+    assert(notices[1].state == 'cancelled')
+    assert(notices[1].message == 'Follow disengaged: player out of range (>8 tiles).')
+    assert(notices[1].isBad == true)
+
+    -- Draining again yields empty queue (no per-tick duplicate notices)
+    local emptyNotices = d:consumeNotices()
+    assert(#emptyNotices == 0)
+    for i = 1, 5 do d:tick() end
+    local stillEmpty = d:consumeNotices()
+    assert(#stillEmpty == 0)
+
+    -- 41c. Session reset clears notice queue
+    f.playerPos.x = 14; f.playerPos.y = 10
+    d:execute('follow')
+    d:cancelActive('path failed')
+    assert(#d.noticeQueue == 1)
+    d:reset()
+    assert(#d.noticeQueue == 0)
+    assert(#d:consumeNotices() == 0)
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')

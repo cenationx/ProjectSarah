@@ -1,40 +1,56 @@
 local Observations={}
+local function isValidNumber(n)
+    return type(n)=='number' and n==n and n~=math.huge and n~=-math.huge
+end
 local function position(npc)
     if not npc then return nil end
     local okX,x=pcall(npc.getX,npc)
     local okY,y=pcall(npc.getY,npc)
     local okZ,z=pcall(npc.getZ,npc)
-    if okX and okY and okZ and type(x)=='number' and type(y)=='number' and type(z)=='number' then
+    if okX and okY and okZ and isValidNumber(x) and isValidNumber(y) and isValidNumber(z) then
         return {x=x,y=y,z=z}
     end
-    if type(npc.x)=='number' and type(npc.y)=='number' and type(npc.z)=='number' then
+    if isValidNumber(npc.x) and isValidNumber(npc.y) and isValidNumber(npc.z) then
         return {x=npc.x,y=npc.y,z=npc.z}
     end
     return nil
 end
-local function isCharacterDead(char)
-    if not char then return true end
+local function checkCharacterLiveness(char)
+    if not char then return 'unknown' end
     if type(char.isDead)=='function' then
         local ok,dead=pcall(char.isDead,char)
-        if ok and type(dead)=='boolean' then return dead end
+        if ok and type(dead)=='boolean' then
+            return dead and 'dead' or 'alive'
+        end
+        return 'unknown'
     end
-    if char.dead~=nil then
-        return char.dead==true
+    if type(char.isDead)=='boolean' then
+        return char.isDead and 'dead' or 'alive'
     end
-    return false
+    if type(char.dead)=='boolean' then
+        return char.dead and 'dead' or 'alive'
+    end
+    if type(char.alive)=='boolean' then
+        return char.alive and 'alive' or 'dead'
+    end
+    return 'unknown'
 end
 function Observations.read(controller,player,includeInventory)
     local data={state='unavailable'}
     if player then
         local pPos=position(player)
         if pPos then
-            local dead=isCharacterDead(player)
+            local liveness=checkCharacterLiveness(player)
+            local dead=(liveness=='dead')
+            local alive=(liveness=='alive')
+            pPos.liveness=liveness
             pPos.dead=dead
             pPos.isDead=dead
-            pPos.alive=not dead
+            pPos.alive=alive
             data.player=pPos
+            data.playerLiveness=liveness
             data.playerDead=dead
-            data.playerAlive=not dead
+            data.playerAlive=alive
         end
     end
     if not controller then data.reason='Foundation is not ready.'; return data end

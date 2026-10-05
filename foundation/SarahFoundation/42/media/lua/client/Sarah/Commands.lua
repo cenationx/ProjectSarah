@@ -1,13 +1,40 @@
 -- Command parser, validation, dispatch and action boundary.
 -- No mutable engine handles are exposed to callers.
 local Commands={}
+local function isValidNumber(n)
+    return type(n)=='number' and n==n and n~=math.huge and n~=-math.huge
+end
+local function isValidCoord(x,y,z)
+    return isValidNumber(x) and isValidNumber(y) and isValidNumber(z)
+end
 local function isPlayerDead(data)
     if not data then return false end
+    if data.playerLiveness=='dead' then return true end
     if data.playerDead~=nil then return data.playerDead==true end
     if data.player then
+        if data.player.liveness=='dead' then return true end
         if data.player.dead~=nil then return data.player.dead==true end
         if data.player.isDead~=nil then return data.player.isDead==true end
         if data.player.alive~=nil then return data.player.alive==false end
+    end
+    return false
+end
+local function isPlayerAlive(data)
+    if not data then return false end
+    if data.playerLiveness~=nil then
+        return data.playerLiveness=='alive'
+    end
+    if data.playerDead~=nil then
+        if data.playerDead==true then return false end
+        if data.playerAlive~=nil then return data.playerAlive==true end
+    end
+    if data.player then
+        if data.player.liveness~=nil then
+            return data.player.liveness=='alive'
+        end
+        if data.player.alive~=nil then return data.player.alive==true end
+        if data.player.dead~=nil then return data.player.dead==false end
+        if data.player.isDead~=nil then return data.player.isDead==false end
     end
     return false
 end
@@ -21,6 +48,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         maxHistory=30,
         lastAction=nil,
         stopFailed=nil,
+        noticeQueue={},
         observe=observe or function() return {state='unavailable'} end,
         stopCallback=stopCallback,
         identityProvider=identityProvider,
@@ -58,6 +86,11 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             copy[i]={id=h.id,command=h.command,state=h.state,summary=h.summary}
         end
         return copy
+    end
+    function self:consumeNotices()
+        local list=self.noticeQueue or {}
+        self.noticeQueue={}
+        return list
     end
     function self:invokeStop(reason,action)
         if not self.stopCallback then return true end
@@ -102,7 +135,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
         return true,ret
     end
-    function self:cancelActive(reason)
+    function self:cancelActive(reason,isUserStop)
         if not self.active then return false,'nothing active' end
         local action=self.active
         self.active=nil
@@ -110,6 +143,25 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         action.summary=reason or 'cancelled'
         self.lastAction={id=action.id,command=action.command,state='cancelled',reason=action.summary}
         self:updateHistory(action.id,'cancelled',action.summary)
+
+        local isUser=(isUserStop==true) or (reason=='stopped by user') or (reason=='session reset')
+        if not isUser then
+            local noticeMsg
+            if action.command=='follow' then
+                noticeMsg='Follow disengaged: '..action.summary..'.'
+            else
+                noticeMsg='Action #'..action.id..' cancelled: '..action.summary..'.'
+            end
+            self.noticeQueue[#self.noticeQueue+1]={
+                id=action.id,
+                command=action.command,
+                state=action.state,
+                reason=action.summary,
+                message=noticeMsg,
+                isBad=true
+            }
+        end
+
         local stopOk,stopErr=self:invokeStop(reason or 'cancelled',{
             id=action.id,
             command=action.command,
@@ -156,7 +208,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return false,'npc unavailable'
         end
         if self.active and self.active.command=='follow' then
-            if not data.player then
+            if not data.player or not isValidCoord(data.player.x,data.player.y,data.player.z) then
                 self:cancelActive('player unavailable')
                 return false,'player unavailable'
             end
@@ -164,12 +216,20 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 self:cancelActive('player dead')
                 return false,'player dead'
             end
+            if not isPlayerAlive(data) then
+                self:cancelActive('player liveness unknown')
+                return false,'player liveness unknown'
+            end
         end
         return true,data
     end
     function self:dispatchFollowStep(data,nx,ny,nz,px,py,pz)
         local act=self.active
         if not act or act.command~='follow' then return false,'not following' end
+        if not isValidCoord(nx,ny,nz) or not isValidCoord(px,py,pz) then
+            self:cancelActive('invalid coordinates')
+            return false,'invalid coordinates'
+        end
 
         local ipx=math.floor(px)
         local ipy=math.floor(py)
@@ -308,17 +368,21 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             self:cancelActive(data.state)
             return false,data.state
         end
-        if not data.npc then
+        if not data.npc or not isValidCoord(data.npc.x,data.npc.y,data.npc.z) then
             self:cancelActive('Sarah position unavailable')
             return false,'Sarah position unavailable'
         end
-        if not data.player then
+        if not data.player or not isValidCoord(data.player.x,data.player.y,data.player.z) then
             self:cancelActive('player unavailable')
             return false,'player unavailable'
         end
         if isPlayerDead(data) then
             self:cancelActive('player dead')
             return false,'player dead'
+        end
+        if not isPlayerAlive(data) then
+            self:cancelActive('player liveness unknown')
+            return false,'player liveness unknown'
         end
 
         local nx,ny,nz=data.npc.x,data.npc.y,math.floor(data.npc.z)
@@ -446,16 +510,36 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         action.summary=message or (success and 'Completed' or 'Failed')
         self.lastAction={id=action.id,command=action.command,state=action.state,reason=action.summary}
         self:updateHistory(id,action.state,action.summary)
+        if not success then
+            local isUser=(message=='stopped by user') or (message=='session reset')
+            if not isUser then
+                local noticeMsg
+                if action.command=='follow' then
+                    noticeMsg='Follow disengaged: '..action.summary..'.'
+                else
+                    noticeMsg='Action #'..action.id..' failed: '..action.summary..'.'
+                end
+                self.noticeQueue[#self.noticeQueue+1]={
+                    id=action.id,
+                    command=action.command,
+                    state=action.state,
+                    reason=action.summary,
+                    message=noticeMsg,
+                    isBad=true
+                }
+            end
+        end
         return true,action.state
     end
     function self:reset()
-        if self.active then self:cancelActive('session reset') end
+        if self.active then self:cancelActive('session reset',true) end
         self.active=nil
         self.lastAction=nil
         self.stopFailed=nil
         self.sequence=0
         self.session=self.session+1
         self.history={}
+        self.noticeQueue={}
     end
     function self:requestWalk(target)
         return self:execute('walk here',target)
@@ -518,7 +602,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 addHistory({id=result.id,command=command,state='rejected',summary='Sarah '..data.state})
                 return result
             end
-            if not data.npc then
+            if not data.npc or not isValidCoord(data.npc.x,data.npc.y,data.npc.z) then
                 result.state='rejected'
                 result.lines={'Sarah position unavailable.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='NPC position missing'})
@@ -541,11 +625,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 addHistory({id=result.id,command=command,state='rejected',summary='Player position missing'})
                 return result
             end
-            if type(tx)~='number' or type(ty)~='number' or type(tz)~='number' or
-               tx~=tx or ty~=ty or tz~=tz or
-               tx==math.huge or tx==-math.huge or
-               ty==math.huge or ty==-math.huge or
-               tz==math.huge or tz==-math.huge then
+            if not isValidCoord(tx,ty,tz) then
                 result.state='rejected'
                 result.lines={'Invalid target coordinates.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='Invalid target coordinates'})
@@ -672,13 +752,13 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 addHistory({id=result.id,command=command,state='rejected',summary='Sarah '..data.state})
                 return result
             end
-            if not data.npc then
+            if not data.npc or not isValidCoord(data.npc.x,data.npc.y,data.npc.z) then
                 result.state='rejected'
                 result.lines={'Sarah position unavailable.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='NPC position missing'})
                 return result
             end
-            if not data.player then
+            if not data.player or not isValidCoord(data.player.x,data.player.y,data.player.z) then
                 result.state='rejected'
                 result.lines={'Player position unavailable.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='Player position missing'})
@@ -688,6 +768,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 result.state='rejected'
                 result.lines={'Player is dead; cannot follow.'}
                 addHistory({id=result.id,command=command,state='rejected',summary='Player dead'})
+                return result
+            end
+            if not isPlayerAlive(data) then
+                result.state='rejected'
+                result.lines={'Player liveness query failed; cannot follow.'}
+                addHistory({id=result.id,command=command,state='rejected',summary='Player liveness unknown'})
                 return result
             end
             local nx,ny,nz=data.npc.x,data.npc.y,math.floor(data.npc.z)
@@ -775,10 +861,11 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return result
         end
         if command=='stop' then
+            local priorStopFailed=self.stopFailed
             if self.active then
                 local cancelledId=self.active.id
                 local cancelledCmd=self.active.command
-                local ok,actionCopy,stopOk,stopErr=self:cancelActive('stopped by user')
+                local ok,actionCopy,stopOk,stopErr=self:cancelActive('stopped by user',true)
                 if not stopOk then
                     self.stopFailed=stopErr or 'stop failed'
                     result.state='failed'
@@ -788,7 +875,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 end
                 self.stopFailed=nil
                 result.state='completed'
-                result.lines={'Cancelled #'..cancelledId..' ('..cancelledCmd..').','Sarah stopped.'}
+                local lines={'Cancelled #'..cancelledId..' ('..cancelledCmd..').'}
+                if priorStopFailed then
+                    lines[#lines+1]='Prior engine stop failure cleared; movement recovered.'
+                end
+                lines[#lines+1]='Sarah stopped.'
+                result.lines=lines
                 addHistory({id=result.id,command=command,state='completed',summary='Cancelled #'..cancelledId})
                 return result
             end
@@ -804,7 +896,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 end
                 self.stopFailed=nil
                 result.state='completed'
-                result.lines={'Sarah stopped; nothing active.'}
+                local lines={}
+                if priorStopFailed then
+                    lines[#lines+1]='Prior engine stop failure cleared; movement recovered.'
+                end
+                lines[#lines+1]='Sarah stopped; nothing active.'
+                result.lines=lines
                 addHistory({id=result.id,command=command,state='completed',summary='Nothing active'})
                 return result
             end
@@ -830,7 +927,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             end
             self.stopFailed=nil
             result.state='completed'
-            result.lines={'Sarah stopped; nothing active.'}
+            local lines={}
+            if priorStopFailed then
+                lines[#lines+1]='Prior engine stop failure cleared; movement recovered.'
+            end
+            lines[#lines+1]='Sarah stopped; nothing active.'
+            result.lines=lines
             addHistory({id=result.id,command=command,state='completed',summary='Nothing active'})
             return result
         end
@@ -848,10 +950,27 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             result.lines={'Sarah: '..data.state}
             if self.active then
                 result.lines[#result.lines+1]='Action: #'..self.active.id..' '..self.active.command..' (running)'
+                if self.active.command=='follow' then
+                    if self.active.stepState=='walking' then
+                        if self.active.currentTarget then
+                            result.lines[#result.lines+1]=string.format('Follow: following while walking to (%d, %d, %d)',self.active.currentTarget.x,self.active.currentTarget.y,self.active.currentTarget.z)
+                        else
+                            result.lines[#result.lines+1]='Follow: following while walking'
+                        end
+                    else
+                        result.lines[#result.lines+1]='Follow: follow engaged but waiting within range'
+                    end
+                end
             elseif self.lastAction then
                 result.lines[#result.lines+1]='Action: idle (last: #'..self.lastAction.id..' '..self.lastAction.state..')'
+                if self.lastAction.command=='follow' and self.lastAction.state=='cancelled' then
+                    result.lines[#result.lines+1]='Follow: disengaged ('..(self.lastAction.reason or 'disengaged')..')'
+                end
             else
                 result.lines[#result.lines+1]='Action: idle'
+            end
+            if self.stopFailed then
+                result.lines[#result.lines+1]='Warning: engine stop failed ('..tostring(self.stopFailed)..'); movement blocked pending recovery.'
             end
             if data.reason then result.lines[#result.lines+1]=data.reason end
             for _,name in ipairs({'player','npc'}) do

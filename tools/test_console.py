@@ -64,7 +64,12 @@ getSpecificPlayer=function() return {} end; getKeyName=function() return 'F9' en
 local obsState='active'
 local obsNpc={x=10,y=20,z=0}
 local obsPlayer={x=12,y=20,z=0}
-require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function() return {state=obsState or 'active',npc=obsNpc,player=obsPlayer} end} end end
+require=function(n) if n=='Sarah/Commands' then return Commands elseif n=='Sarah/Observations' then return {read=function()
+    local dead=obsPlayer and (obsPlayer.dead==true or obsPlayer.liveness=='dead') or false
+    local unknown=obsPlayer and (obsPlayer.liveness=='unknown') or false
+    local alive=obsPlayer and (not dead and not unknown) or false
+    return {state=obsState or 'active',npc=obsNpc,player=obsPlayer,playerDead=dead,playerAlive=alive,playerLiveness=unknown and 'unknown' or (dead and 'dead' or 'alive')}
+end} end end
 local function reload() return assert(load(ConsoleSource))() end
 local s=reload()
 local function release() raw={}; s.tick() end
@@ -886,6 +891,191 @@ test('OnResolutionChange immediately re-clamps open panel, adapts height, and up
     s.close()
     s.reset()
     screenW=nil; screenH=nil
+end)
+test('asynchronous disengagement appends to open console panel history and notifies in-world feedback once',function()
+    local lastPlayerNotified,lastMessageNotified,lastIsBadNotified
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        },
+        notify=function(p,msg,isBad)
+            lastPlayerNotified=p
+            lastMessageNotified=msg
+            lastIsBadNotified=isBad
+        end
+    }
+    obsPlayer={x=12,y=20,z=0,dead=false,alive=true}
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- Start follow
+    p.btnFollow:click()
+    assert(p.dispatch.active and p.dispatch.active.command=='follow')
+
+    -- Player moves out of range (>8 tiles away: 50, 20)
+    obsPlayer={x=50,y=20,z=0,dead=false,alive=true}
+    local itemsBefore=#p.history.items
+    s.tick()
+
+    -- Follow is disengaged
+    assert(p.dispatch.active==nil)
+    assert(p.dispatch.lastAction.state=='cancelled')
+
+    -- Notice is appended to open panel
+    local foundDisengagedNotice,foundCancelledStatus=false,false
+    for i=itemsBefore+1,#p.history.items do
+        local text=p.history.items[i].text
+        if text:find('Follow disengaged: player out of range %(>8 tiles%)%.') then
+            foundDisengagedNotice=true
+        end
+        if text:find('cancelled') then
+            foundCancelledStatus=true
+        end
+    end
+    assert(foundDisengagedNotice and foundCancelledStatus)
+
+    -- In-world feedback notification was delivered
+    assert(lastMessageNotified=='Follow disengaged: player out of range (>8 tiles).')
+    assert(lastIsBadNotified==true)
+
+    -- Subsequent ticks do NOT append duplicate notices
+    local itemsAfter=#p.history.items
+    lastMessageNotified=nil
+    for i=1,5 do s.tick() end
+    assert(#p.history.items==itemsAfter)
+    assert(lastMessageNotified==nil)
+
+    s.close()
+    s.reset()
+end)
+test('closed-console disengagement notifies in-world feedback and does not replay on later panel open or reopen',function()
+    local lastMessageNotified,lastIsBadNotified
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        },
+        notify=function(p,msg,isBad)
+            lastMessageNotified=msg
+            lastIsBadNotified=isBad
+        end
+    }
+    obsPlayer={x=12,y=20,z=0,dead=false,alive=true}
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- Start follow
+    p.btnFollow:click()
+    assert(p.dispatch.active and p.dispatch.active.command=='follow')
+
+    -- Close console panel while follow is active
+    s.close()
+    assert(s.panel==nil)
+
+    -- Player dies while console is closed
+    obsPlayer={x=12,y=20,z=0,dead=true,alive=false}
+    s.tick()
+    assert(p.dispatch.active==nil)
+    assert(p.dispatch.lastAction.reason=='player dead')
+
+    -- In-world notification was delivered even with console closed
+    assert(lastMessageNotified=='Follow disengaged: player dead.')
+    assert(lastIsBadNotified==true)
+
+    -- Open console later: must not replay notification or execute commands
+    lastMessageNotified=nil
+    s.open()
+    local pNew=s.panel
+    assert(pNew~=nil)
+    -- History only contains initial greeting / commands info, no replayed notice
+    local replayedNotice=false
+    for _,item in ipairs(pNew.history.items) do
+        if item.text:find('Follow disengaged') then replayedNotice=true end
+    end
+    assert(not replayedNotice)
+    assert(lastMessageNotified==nil)
+
+    -- Status button reflects disengagement accurately without extra commands
+    pNew.btnStatus:click()
+    local foundDisengagedStatus=false
+    for _,item in ipairs(pNew.history.items) do
+        if item.text:find('Follow: disengaged %(player dead%)') then
+            foundDisengagedStatus=true
+        end
+    end
+    assert(foundDisengagedStatus)
+
+    -- Reopen does not replay or trigger commands
+    s.close()
+    s.open()
+    assert(s.panel~=nil)
+    replayedNotice=false
+    for _,item in ipairs(s.panel.history.items) do
+        if item.text:find('Follow disengaged') then replayedNotice=true end
+    end
+    assert(not replayedNotice)
+
+    s.close()
+    s.reset()
+end)
+test('session reset clears notice queue and prevents replay across world sessions',function()
+    local lastMessageNotified
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        },
+        notify=function(p,msg) lastMessageNotified=msg end
+    }
+    obsPlayer={x=12,y=20,z=0,dead=false,alive=true}
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- Start follow
+    p.btnFollow:click()
+    assert(p.dispatch.active~=nil)
+
+    -- Session reset (e.g. leaving world)
+    s.reset()
+    assert(s.panel==nil)
+    assert(s.pos==nil)
+    assert(p.dispatch.active==nil)
+    assert(#p.dispatch.noticeQueue==0)
+
+    -- Tick in new session does not fire stale notice
+    lastMessageNotified=nil
+    s.tick()
+    assert(lastMessageNotified==nil)
+
+    -- Reopen in new world session starts clean
+    s.open()
+    assert(s.panel~=nil)
+    local hasNotice=false
+    for _,item in ipairs(s.panel.history.items) do
+        if item.text:find('Follow disengaged') or item.text:find('cancelled') then
+            hasNotice=true
+        end
+    end
+    assert(not hasNotice)
+
+    s.close()
+    s.reset()
 end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

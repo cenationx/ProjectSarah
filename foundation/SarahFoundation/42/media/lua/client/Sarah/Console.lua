@@ -311,7 +311,24 @@ end
 -- Eat the release to avoid opening the pause menu after closing with Escape.
 state.tick=function()
     if not allowed() then state.close(); return end
-    if state.dispatch then state.dispatch:tick() end
+    if state.dispatch then
+        state.dispatch:tick()
+        if state.dispatch.consumeNotices then
+            local notices=state.dispatch:consumeNotices()
+            if notices and #notices>0 then
+                local player=getSpecificPlayer and getSpecificPlayer(0)
+                for _,notice in ipairs(notices) do
+                    if state.panel then
+                        state.panel:append(notice.message)
+                        state.panel:append('#'..notice.id..' '..notice.state)
+                    end
+                    if SarahFoundation and SarahFoundation.notify then
+                        SarahFoundation.notify(player,notice.message,notice.isBad~=false)
+                    end
+                end
+            end
+        end
+    end
     local key=getCore():getKey(binding)
     local alt=getCore():getAltKey(binding)
     local pressed=0
