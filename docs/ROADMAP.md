@@ -1,7 +1,8 @@
 # Project Sarah roadmap
 
 The intended direction is a dependable Sarah NPC foundation, followed by a small
-AI-controlled vertical slice if the user approves starting AI. Later milestones
+native survivor core. External/model AI comes near the end, after useful core
+mechanics pass acceptance and the user explicitly approves integration. Later milestones
 are planning proposals, not authorization or promises. Finish the current gate
 before adding broader features. Multiplayer is outside the initial scope.
 
@@ -10,9 +11,10 @@ before adding broader features. Multiplayer is outside the initial scope.
 | M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
 | M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
 | M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B smoke passed, slice C implemented offline, follow command implemented offline |
-| M2: Minimal AI vertical slice | One bounded model-to-action loop | ON HOLD; explicit user approval required |
-| M3: Sarah behavior and continuity | Personality, limited memory and useful behaviors | PROPOSED |
-| M4: Release candidate | Installation, regression checks and user documentation | PROPOSED |
+| M2: Native survivor core | Own perception, equipment, defense, bounded looting, exchange and one build action | RESEARCH/PLAN; see SURVIVOR-CORE-PLAN.md |
+| M3: External AI vertical slice | One bounded model-to-action loop after native core | ON HOLD; explicit user approval required |
+| M4: Broader behavior and continuity | Personality and expanded behaviors | PROPOSED |
+| M5: Release candidate | Installation, regression checks and user documentation | PROPOSED |
 
 ## M0: completed evidence
 
@@ -85,9 +87,28 @@ or the user explicitly accepts a documented limitation. Keep the AI hold intact.
 
 Gate: commands demonstrably work and fail safely before a model can invoke them.
 Carry all M0 limitations and safeguards forward. The console contains no model
-integration; accepting this plan does not authorize M2.
+integration; accepting the console plan does not establish native survivor acceptance or authorize external AI.
 
-## M2: AI vertical slice (on hold)
+## M2: small native survivor core (research and planning)
+
+User direction updated 2026-10-05: meaningful native mechanics first; external
+AI is one of the last additions. See [SURVIVOR-CORE-PLAN.md](SURVIVOR-CORE-PLAN.md)
+for inspected references, slice boundaries, uncertainties and acceptance.
+
+- [ ] Resolve pending foundation/Follow native checks and nearby rendering independence.
+- [ ] Independent Sarah sight: own facing/range/line of sight, bounded observation memory.
+- [ ] Real inventory transfer and supported weapon/clothing equipment.
+- [ ] Bounded self-defense against one threat, with retreat and cancellation policy.
+- [ ] Loot one container, then a selected room/house with capacity and interruption handling.
+- [ ] Explainable equipment improvements from owned supported items.
+- [ ] Player-Sarah item exchange, followed by bounded barter if desired.
+- [ ] One specified native construction action consuming real tools/materials.
+
+Gate: useful native survivor behavior demonstrated in isolated gameplay before
+external/model integration. This is the proposed sequence, not implementation
+or acceptance of every feature.
+
+## M3: external AI vertical slice (on hold until native core)
 
 - [ ] Obtain explicit approval to begin AI; agree local/hosted model and costs.
 - [ ] Agree a narrow demonstration and acceptance criteria with the user.
@@ -97,12 +118,12 @@ integration; accepting this plan does not authorize M2.
 - [ ] Test timeouts, unavailable model, malformed output and manual stop.
 - [ ] Demonstrate one repeatable useful behavior before expanding.
 
-## M3 and M4: proposals to refine after the vertical slice
+## M4 and M5: proposals to refine after the native core
 
-M3: personality and dialogue, minimal saved memory, a small set of useful tasks,
+M4: personality and dialogue, minimal saved memory, a small set of useful tasks,
 and behavior evaluations. Decide each addition from demonstrated needs.
 
-M4: packaging, version compatibility checks, installation/uninstall instructions,
+M5: packaging, version compatibility checks, installation/uninstall instructions,
 backup guidance, regression checklist, third-party notices and a limited release.
 No multiplayer or broad PZNS modernization commitment is implied.
 
