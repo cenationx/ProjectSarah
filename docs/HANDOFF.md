@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
-125 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint, 54 command,
-19 console). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
+135 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+19 console, 10 acceptance driver). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
 and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
 scoping, production controller contract, and safe context menu routing) implemented, hardened against session-reset
@@ -95,7 +95,8 @@ Run `tools/test_render.py`: 15 engine adapter checks.
 Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
 Run `tools/test_commands.py`: 54 command parser/cancellation/movement checks.
 Run `tools/test_console.py`: 19 simulated console UI/key/session checks.
-125 automated checks total. Simulated checks do not prove exceptional native cleanup.
+Run `tools/test_driver.py`: 10 acceptance driver sequencing/movement/timeout/teardown checks.
+135 automated checks total (125 in core suites + 10 driver checks). Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -103,6 +104,22 @@ APIs; that failure is not a regression in SarahFoundation. ECJ 3.43.0 is needed
 locally for compilation; CFR 0.152 was used only for local engine inspection.
 
 ## Live tests
+
+### Temporary native acceptance driver for walk/stop testing
+To run native walk and stop testing without manual typing:
+1. Ensure the game is CLOSED.
+2. Deploy driver: copy `tools/FoundationWalkStopDriver.lua` to `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
+3. Launch game with isolated profile and `SarahConsoleNativeCase`.
+4. The driver UI panel appears at (20, 200). It never starts any test automatically.
+5. Move the player 4–6 tiles away from Sarah on the same floor with a clear path.
+6. Click `Walk then Stop`:
+   - Driver dispatches `walk here`, monitors observable movement (>= 0.2 tiles), and issues `stop`.
+   - Verifies Sarah halts before target square and marks mid-walk cancellation `PASS`.
+   - If Sarah reaches target square too early, driver marks `INVALID: Arrived too soon` (not labelled mid-walk cancellation).
+7. Click `Walk to Player`: verifies clean resumption after cancellation.
+8. Click `Status & History`: logs status and history to verify dispatch record.
+9. Close game cleanly.
+10. Remove driver: delete `runtime/isolated/mods/SarahFoundation/42/media/lua/client/ZZSarahWalkStopDriver.lua`.
 
 1. Read STATUS and the applicable test report. Confirm game process is closed.
    Sandboxed process queries may not see a game launched outside that sandbox;
