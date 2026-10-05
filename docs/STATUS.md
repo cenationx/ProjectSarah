@@ -523,3 +523,31 @@ Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
   - Native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
   - External AI remains strictly ON HOLD.
   - Checkout ownership is RELEASED to Codex.
+
+### Native slice C session IN PROGRESS (2026-10-05)
+Codex owns checkout. Gamepad-disconnected automated F9/A/I had no visible effect. Prior game closed cleanly (SAVED a; GameThread exited). Backup: runtime\backups\slice-c-native-20261005-143139 (world, Previous-mod, keys, options, selection, raw log). Reviewed production files deployed; no temporary driver. Restore only game-closed after preserving latest state. Native UI/walking/cancellation checks remain pending.
+
+Native progress: Help #1, Status #2, Inventory #3 and History shortcuts displayed correctly. Walk #4 reached (10768,10270,0); longer walk #8 reached (10769,10275,0) before Codex stop #9. User submitted walk #11 and stop #12: cancelled before target (10769,10271,0). Status #13/#14 observed NPC (10769.47,10274.26,0) unchanged across unpaused interval. Follow-up walk #15 completed at target; #17 immediately reported Already at target. Remaining: user visual confirmation of mid-walk halt, distance refusal, context-menu feedback and session reset. Game remains running; no final acceptance claim.
+
+User confirmed native visual mid-walk halt after making game fullscreen: Walk Here followed by Stop visibly stopped Sarah. This completes visual cancellation confirmation; distance refusal, context-menu feedback and session reset remain pending.
+
+Context-menu walk #23 reached (10768,10272,0), confirmed by History #24 and visible travel/green feedback. Native distance refusal deferred because indoor space is insufficient. Next: same-process menu/reload reset. Game still running; Codex owns checkout.
+
+### Native slice C bounded results (Codex, 2026-10-05)
+Production mouse shortcuts passed help/status/inventory/history, nearby walk arrival,
+already-at-target, active cancellation with sustained halt, and subsequent walk.
+User visually confirmed walk #18 halted by stop #19. Context-menu walk #23 displayed
+green feedback and completed at (10768,10272,0), confirmed by history #24.
+Same-process Quit -> Continue passed: Help restarted at #1; History #2 listed only
+new Help, with no previous-session requests. Status #3 showed Sarah active/idle,
+player (10768.86,10272.74,0), NPC (10768.47,10272.42,0). Log showed SESSION_RESET,
+ACTIVE npc=true localPlayerPreserved=true, RESTORED b. Post-reload user movement
+was not separately retested. Native distance refusal and red context-menu refusal
+feedback remain pending: house too small; user did not go outside. No full slice C
+acceptance claim. Offline baseline remains 146 project checks plus 11 runner tests.
+Game closed cleanly: SAVED a; GameThread exited; no java/javaw processes remained.
+Final world/settings/raw log preserved at
+runtime/backups/slice-c-native-20261005-143139/Final-native.
+F9 key:67 and Forward key:17 retained. No temporary probes deployed.
+Codex owns checkout. Next: safe disposable spacious case for native refusal checks,
+or bounded offline work while those checks remain explicitly pending. AI ON HOLD.

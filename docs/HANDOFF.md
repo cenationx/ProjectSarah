@@ -591,3 +591,24 @@ Gemini completed offline preparation for native acceptance of M1 slice C and con
   - Native M1 slice C and console-button acceptance by Codex following `docs/M1-slice-c-checklist.md`.
   - External AI remains strictly ON HOLD.
   - Checkout ownership is RELEASED to Codex.
+
+Native slice C IN PROGRESS: Codex deployed reviewed production files after clean exit and backup at runtime\backups\slice-c-native-20261005-143139. Previous-mod provides rollback; world/settings included. No temporary driver deployed.
+
+### Native slice C bounded results (Codex, 2026-10-05)
+Production mouse shortcuts passed help/status/inventory/history, nearby walk arrival,
+already-at-target, active cancellation with sustained halt, and subsequent walk.
+User visually confirmed walk #18 halted by stop #19. Context-menu walk #23 displayed
+green feedback and completed at (10768,10272,0), confirmed by history #24.
+Same-process Quit -> Continue passed: Help restarted at #1; History #2 listed only
+new Help, with no previous-session requests. Status #3 showed Sarah active/idle,
+player (10768.86,10272.74,0), NPC (10768.47,10272.42,0). Log showed SESSION_RESET,
+ACTIVE npc=true localPlayerPreserved=true, RESTORED b. Post-reload user movement
+was not separately retested. Native distance refusal and red context-menu refusal
+feedback remain pending: house too small; user did not go outside. No full slice C
+acceptance claim. Offline baseline remains 146 project checks plus 11 runner tests.
+Game closed cleanly: SAVED a; GameThread exited; no java/javaw processes remained.
+Final world/settings/raw log preserved at
+runtime/backups/slice-c-native-20261005-143139/Final-native.
+F9 key:67 and Forward key:17 retained. No temporary probes deployed.
+Codex owns checkout. Next: safe disposable spacious case for native refusal checks,
+or bounded offline work while those checks remain explicitly pending. AI ON HOLD.

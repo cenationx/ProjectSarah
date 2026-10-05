@@ -104,3 +104,5 @@ and behavior evaluations. Decide each addition from demonstrated needs.
 M4: packaging, version compatibility checks, installation/uninstall instructions,
 backup guidance, regression checklist, third-party notices and a limited release.
 No multiplayer or broad PZNS modernization commitment is implied.
+
+Native slice C update (2026-10-05): nearby arrival, already-at-target, sustained cancellation/resumption, mouse toolbar and context-menu success, same-process history reset verified. Distance refusal/red feedback and post-reload user movement remain pending. See evidence/slice-c-native-partial.txt; no full native acceptance claim.

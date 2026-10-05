@@ -130,7 +130,7 @@ Before starting the test, the following reviewed production source files must be
     - Log shows `SESSION_RESET` and clean world reload (`RESTORED a` or `b`).
     - Codex opens console via right-click world -> `Sarah: console` (or F9).
     - Codex clicks `[Help]` button: output begins at request `#1 help: completed` (sequence counter reset).
-    - Codex clicks `[History]` button: outputs `#1 help: completed` and `#2 history: completed` (confirming pre-reset history cleared and sequence numbering restarts at #1).
+    - Codex clicks `[History]` button: lists only `#1 help: completed`, then reports request `#2 completed` (confirming pre-reset history cleared and sequence numbering restarts at #1).
     - User confirms player and Sarah are intact, one Sarah present, and movement functional.
   - **Evidence to record**: Clean log excerpt (`SESSION_RESET`, `RESTORED`), reset history and sequence `#1`.
 
@@ -143,3 +143,23 @@ Before starting the test, the following reviewed production source files must be
 3. Verify all temporary test/diagnostic probes remain disabled outside the mod (`runtime/disabled-probes`).
 4. Preserve final test case into `runtime/backups/`.
 5. Update `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/HANDOFF.md`, and `docs/M1-console-test.md` with captured evidence.
+
+
+### Native slice C bounded results (Codex, 2026-10-05)
+Production mouse shortcuts passed help/status/inventory/history, nearby walk arrival,
+already-at-target, active cancellation with sustained halt, and subsequent walk.
+User visually confirmed walk #18 halted by stop #19. Context-menu walk #23 displayed
+green feedback and completed at (10768,10272,0), confirmed by history #24.
+Same-process Quit -> Continue passed: Help restarted at #1; History #2 listed only
+new Help, with no previous-session requests. Status #3 showed Sarah active/idle,
+player (10768.86,10272.74,0), NPC (10768.47,10272.42,0). Log showed SESSION_RESET,
+ACTIVE npc=true localPlayerPreserved=true, RESTORED b. Post-reload user movement
+was not separately retested. Native distance refusal and red context-menu refusal
+feedback remain pending: house too small; user did not go outside. No full slice C
+acceptance claim. Offline baseline remains 146 project checks plus 11 runner tests.
+Game closed cleanly: SAVED a; GameThread exited; no java/javaw processes remained.
+Final world/settings/raw log preserved at
+runtime/backups/slice-c-native-20261005-143139/Final-native.
+F9 key:67 and Forward key:17 retained. No temporary probes deployed.
+Codex owns checkout. Next: safe disposable spacious case for native refusal checks,
+or bounded offline work while those checks remain explicitly pending. AI ON HOLD.
