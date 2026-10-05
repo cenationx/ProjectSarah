@@ -96,7 +96,7 @@ AI is one of the last additions. See [SURVIVOR-CORE-PLAN.md](SURVIVOR-CORE-PLAN.
 for inspected references, slice boundaries, uncertainties and acceptance.
 
 - [ ] Resolve pending foundation/Follow native checks and nearby rendering independence.
-- [ ] Independent Sarah sight: own facing/range/line of sight, bounded observation memory.
+- [ ] Independent Sarah sight: offline policy/memory implemented (46 fixtures), native integration/lighting/acceptance pending; see PERCEPTION-V1.md.
 - [ ] Real inventory transfer and supported weapon/clothing equipment.
 - [ ] Bounded self-defense against one threat, with retreat and cancellation policy.
 - [ ] Loot one container, then a selected room/house with capacity and interruption handling.
