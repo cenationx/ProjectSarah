@@ -1,3 +1,26 @@
+## Latest checkpoint: inert caller epoch and accounting (2026-10-06)
+
+Started clean main dac6c1f; Codex remains sole shared-checkout editor. Gemini3.8
+Flash HIGH authored NO-TOOLS tools/CallerEpoch.lua and CaptureAccounting.lua with
+base fixtures. Codex reviewed/applied, corrected a nil-hole fixture and added
+14 regressions, including mandatory overflow paths and actual probe composition.
+53 caller cases; all608 suite checks/14 suites +11 runner +19 preflight PASS.
+CallerEpoch copies five caller-issued scalar tokens with framework separate from
+controller, bounded non-reused epoch tickets and permanent exhaustion. It does
+not establish native identity, generation or residency. CaptureAccounting is a
+fresh per-pass precharge ledger, not a native-work/timing sandbox. No automatic
+reset propagation is implemented; caller must stop on denial and close ledgers.
+See CALLER-CONTEXT-OFFLINE.md and evidence/caller-context-offline-20261006.txt.
+Actual probe model:54 captures/26 reads/566 charges complete;565 charges abort.
+No production imports/native caller/events/deployment/game launch/save/settings
+changes. Stop unchanged, lightunknown; deployed baseline remains5fa6b9c.
+Next bounded offline task: review dormant one-shot caller/bridge design with token
+provenance, reset propagation and per-operation accounting prerequisites.
+Native identity/exposure/enum/loaded-world/light and Follow/rendering remain open.
+Live tests stay here and deferred; external/model AI ON HOLD. Gemini drafts code;
+Codex applies/reviews/tests/commits/pushes and alone later deploys/launches.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: native binding/lifecycle review (2026-10-06)
 
 Started clean main795db52; Codex sole checkout editor. Gemini3.8 Flash HIGH

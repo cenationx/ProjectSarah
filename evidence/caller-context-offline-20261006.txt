@@ -1,0 +1,19 @@
+Project Sarah - inert caller epoch/accounting, 2026-10-06
+Starting checkpoint:dac6c1fae053ac4c8e72381e6603c373b45c963c,main,clean.
+Codex sole editor; Gemini3.8 Flash HIGH NO-TOOLS source/base39 fixtures.
+Codex corrected nil-hole namespace test, summary and redundant string conversion;
+added14 regressions. Actual Lua tools/probe run through Lupa Lua55.
+run_tests.py:PASS608 checks/14 suites; caller suite53 cases.
+test_runner.py:PASS11. test_preflight.py:PASS19.
+Epoch state tokens copied, framework distinct from controller; max2147483647,
+no ticket reuse on active invalidation/reset, permanent overflow exhaustion.
+Accounting hard capture512/operations16384, no refill, before-call charges,
+sticky first reason and denial. No native operations executed by policy.
+Actual probe composition54 captures/26 resolutions/566 declared charges complete;
+565 model charges abort on final capture with empty output. No native residency
+semantics or cost benchmark established by this source-call model.
+Guarded global env, raw fields, input copies, handle rejection, all overflow paths,
+callback failure charge retention and pre-denial callback refusal verified.
+Tools remain outside production; no native bindings/events/game launch/deployment,
+save/settings/Stop changes. Lightingunknown; external/model AI ON HOLD.
+Native identity/exposure/light/loaded-world/Follow/render acceptance pending.

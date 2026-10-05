@@ -1,3 +1,10 @@
+## Latest offline baseline (2026-10-06, caller policies)
+
+Default runner includes14 suites and608 checks including53 caller epoch/accounting
+cases. Runner self-tests11; preflight self-tests19. See CALLER-CONTEXT-OFFLINE.md.
+Lua55 fixture checks do not establish Kahlua/native acceptance. Earlier totals
+and examples below are historical.
+
 ## Latest offline baseline (2026-10-06, exposure probe)
 
 Default runner includes13 suites and555 checks including48 exposure probe cases.

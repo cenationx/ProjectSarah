@@ -12,8 +12,11 @@
   No native resolver/invocation; symbol/enum reference fixtures are not engine proof.
 - [x] Concrete native candidate/resolver mapping and lifecycle review:
   NATIVE-BINDING-LIFECYCLE-REVIEW.md, deferred cases prepared, native gates open.
-- [ ] Inert caller epoch/reset policy and capture operation accounting contract
-  with Gemini coding/Codex review, no bindings/events/native residency simulation.
+- [x] Inert CallerEpoch/CaptureAccounting tools, Gemini coding/Codex review:
+  53 caller cases; all608 suite checks/14 suites +11 runner +19 preflight PASS.
+  No native token proof or automatic reset propagation.
+- [ ] Review dormant one-shot caller/bridge design: exact token provenance, reset
+  propagation and per-operation accounting, no native invocation or runtime hooks.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/
