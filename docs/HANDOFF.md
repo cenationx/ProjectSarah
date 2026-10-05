@@ -24,12 +24,12 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, and `M1-slice-c-checklist.md` for current checks.
-139 automated checks passed (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-19 console, 14 acceptance driver). Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
+146 automated checks passed across 6 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+26 console, 14 acceptance driver) plus 11 runner self-tests. Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention,
 and session-reset smoke checks passed natively; active moving-action cancellation remains native testing pending.
 Slice C (walk here, completion tracking, stop cancellation, timeout, lifecycle invalidation, dual controller+NPC identity
 scoping, production controller contract, safe context menu routing, and temporary acceptance driver with sustained halt verification)
-implemented and hardened offline (139 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
+implemented and hardened offline (146 automated checks); native acceptance of walking, arrival, and live cancellation pending Codex live check
 per `docs/M1-slice-c-checklist.md`.
 Automated special-key delivery remains limited by Computer Use; physical keys need the user. Keep external AI on hold.
 
@@ -79,7 +79,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (139 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (146 checks total) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -87,7 +87,7 @@ From the project directory in PowerShell, the single-entry verification workflow
 
 See `docs/verification-workflow.md` for full documentation (CLI flags, `--python` overrides, per-suite options, JSON/Markdown reports under `tools/reports/`, and runner self-tests).
 
-To test the runner itself (9 unit tests using standard library only):
+To test the runner itself (11 unit tests using standard library only):
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\test_runner.py
 ```
@@ -97,9 +97,9 @@ Individual suites can also still be executed directly:
 - `tools/test_render.py`: 15 engine adapter/render checks.
 - `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
 - `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
-- `tools/test_console.py`: 19 simulated console UI/key/session checks.
+- `tools/test_console.py`: 26 simulated console UI/key/shortcut/session checks.
 - `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
-139 automated checks total (across 6 suites) plus 9 runner self-tests. Simulated checks do not prove exceptional native cleanup.
+146 automated checks total (across 6 suites) plus 11 runner self-tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -506,3 +506,33 @@ Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
 
 ### Verification runner correction (2026-10-05)
 Runner dirty status includes untracked files. Self-tests use ignored tools/reports/self-test-tmp and clean their temporary directories. Verified 139 project checks plus 11 runner self-tests; native acceptance remains pending.
+
+## Sarah Console mouse shortcuts for commands (latest, 2026-10-05)
+
+Gemini added mouse-operated command shortcut buttons to `SarahConsole.lua` and added full regression coverage in `tools/test_console.py` (offline tooling only; no game launches, desktop automation, or runtime deployment):
+- **Mouse shortcut toolbar in Sarah Console**:
+  - Purpose: Overcomes unreliable automated keyboard input in PZ; allows Codex to open the console via mouse context menu (`Sarah: console`) and submit all core commands by clicking dedicated buttons, while the user controls movement and gameplay.
+  - Buttons: Dedicated, clearly labelled buttons for `Help`, `Status`, `Inventory`, `History`, `Walk Here`, and `Stop`.
+  - Exact command path: Every button routes directly through the existing validated dispatcher (`self.dispatch:execute()`) and the unified display path (`executeCommand()`), identical to typed entry. No duplicated logic or secondary dispatchers.
+  - `Walk Here`: Captures the player's position at click time via `self.observe(false)`, validating proximity (<= 8 tiles, same floor), alive/active status, and busy state.
+  - `Stop`: Remains accessible and clickable while a walk is running, halting Sarah and cancelling the active timed action.
+  - Rejection & failure visibility: Rejected requests (e.g. distant target, busy state) and failure reasons are displayed in the history box with request IDs.
+  - Layout & geometry: Compact toolbar at `y = height - 74` (height 26) with balanced proportional button widths (Help: 72, Status: 80, Inventory: 96, History: 82, Walk Here: 102, Stop: 72). Clean margins (12px left/right), no overlap with history (y: 42..288), entry (y: 330..356), Run (x: 484..548), or Close (x: 480..548, y: 10..34). Fits cleanly inside 1280x720.
+  - Translation integration: Added translation keys `UI_SarahConsole_Help`, `UI_SarahConsole_Status`, `UI_SarahConsole_Inventory`, `UI_SarahConsole_History`, `UI_SarahConsole_WalkHere`, `UI_SarahConsole_Stop`, `UI_SarahConsole_Run`, and `UI_SarahConsole_Close` to `Translate/EN/UI.json`. Safe `tr()` helper checks `getText()`.
+  - Preserved controls: Typed command entry in `entry` and Enter/Run button remain fully functional. Reopening/redrawing never executes commands.
+- **Offline regression suite (`tools/test_console.py`)**:
+  - 7 new automated tests (26 checks total in suite):
+    1. All 6 shortcut buttons created with valid labels and non-overlapping geometry.
+    2. Each shortcut button invokes its command once through normal output path with refocused entry.
+    3. Stop shortcut button remains accessible and halts active walk mid-stride.
+    4. Rejected walk shortcut feedback displays rejection reason and request ID.
+    5. Reopening/redrawing does not execute commands or advance sequence.
+    6. Translation helper uses `getText` when available and falls back gracefully.
+    7. Typed command entry and session reset remain fully operational alongside shortcuts.
+- **Verification status**:
+  - 146 checks across 6 suites pass in `tools/run_tests.py` (0.31s).
+  - 11 runner self-tests pass in `tools/test_runner.py` (2.77s).
+  - Offline tooling and mod source updated. Native UI verification and Slice C native acceptance remain PENDING live testing by Codex.
+  - Temporary driver in `tools/FoundationWalkStopDriver.lua` retained for Codex evaluation.
+
+Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

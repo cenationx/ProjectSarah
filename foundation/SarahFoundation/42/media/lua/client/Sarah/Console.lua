@@ -112,19 +112,58 @@ function state.close()
         state.panel=nil
     end
 end
+local function tr(key,fallback)
+    if getText then
+        local val=getText(key)
+        if val and val~=key then return val end
+    end
+    return fallback
+end
+function Panel:onShortcutHelp() self:executeCommand('help') end
+function Panel:onShortcutStatus() self:executeCommand('status') end
+function Panel:onShortcutInventory() self:executeCommand('inventory') end
+function Panel:onShortcutHistory() self:executeCommand('history') end
+function Panel:onShortcutWalkHere() self:executeCommand('walk here') end
+function Panel:onShortcutStop() self:executeCommand('stop') end
 function Panel:initialise()
     ISPanel.initialise(self)
     self:setWantKeyEvents(true)
-    self.history=ISScrollingListBox:new(12,45,self.width-24,self.height-105)
+    self.history=ISScrollingListBox:new(12,42,self.width-24,self.height-124)
     self.history:initialise(); self.history:instantiate(); self:addChild(self.history)
     self.history:setFont(UIFont.Small,4)
-    self.entry=ISTextEntryBox:new('',12,self.height-48,self.width-112,28)
+
+    local btnY=self.height-74
+    local btnH=26
+    local buttons={
+        {key='btnHelp',cmd='help',label=tr('UI_SarahConsole_Help','Help'),x=12,w=72,fn=Panel.onShortcutHelp},
+        {key='btnStatus',cmd='status',label=tr('UI_SarahConsole_Status','Status'),x=90,w=80,fn=Panel.onShortcutStatus},
+        {key='btnInventory',cmd='inventory',label=tr('UI_SarahConsole_Inventory','Inventory'),x=176,w=96,fn=Panel.onShortcutInventory},
+        {key='btnHistory',cmd='history',label=tr('UI_SarahConsole_History','History'),x=279,w=82,fn=Panel.onShortcutHistory},
+        {key='btnWalkHere',cmd='walk here',label=tr('UI_SarahConsole_WalkHere','Walk Here'),x=368,w=102,fn=Panel.onShortcutWalkHere},
+        {key='btnStop',cmd='stop',label=tr('UI_SarahConsole_Stop','Stop'),x=476,w=72,fn=Panel.onShortcutStop},
+    }
+    for _,b in ipairs(buttons) do
+        local btn=ISButton:new(b.x,btnY,b.w,btnH,b.label,self,b.fn)
+        btn.command=b.cmd
+        btn:initialise()
+        self:addChild(btn)
+        self[b.key]=btn
+    end
+
+    local inputY=self.height-40
+    local inputH=26
+    self.entry=ISTextEntryBox:new('',12,inputY,self.width-96,inputH)
     self.entry:initialise(); self.entry:instantiate(); self.entry:setMaxTextLength(128); self:addChild(self.entry)
     self.entry.onCommandEntered=function() self:submit() end
-    local run=ISButton:new(self.width-88,self.height-48,76,28,'Run',self,Panel.submit)
+
+    local run=ISButton:new(self.width-76,inputY,64,inputH,tr('UI_SarahConsole_Run','Run'),self,Panel.submit)
     run:initialise(); self:addChild(run)
-    local close=ISButton:new(self.width-80,10,68,24,'Close',nil,state.close)
+    self.btnRun=run
+
+    local close=ISButton:new(self.width-80,10,68,24,tr('UI_SarahConsole_Close','Close'),nil,state.close)
     close:initialise(); self:addChild(close)
+    self.btnClose=close
+
     self.dispatch=getDispatch()
     self:append('Commands: help, status, inventory, walk here, stop, history. Enter submits.')
     local conflict=state.conflict(getCore():getKey(binding))
@@ -136,14 +175,18 @@ function Panel:append(line)
     while #self.history.items>60 do table.remove(self.history.items,1) end
     self.history:setYScroll(-math.max(0,#self.history.items*self.history.itemheight-self.history.height+8))
 end
-function Panel:submit()
+function Panel:executeCommand(commandText)
     if not allowed() then state.close(); return end
-    local input=self.entry:getText()
+    local input=commandText or self.entry:getText()
     local result=self.dispatch:execute(input)
     self:append('> '..input)
     for _,line in ipairs(result.lines) do self:append(line) end
     self:append('#'..result.id..' '..result.state)
     self.entry:setText(''); self.entry:focus()
+    return result
+end
+function Panel:submit()
+    return self:executeCommand(self.entry:getText())
 end
 function Panel:prerender()
     ISPanel.prerender(self)
@@ -153,7 +196,7 @@ function Panel:isKeyConsumed(key) return self.entry:isFocused() or key==getCore(
 function state.open()
     if not allowed() then return end
     if state.panel then state.panel.entry:focus(); return end
-    local w,h=560,360
+    local w,h=560,370
     local panel=Panel:new(math.max(0,(getCore():getScreenWidth()-w)/2),math.max(0,(getCore():getScreenHeight()-h)/2),w,h)
     panel.backgroundColor={r=0.05,g=0.07,b=0.10,a=0.97}
     panel:initialise(); panel:addToUIManager(); state.panel=panel; panel.entry:focus()

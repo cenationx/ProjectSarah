@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) plus 11 passing runner self-tests. Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 146 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver) plus 11 passing runner self-tests. Mouse-operated shortcut toolbar added directly to Sarah Console panel ([Help], [Status], [Inventory], [History], [Walk Here], [Stop]). Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native UI checks and slice C walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,12 +13,12 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
-- Automated tests: 139 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 9 runner self-tests in `tools/test_runner.py`.
+- Automated tests: 146 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 26 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 11 runner self-tests in `tools/test_runner.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 139 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 9 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
+- **Automated policy checks**: 146 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 26 simulated console UI/key/shortcut/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 11 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -471,3 +471,31 @@ Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
 - Runner self-test temporary files are created and cleaned under tools/reports/self-test-tmp, independent of system TEMP settings.
 - Verified: 139 project checks and 11 runner self-tests pass. Two regressions cover project-local temporary files and clean/tracked/untracked Git status.
 - Offline only; runtime and saves untouched. Native slice C remains pending. Ownership: Codex.
+
+### Sarah Console mouse shortcuts for commands (2026-10-05)
+- **Mouse shortcut toolbar added to Sarah Console**:
+  - Purpose: Avoids unreliable automated desktop keyboard input in PZ; allows Codex to open the console via mouse context menu (`Sarah: console`) and submit all core commands by clicking dedicated buttons, while the user controls movement and gameplay.
+  - Buttons: Dedicated, clearly labelled buttons for `Help`, `Status`, `Inventory`, `History`, `Walk Here`, and `Stop`.
+  - Exact command path: Every button routes directly through the existing validated dispatcher (`self.dispatch:execute()`) and the unified display path (`executeCommand()`), identical to typed entry. No duplicated logic or secondary dispatchers.
+  - `Walk Here`: Captures the player's position at click time via `self.observe(false)`, validating proximity (<= 8 tiles, same floor), alive/active status, and busy state.
+  - `Stop`: Remains accessible and clickable while a walk is running, halting Sarah and cancelling the active timed action.
+  - Rejection & failure visibility: Rejected requests (e.g. distant target, busy state) and failure reasons are displayed in the history box with request IDs.
+  - Layout & geometry: Compact toolbar at `y = height - 74` (height 26) with balanced proportional button widths (Help: 72, Status: 80, Inventory: 96, History: 82, Walk Here: 102, Stop: 72). Clean margins (12px left/right), no overlap with history (y: 42..288), entry (y: 330..356), Run (x: 484..548), or Close (x: 480..548, y: 10..34). Fits cleanly inside 1280x720.
+  - Translation integration: Added translation keys `UI_SarahConsole_Help`, `UI_SarahConsole_Status`, `UI_SarahConsole_Inventory`, `UI_SarahConsole_History`, `UI_SarahConsole_WalkHere`, `UI_SarahConsole_Stop`, `UI_SarahConsole_Run`, and `UI_SarahConsole_Close` to `Translate/EN/UI.json`. Safe `tr()` helper checks `getText()`.
+  - Preserved controls: Typed command entry in `entry` and Enter/Run button remain fully functional. Reopening/redrawing never executes commands.
+- **Offline regression suite (`tools/test_console.py`)**:
+  - 7 new automated tests (26 checks total in suite):
+    1. All 6 shortcut buttons created with valid labels and non-overlapping geometry.
+    2. Each shortcut button invokes its command once through normal output path with refocused entry.
+    3. Stop shortcut button remains accessible and halts active walk mid-stride.
+    4. Rejected walk shortcut feedback displays rejection reason and request ID.
+    5. Reopening/redrawing does not execute commands or advance sequence.
+    6. Translation helper uses `getText` when available and falls back gracefully.
+    7. Typed command entry and session reset remain fully operational alongside shortcuts.
+- **Verification status**:
+  - 146 checks across 6 suites pass in `tools/run_tests.py` (0.31s).
+  - 11 runner self-tests pass in `tools/test_runner.py` (2.77s).
+  - Offline tooling and mod source updated. Native UI verification and Slice C native acceptance remain PENDING live testing by Codex.
+  - Temporary driver in `tools/FoundationWalkStopDriver.lua` retained for Codex evaluation.
+
+Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

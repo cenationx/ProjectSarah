@@ -30,7 +30,16 @@ function Base:unfocus() self.focused=false; if focused==self then focused=nil en
 function Base:isFocused() return self.focused end
 function Base:getText() return self.text or '' end
 function Base:setText(v) self.text=v end
-ISPanel=Base; ISScrollingListBox=Base; ISButton=Base
+ISPanel=Base; ISScrollingListBox=Base
+ISButton=Base:derive()
+function ISButton:new(x,y,w,h,title,target,onclick)
+    local o=Base.new(self,x,y,w,h)
+    o.title=title; o.target=target; o.onclick=onclick
+    return o
+end
+function ISButton:click()
+    if self.onclick then return self.onclick(self.target,self) end
+end
 ISTextEntryBox=Base:derive()
 function ISTextEntryBox:new(text,x,y,w,h) local o=Base.new(self,x,y,w,h); o.text=text; return o end
 UIFont={Small=1,Medium=2}
@@ -260,6 +269,282 @@ test('console dispatch rejects controller replacement with same NPC and leaves r
     assert(stopRes==false)
     assert(stopped2==nil)
     dispatch:reset()
+end)
+test('console panel creates all 6 shortcut buttons with valid labels and non-overlapping geometry',function()
+    s.open()
+    local p=s.panel
+    assert(p and p.btnHelp and p.btnStatus and p.btnInventory and p.btnHistory and p.btnWalkHere and p.btnStop)
+    assert(p.btnRun and p.btnClose)
+    assert(p.btnHelp.title=='Help' and p.btnHelp.command=='help')
+    assert(p.btnStatus.title=='Status' and p.btnStatus.command=='status')
+    assert(p.btnInventory.title=='Inventory' and p.btnInventory.command=='inventory')
+    assert(p.btnHistory.title=='History' and p.btnHistory.command=='history')
+    assert(p.btnWalkHere.title=='Walk Here' and p.btnWalkHere.command=='walk here')
+    assert(p.btnStop.title=='Stop' and p.btnStop.command=='stop')
+    assert(p.btnRun.title=='Run' and p.btnClose.title=='Close')
+
+    local btns={p.btnHelp,p.btnStatus,p.btnInventory,p.btnHistory,p.btnWalkHere,p.btnStop}
+    for i,b in ipairs(btns) do
+        assert(b.width>0 and b.height>0)
+        assert(b.x>=12 and (b.x+b.width)<=p.width-12)
+        assert(b.y>=0 and (b.y+b.height)<=p.height)
+        if i>1 then
+            local prev=btns[i-1]
+            assert(prev.x+prev.width<=b.x,'Buttons must not overlap horizontally: '..prev.title..' and '..b.title)
+        end
+        assert(p.history.y+p.history.height<=b.y,'Shortcut buttons must not overlap history output')
+        assert(b.y+b.height<=p.entry.y,'Shortcut buttons must not overlap text entry')
+    end
+    assert(p.btnClose.y+p.btnClose.height<=p.history.y,'Close button must not overlap history output')
+    assert(p.entry.x+p.entry.width<=p.btnRun.x,'Text entry must not overlap Run button')
+    s.close()
+end)
+test('each shortcut button invokes its command once through normal output path and refocused entry',function()
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        }
+    }
+    obsPlayer={x=12,y=20,z=0}
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- 1. Help shortcut
+    local seqBefore=p.dispatch.sequence
+    p.btnHelp:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundHelpCmd,foundHelpRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> help' then foundHelpCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' completed') then foundHelpRes=true end
+    end
+    assert(foundHelpCmd and foundHelpRes)
+    assert(p.entry:getText()=='' and p.entry:isFocused())
+
+    -- 2. Status shortcut
+    seqBefore=p.dispatch.sequence
+    p.btnStatus:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundStatusCmd,foundStatusRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> status' then foundStatusCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' completed') then foundStatusRes=true end
+    end
+    assert(foundStatusCmd and foundStatusRes)
+
+    -- 3. Inventory shortcut
+    seqBefore=p.dispatch.sequence
+    p.btnInventory:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundInvCmd,foundInvRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> inventory' then foundInvCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' completed') then foundInvRes=true end
+    end
+    assert(foundInvCmd and foundInvRes)
+
+    -- 4. History shortcut
+    seqBefore=p.dispatch.sequence
+    p.btnHistory:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundHistCmd,foundHistRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> history' then foundHistCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' completed') then foundHistRes=true end
+    end
+    assert(foundHistCmd and foundHistRes)
+
+    -- 5. Walk here shortcut
+    seqBefore=p.dispatch.sequence
+    p.btnWalkHere:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundWalkCmd,foundWalkRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> walk here' then foundWalkCmd=true end
+        if item.text:find('#'..p.dispatch.sequence..' running') then foundWalkRes=true end
+    end
+    assert(foundWalkCmd and foundWalkRes)
+    assert(p.dispatch.active and p.dispatch.active.command=='walk here')
+
+    -- 6. Stop shortcut
+    seqBefore=p.dispatch.sequence
+    local walkActId=p.dispatch.active.id
+    p.btnStop:click()
+    assert(p.dispatch.sequence==seqBefore+1)
+    local foundStopCmd,foundStopRes=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> stop' then foundStopCmd=true end
+        if item.text:find('Cancelled #'..walkActId) and item.text:find('%(walk here%)') then foundStopRes=true end
+    end
+    assert(foundStopCmd and foundStopRes)
+    assert(p.dispatch.active==nil)
+
+    s.close()
+    p.dispatch:reset()
+end)
+test('stop shortcut button remains accessible and halts active walk mid-stride',function()
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        }
+    }
+    obsPlayer={x=12,y=20,z=0}
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    p.btnWalkHere:click()
+    local walkId=p.dispatch.active and p.dispatch.active.id
+    assert(walkId and p.dispatch.active.state=='running')
+
+    -- Click Stop while walk is actively running
+    p.btnStop:click()
+    assert(p.dispatch.active==nil)
+    local h=p.dispatch:getHistory()
+    assert(h[#h-1].id==walkId and h[#h-1].state=='cancelled' and h[#h-1].summary=='stopped by user')
+    assert(h[#h].command=='stop' and h[#h].state=='completed')
+
+    local foundCancelled=false
+    for _,item in ipairs(p.history.items) do
+        if item.text:find('Cancelled #'..walkId) and item.text:find('%(walk here%)') then foundCancelled=true end
+    end
+    assert(foundCancelled)
+
+    s.close()
+    p.dispatch:reset()
+end)
+test('rejected walk shortcut feedback displays rejection reason and request id',function()
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- 1. Player too far away (> 8 tiles)
+    obsPlayer={x=50,y=50,z=0}
+    p.btnWalkHere:click()
+    assert(p.dispatch.active==nil)
+    local rejId=p.dispatch.sequence
+    local foundTooFar,foundRejId=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text:find('Target is too far %(maximum 8 tiles%)') then foundTooFar=true end
+        if item.text=='#'..rejId..' rejected' then foundRejId=true end
+    end
+    assert(foundTooFar and foundRejId)
+
+    -- 2. Sarah busy refusal
+    obsPlayer={x=12,y=20,z=0}
+    SarahFoundation={
+        controller={
+            npc={x=10,y=20,z=0},
+            adapter={
+                walk=function(npc,sq,onComp,onFail) return true,{} end,
+                stop=function() return true end,
+                validateTarget=function(npc,tgt) return true,tgt end
+            }
+        }
+    }
+    p.btnWalkHere:click()
+    assert(p.dispatch.active and p.dispatch.active.command=='walk here')
+    local activeId=p.dispatch.active.id
+
+    -- Click Walk Here again while already running
+    p.btnWalkHere:click()
+    local busyId=p.dispatch.sequence
+    local foundBusy,foundBusyId=false,false
+    for _,item in ipairs(p.history.items) do
+        if item.text:find('Sarah is busy %('..'#'..activeId) then foundBusy=true end
+        if item.text=='#'..busyId..' rejected' then foundBusyId=true end
+    end
+    assert(foundBusy and foundBusyId)
+
+    s.close()
+    p.dispatch:reset()
+end)
+test('reopening, redrawing, or layout changes do not execute commands or advance sequence',function()
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+    local initialSeq=p.dispatch.sequence
+    local initialItemCount=#p.history.items
+
+    -- Redraws
+    p:prerender()
+    p:prerender()
+    assert(p.dispatch.sequence==initialSeq)
+    assert(#p.history.items==initialItemCount)
+
+    -- Close and reopen
+    s.close()
+    assert(s.panel==nil)
+    s.open()
+    p=s.panel
+    assert(p.dispatch.sequence==initialSeq)
+    p:prerender()
+    assert(p.dispatch.sequence==initialSeq)
+
+    s.close()
+end)
+test('translation helper uses getText when available and falls back gracefully',function()
+    -- When getText returns a translated string
+    getText=function(k)
+        if k=='UI_SarahConsole_Help' then return 'Aide' end
+        if k=='UI_SarahConsole_Status' then return 'Statut' end
+        return k
+    end
+    local sTr=reload()
+    sTr.open()
+    local p=sTr.panel
+    assert(p.btnHelp.title=='Aide')
+    assert(p.btnStatus.title=='Statut')
+    -- Missing translation key returns k, tr() falls back to English string
+    assert(p.btnInventory.title=='Inventory')
+    assert(p.btnHistory.title=='History')
+    assert(p.btnWalkHere.title=='Walk Here')
+    assert(p.btnStop.title=='Stop')
+    sTr.close()
+    getText=nil
+    s=reload()
+end)
+test('typed command entry and session reset remain fully operational alongside shortcuts',function()
+    s.open()
+    local p=s.panel
+    p.dispatch:reset()
+
+    -- Typed command via Enter/submit
+    p.entry:setText('status')
+    p:submit()
+    local foundTypedStatus=false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> status' then foundTypedStatus=true end
+    end
+    assert(foundTypedStatus)
+    assert(p.entry:getText()=='')
+
+    -- Typed command via Run button
+    p.entry:setText('help')
+    p.btnRun:click()
+    local foundRunHelp=false
+    for _,item in ipairs(p.history.items) do
+        if item.text=='> help' then foundRunHelp=true end
+    end
+    assert(foundRunHelp)
+
+    -- Session reset
+    s.reset()
+    assert(s.panel==nil and s.dispatch.active==nil and #s.dispatch:getHistory()==0)
+    s.open()
+    assert(s.panel and s.panel.dispatch.sequence==0)
+    s.close()
 end)
 print('RESULT '..count..' simulated console checks passed')
 ''')

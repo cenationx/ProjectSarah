@@ -1,4 +1,12 @@
 {
     "UI_optionscreen_binding_Project Sarah": "Project Sarah",
-    "UI_optionscreen_binding_Sarah Console": "Sarah Console"
+    "UI_optionscreen_binding_Sarah Console": "Sarah Console",
+    "UI_SarahConsole_Help": "Help",
+    "UI_SarahConsole_Status": "Status",
+    "UI_SarahConsole_Inventory": "Inventory",
+    "UI_SarahConsole_History": "History",
+    "UI_SarahConsole_WalkHere": "Walk Here",
+    "UI_SarahConsole_Stop": "Stop",
+    "UI_SarahConsole_Run": "Run",
+    "UI_SarahConsole_Close": "Close"
 }
