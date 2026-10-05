@@ -1,3 +1,9 @@
+## Latest offline baseline (2026-10-06)
+
+Default runner now includes 10 suites and 401 checks, including 69 collector
+fixtures. Runner self-tests:11; preflight self-tests:19. COLLECTOR-OFFLINE.md
+records the inert scope and native limits; earlier example totals below are historical.
+
 Current baseline (2026-10-06): 332 checks across 9 suites, including 64 offline
 coverage checks, plus 11 runner and 19 preflight self-tests. Examples below with
 smaller historical totals illustrate output format only. Coverage remains inert

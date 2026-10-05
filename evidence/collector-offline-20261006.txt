@@ -1,0 +1,11 @@
+Project Sarah offline candidate collector checkpoint, 2026-10-06
+Starting clean main/origin: b8708d66782a019d79aecb7a0c3211a36a83a6d0
+Ownership: Codex sole checkout editor; Gemini NO-TOOLS code/base fixture generation.
+Early generated drafts rejected; exported fixtures failed before review corrections.
+Codex review fixed repeated budget-boundary starvation and meaningful fixture assumptions.
+Final collector:69 actual-Lua checks PASS; run_tests.py:401 checks/10 suites PASS.
+test_runner.py:11 PASS; test_preflight.py:19 PASS. Native acceptance not performed.
+No production imports/wiring, deployment, game launches, saves/settings changes.
+No native identity registry or independent lighting claim. External/model AI ON HOLD.
+Next: bounded offline adapter identity/token and exact-enum investigation/fixtures.
+Ignored runtime draft exports retained locally; no credentials/raw logs committed.

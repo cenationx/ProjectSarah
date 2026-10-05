@@ -1,6 +1,8 @@
 # Native adapter diagnostic specification
 
-2026-10-06. Reviewed design only, based on offline checkpoint aa7595f.
+2026-10-06. Reviewed design, based on offline checkpoint aa7595f.
+The subsequent inert collector slice is implemented/tested in COLLECTOR-OFFLINE.md;
+this specification itself does not establish native probe acceptance.
 Gemini 3.8 Flash HIGH drafted through a temporary user-visible Remote Control
 session with NO TOOLS; Codex reviewed and owns all checkout changes. No collector,
 native probe, integration or deployment is implemented by this document.
@@ -141,7 +143,7 @@ cases separately from illumination. Day/night observations alone cannot prove an
 independent light source; no player-cache fallback. Label actual observations and
 untested cases honestly. Complete Follow/rendering gates separately.
 
-## Next bounded task
+## Collector slice (subsequently implemented offline)
 
 Implement only the inert injected CandidateCollector.lua policy under
 foundation/SarahFoundation/42/media/lua/client/Sarah with meaningful actual-Lua

@@ -1,3 +1,23 @@
+## Latest checkpoint: offline candidate collector (2026-10-06)
+
+Codex owns checkout. CandidateCollector.lua is implemented OFFLINE and inert,
+with injected read-only queries, private state, fixed call/candidate/cursor limits,
+round-robin list cursors and transactional lifecycle discard. See COLLECTOR-OFFLINE.md.
+Gemini 3.8 Flash HIGH authored code/base fixtures via NO-TOOLS drafts/structured
+CLI exports; Codex applied/reviewed, fixed a budget-boundary starvation bug,
+corrected fixture assumptions and added review regressions. Gemini did not edit
+checkout. User explicitly prefers coding delegated to Gemini, Codex review/tests.
+All 401 suite checks across 10 suites +11 runner +19 preflight self-tests PASS.
+No native imports/production wiring/deployment/game launches or saves/settings
+changes. Latest deployed baseline remains 5fa6b9c; disposable world/backups unchanged.
+Tokens are caller-issued strings only; native identity/exposure and independent
+lighting remain unresolved. Follow/rendering native gates pending, live tests
+deferred, external/model AI ON HOLD. Next offline task: adapter identity/token and
+exact-enum boundary investigation/fixtures, not gameplay or tick integration.
+Temporary Remote Control session remains available in empty Admin visibility-test;
+visible drafts were followed by structured CLI source exports for reproducibility.
+Older state/counts below are historical and superseded by this block.
+
 ## Latest checkpoint: reviewed adapter diagnostic design (2026-10-06)
 
 Codex owns the checkout. NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md is a reviewed design,

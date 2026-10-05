@@ -1,10 +1,10 @@
 ## Current offline next step (2026-10-06)
 
-Reviewed native-adapter diagnostic design is complete; see
-NATIVE-ADAPTER-DIAGNOSTIC-SPEC.md. Next is a pure injected candidate collector
-with bounded enumeration, fairness and lifecycle-discard fixtures. No native
-adapter/lighting integration or deployment is complete. Native Follow/rendering
-acceptance and independent lighting remain open; live tests deferred, AI ON HOLD.
+Inert candidate collector implemented and fixture-tested; see COLLECTOR-OFFLINE.md.
+401 suite checks +11 runner +19 preflight PASS. Next is offline adapter identity/token
+and exact-enum boundary investigation/fixtures. No native integration/deployment;
+independent lighting and native Follow/rendering remain open. Live tests deferred,
+external/model AI ON HOLD. Gemini authors coding drafts; Codex applies/reviews/tests.
 
 # Project Sarah roadmap
 

@@ -31,6 +31,7 @@ DEFAULT_SUITES = [
     "tools/test_follow.py",
     "tools/test_perception.py",
     "tools/test_coverage.py",
+    "tools/test_collector.py",
 ]
 
 DISCLAIMER = "These are offline fixture checks and do not establish native gameplay acceptance."
