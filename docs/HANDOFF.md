@@ -79,23 +79,27 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the tested command is:
+From the project directory in PowerShell, the single-entry verification workflow runs all 6 offline test suites (139 checks total) and generates detailed reports:
 
 ```powershell
-& 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\test_foundation.py
+& 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
 ```
 
-It uses Lupa from `tools/dependencies/python`. The last tested installation was
-Lupa 2.8; on a fresh setup install it into that project-local directory using an
-available Python, with temporary/output directories under the project. This test
-executes actual Lua source with fake engine adapters and events. It does not
-prove gameplay compatibility. Expected latest result: 29 foundation checks.
-Run `tools/test_render.py`: 15 engine adapter checks.
-Run `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
-Run `tools/test_commands.py`: 54 command parser/cancellation/movement checks.
-Run `tools/test_console.py`: 19 simulated console UI/key/session checks.
-Run `tools/test_driver.py`: 10 acceptance driver sequencing/movement/timeout/teardown checks.
-135 automated checks total (125 in core suites + 10 driver checks). Simulated checks do not prove exceptional native cleanup.
+See `docs/verification-workflow.md` for full documentation (CLI flags, `--python` overrides, per-suite options, JSON/Markdown reports under `tools/reports/`, and runner self-tests).
+
+To test the runner itself (9 unit tests using standard library only):
+```powershell
+& 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\test_runner.py
+```
+
+Individual suites can also still be executed directly:
+- `tools/test_foundation.py`: 29 foundation lifecycle checks.
+- `tools/test_render.py`: 15 engine adapter/render checks.
+- `tools/test_checkpoint.py`: 8 checkpoint readback/cleanup checks.
+- `tools/test_commands.py`: 54 command parser/dispatch/cancellation checks.
+- `tools/test_console.py`: 19 simulated console UI/key/session checks.
+- `tools/test_driver.py`: 14 acceptance driver sequencing/movement/stability/timeout/teardown checks.
+139 automated checks total (across 6 suites) plus 9 runner self-tests. Simulated checks do not prove exceptional native cleanup.
 
 API inspection: `tools/inspect_compatibility.py`, `tools/run-api-probe.ps1` and
 the Java probes. The legacy PZNS compatibility probe is expected to fail missing
@@ -456,5 +460,46 @@ Gemini built and verified a temporary acceptance driver in `tools/FoundationWalk
   5. *Test resumption*: Click `Walk to Player`. Verify Sarah walks to the player's new position and arrives.
   6. *Verify history*: Click `Status & History`. Verify recent outcomes recorded.
   7. *Remove*: Close game cleanly. Delete `ZZSarahWalkStopDriver.lua` from `runtime/isolated/mods/SarahFoundation/42/media/lua/client/`.
+
+Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
+
+## Single-entry offline verification workflow handoff (latest, 2026-10-05)
+
+Gemini built and verified a dependable, single-entry offline verification workflow in `tools/run_tests.py` and `tools/test_runner.py` (offline tooling only; no game launches, desktop automation, or runtime deployment):
+- **Unified test runner (`tools/run_tests.py`)**:
+  - Single command executes all 6 offline test suites from any working directory (`& "<python.exe>" tools/run_tests.py`).
+  - Resolves suite and report paths relative to repository root; runs child processes in repository root.
+  - Resolves Python interpreter via CLI `--python`, environment variable `SARAH_PYTHON`, documented cache runtime `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`, or `sys.executable`. No packages installed automatically.
+  - Resolves Git metadata (commit, branch, dirty status) gracefully via `SARAH_GIT`, PATH, or cache git; degrades safely if Git is unavailable.
+  - Preserves child exit status and output. Verifies exit code 0, positive check count, and valid `RESULT <count>` summary (using `re.findall` to correctly capture final cumulative summaries when intermediate progress lines exist).
+  - Enforces per-suite bounded timeout (`--timeout 60`, default 60s) and cleans up hung child processes.
+  - Generates human-readable Markdown (`tools/reports/test-report.md`) and machine-readable JSON (`tools/reports/test-report.json`) under ignored `/tools/reports/` with explicit fixture disclaimer and sanitized paths.
+- **Runner test suite (`tools/test_runner.py`)**:
+  - 9 automated unit tests using standard library only (`unittest`, `subprocess`, `tempfile`, `json`).
+  - Tests runner against controlled child fixtures without running the full suite:
+    1. Valid suite success and check count extraction.
+    2. Non-zero exit code failure reporting.
+    3. Missing `RESULT` summary detection and failure reporting.
+    4. Child process unhandled exception/crash capture.
+    5. Timeout enforcement and process cleanup.
+    6. Paths and directories containing spaces.
+    7. Invocation from foreign working directories.
+    8. Graceful handling of unavailable Git.
+    9. Multiple RESULT lines taking the final cumulative summary.
+  - All 9 runner tests pass (`OK`).
+- **Full suite execution verification**:
+  - Executed all 6 production suites through `tools/run_tests.py`:
+    - `tools/test_foundation.py`: 29 checks pass
+    - `tools/test_render.py`: 15 checks pass
+    - `tools/test_checkpoint.py`: 8 checks pass
+    - `tools/test_commands.py`: 54 checks pass
+    - `tools/test_console.py`: 19 checks pass
+    - `tools/test_driver.py`: 14 checks pass
+    - Overall: **PASSED (139 checks across 6 suites in ~0.30s)**.
+  - Inspected generated Markdown and JSON reports in `tools/reports/`.
+- **Workflow documentation (`docs/verification-workflow.md`)**:
+  - Documents exact operating command, interpreter resolution and overrides, report formats, troubleshooting, and the explicit distinction between offline fixture checks and native gameplay acceptance.
+- **Slice C native acceptance status**:
+  - Offline tooling complete. Native walking, arrival, and live cancellation acceptance remain **PENDING** live check per `docs/M1-slice-c-checklist.md`.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

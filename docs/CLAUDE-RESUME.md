@@ -61,18 +61,20 @@ within this scope and ask only for missing information or actions that need it.
 
 Working directory: `G:\Codex\Project Sarah`. Local Python:
 `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`.
-Each script imports Lupa from tools/dependencies/python; no install is required.
+Each suite imports Lupa from tools/dependencies/python; no install is required.
 
+Run all 6 suites via the single-entry verification runner (139 checks total):
 ```powershell
 $sarahPython = 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-& $sarahPython tools/test_foundation.py
-& $sarahPython tools/test_render.py
-& $sarahPython tools/test_checkpoint.py
-& $sarahPython tools/test_commands.py
-& $sarahPython tools/test_console.py
+& $sarahPython tools/run_tests.py
+```
+See `docs/verification-workflow.md` for runner options, interpreter resolution, and generated Markdown/JSON reports in `tools/reports/`.
+To test the runner itself (9 unit tests):
+```powershell
+& $sarahPython tools/test_runner.py
 ```
 
-Expected totals: 27 + 13 + 8 + 12 + 11 = 71. These execute actual Lua with simulated
+Expected totals across 6 offline suites: 29 + 15 + 8 + 54 + 19 + 14 = 139 checks. These execute actual Lua with simulated
 engine/UI fixtures. They do not establish native game compatibility or input.
 For backed-up live tests, use tools/launch-isolated.ps1 -NoDebug and the exact
 isolated profile in HANDOFF. Bulk Unicode typing and automated function keys were

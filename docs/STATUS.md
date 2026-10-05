@@ -1,7 +1,7 @@
 # Current project state
 
 Updated: 2026-10-05 (Europe/Helsinki).
-State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver). Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
+State: M0 broader hardening open. M1 slice A native acceptance PASSED. M1 slice B native idle-stop/history/session-reset smoke checks PASSED; active movement cancellation remains native testing pending. M1 slice C bounded movement ("walk here"), tracking, and stop/cancellation integration implemented, hardened against session-reset callback collision and checklist expectations with 139 passing automated checks across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) plus 9 passing runner self-tests. Single-entry verification workflow established in tools/run_tests.py and tools/test_runner.py. Temporary native acceptance driver built in tools/FoundationWalkStopDriver.lua and hardened for sustained halt stability evidence. Native walking, arrival, and cancellation acceptance pending Codex live check following docs/M1-slice-c-checklist.md.
 External AI: ON HOLD by explicit user instruction.
 Ownership: Released to Codex. All launches/live tests stay in Codex; Gemini handles bounded offline coding and analysis tasks only.
 Do not have two agents edit this checkout concurrently.
@@ -13,12 +13,12 @@ Do not have two agents edit this checkout concurrently.
 - Reviewed slice B source previously deployed to `runtime/isolated/mods/SarahFoundation/` by Codex. Final native case/settings/log preserved at `runtime/backups/slice-b-20261005-014102/Final-native`.
 - All temporary diagnostic probes (`ZZSarahEscapeProbe`, `FoundationInputProbe`) disabled outside mod in `runtime/disabled-probes`.
 - Backups: Latest final case/settings/logs: `runtime/backups/slice-b-20261005-014102/Final-native`. Key settings F9; Forward W.
-- Automated tests: 139 automated checks passing (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver).
+- Automated tests: 139 automated checks passing across 6 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 19 console + 14 acceptance driver) executed via unified runner `tools/run_tests.py`, plus 9 runner self-tests in `tools/test_runner.py`.
 - Desktop automation limitation: Computer Use `press_key` has no hold-duration controls and special-key attempts (F9/Escape) have not produced reliable observed delivery; native keyboard checks require physical user assistance. See `docs/desktop-input-diagnostic.md`.
 
 ## Summary of verified outcomes
 
-- **Automated policy checks**: 139 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases).
+- **Automated policy checks**: 139 automated checks pass (29 foundation lifecycle, 15 engine adapter/render, 8 checkpoint readback/cleanup, 54 command parser/dispatch/cancellation, 19 simulated console UI/key/session cases, 14 acceptance driver sequencing/movement/stability/timeout/teardown cases) plus 9 runner self-tests. Single-entry runner `tools/run_tests.py` and documentation `docs/verification-workflow.md` verified.
 - **M0 NPC lifecycle and recovery**: Demonstrated minimal NPC spawn, duplicate prevention, three equipped clothes, two-slot saves, unload/restore, full restart restoration, corrupt slot recovery, and saved death tombstone without resurrection.
 - **M0 live sessions**: Verified in isolated disposable worlds across restarts, main-script reloads, pause menu return and Continue, ordinary same-floor world rendering, bounded travel suspension, locked-write recovery, and idle session cleanup.
 - **M1 slice A read-only commands and native input**: PASSED native acceptance in the isolated case (all 6 gates in `docs/M1-native-checklist.md`: hold-repeat, restored movement after Escape/mouse Close, English Options labels, key rebinding and persistence across restart, conflict refusal and context menu fallback, same-process menu teardown).
@@ -425,5 +425,42 @@ Gemini built and verified a temporary mouse-operated acceptance driver in `tools
   5. *Test resumption*: Click `Walk to Player`. Verify Sarah walks to the player's new position and arrives.
   6. *Verify history*: Click `Status & History`. Verify recent outcomes recorded.
   7. *Remove*: Close game cleanly. Delete `ZZSarahWalkStopDriver.lua` from `runtime/isolated/mods/SarahFoundation/42/media/lua/client/`.
+
+## Single-entry offline verification workflow (2026-10-05)
+
+Gemini built and verified a dependable, single-entry offline verification workflow in `tools/run_tests.py` and `tools/test_runner.py` (offline only; no game launches, desktop automation, or runtime deployment):
+- **Unified test runner (`tools/run_tests.py`)**:
+  - Single command executes all 6 offline test suites from any working directory (`& "<python.exe>" tools/run_tests.py`).
+  - Resolves suite and report paths relative to repository root; runs child processes in repository root.
+  - Resolves Python interpreter via CLI `--python`, environment variable `SARAH_PYTHON`, documented cache runtime `C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`, or `sys.executable`. No packages installed automatically.
+  - Resolves Git metadata (commit, branch, dirty status) gracefully via `SARAH_GIT`, PATH, or cache git; degrades safely if Git is unavailable.
+  - Preserves child exit status and output. Verifies exit code 0, positive check count, and valid `RESULT <count>` summary (using `re.findall` to correctly capture final cumulative summaries when intermediate progress lines exist).
+  - Enforces per-suite bounded timeout (`--timeout 60`, default 60s) and cleans up hung child processes.
+  - Generates human-readable Markdown (`tools/reports/test-report.md`) and machine-readable JSON (`tools/reports/test-report.json`) under ignored `/tools/reports/` with explicit fixture disclaimer and sanitized paths.
+- **Runner test suite (`tools/test_runner.py`)**:
+  - 9 automated unit tests using standard library only (`unittest`, `subprocess`, `tempfile`, `json`).
+  - Tests runner against controlled child fixtures without running the full suite:
+    1. Valid suite success and check count extraction.
+    2. Non-zero exit code failure reporting.
+    3. Missing `RESULT` summary detection and failure reporting.
+    4. Child process unhandled exception/crash capture.
+    5. Timeout enforcement and process cleanup.
+    6. Paths and directories containing spaces.
+    7. Invocation from foreign working directories.
+    8. Graceful handling of unavailable Git.
+    9. Multiple RESULT lines taking the final cumulative summary.
+  - All 9 runner tests pass (`OK`).
+- **Full suite execution verification**:
+  - Executed all 6 production suites through `tools/run_tests.py`:
+    - `tools/test_foundation.py`: 29 checks pass
+    - `tools/test_render.py`: 15 checks pass
+    - `tools/test_checkpoint.py`: 8 checks pass
+    - `tools/test_commands.py`: 54 checks pass
+    - `tools/test_console.py`: 19 checks pass
+    - `tools/test_driver.py`: 14 checks pass
+    - Overall: **PASSED (139 checks across 6 suites in ~0.30s)**.
+  - Inspected generated Markdown and JSON reports in `tools/reports/`.
+- **Workflow documentation (`docs/verification-workflow.md`)**:
+  - Documents exact operating command, interpreter resolution and overrides, report formats, troubleshooting, and the explicit distinction between offline fixture checks and native gameplay acceptance.
 
 Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.
