@@ -1,0 +1,12 @@
+Coverage offline checkpoint, 2026-10-06
+Starting main: 8fddc76; Codex owns checkout.
+Gemini 3.8 Flash HIGH: authenticated no-tools proposal received; no checkout edits or tool calls.
+Codex review: removed cross-call square cache, made sample counters private, strict options and reentrancy guard.
+64 actual-Lua coverage checks PASS; full runner 332 checks across 9 suites PASS.
+11 runner and 19 preflight self-tests PASS.
+Initial aggregate summary-format failure corrected before final passing run.
+Installed jar SHA256: E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33
+Class Code inspection: update()V offset45 branches to134 for playerIndex -1; skips JNI calls91/128; reads lightInts then square.lightLevel write315.
+Static inspection only, no JNI invocation/native gameplay acceptance.
+Coverage.lua not imported or deployed; saves/settings/backups/game untouched.
+Native Follow/rendering and independent lighting pending. External/model AI ON HOLD.

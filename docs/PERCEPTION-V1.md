@@ -49,7 +49,7 @@ See COMPANION-ENGINE-RESEARCH.md for jar hash and fresh decompilation provenance
 |---|---|---|
 | Facing | IsoGameCharacter.getForwardDirectionX/Y return forward-vector components (fresh lines 2574/2578) | Implementation inspected; Lua exposure and correctness during turning/off-camera unverified |
 | Local enumeration | IsoGridSquare.getMovingObjects used by installed character code around line 6951; bound square queries around Sarah | Call site inspected; collector cost, exposure, filtering and fair cap scheduling unverified |
-| Loaded coverage | cell.getGridSquare; LosUtil.lineClear skips adjacency checks when squares missing | Implementation inspected; complete conservative coverage walker not implemented |
+| Loaded coverage | cell.getGridSquare; LosUtil.lineClear skips adjacency checks when squares missing | Implementation inspected; conservative bounded rectangle helper implemented offline (COVERAGE-OFFLINE.md); native coverage unverified |
 | Obstructions | CanSee -> LosUtil.lineClear; separate clear/window/open-door/closed-door results | Implementation inspected; exact material/door mapping and Lua enum access unverified |
 | Lighting | current renderer uses square:getLightInfo(playerIndex) | Player-relative call inspected; no verified independent sensory lighting query available |
 | Character identity | caller-provided session IDs | Offline contract only; native session ID registry still required, must not imply persistence |
@@ -119,3 +119,12 @@ getLightLevel(-1) shared-buffer path. It supersedes earlier exposure/coverage/li
 candidate summaries without establishing native capability. Coverage helper is
 proposed only; lighting remains unknown. No integration/deployment/live tests.
 All 268 suite +11 runner +19 preflight self-tests passed; Codex owns checkout.
+
+## Coverage helper checkpoint (2026-10-05)
+
+Coverage.lua remains offline, with an explicit shared sample context and no
+cross-call square cache; see COVERAGE-OFFLINE.md. All 332 suite checks (including
+64 coverage) +11 runner +19 preflight self-tests PASS. Direct bytecode inspection
+confirmed the -1 light branch bypasses refresh and writes square.lightLevel;
+keep lighting unknown. No new callbacks, sight/memory wiring, deployment or
+live acceptance. Native independent light and Follow/rendering remain open.

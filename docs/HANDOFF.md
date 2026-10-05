@@ -1,18 +1,22 @@
-## Current authoritative handoff (2026-10-05)
+## Current authoritative handoff (2026-10-06)
 
-Codex owns checkout. Offline adapter research completed; read
-NATIVE-PERCEPTION-ADAPTER-RESEARCH.md. 268 suite checks +11 runner +19 preflight
-self-tests PASS in this session. Research only; no production/deployed changes.
-No agy/Claude/Java/game processes found at initial check; game was not launched.
-Latest disposable case remains Sandbox/2026-10-05_19-04-21; final backup remains
-runtime/backups/batched-follow-20261005-190349/Final-native. No saves/settings
-changed. Historical local-state descriptions below are superseded by this block.
-Gemini CLI now asked for authentication; cancelled before execution. Do not rely
-on the earlier successful login baseline. No global permission bypass used.
-Next: offline injected loaded-coverage helper with bounded rectangle/side-square
-fixtures; lighting stays unknown. No native integration/deployment/test until
-explicitly resumed. Preserve Stop; Follow/rendering native gates remain open;
-external/model AI ON HOLD. See STATUS for current offline evidence.
+Codex owns checkout. Coverage.lua is implemented/tested OFFLINE, inert and not
+imported/deployed. Read COVERAGE-OFFLINE.md and NATIVE-PERCEPTION-ADAPTER-RESEARCH.md.
+All 332 suite checks +11 runner +19 preflight self-tests PASS. Independent light
+still unresolved; the -1 light path's shared-buffer refresh bypass and square
+write were confirmed from bytecode. Coverage does not establish sight or memory.
+No game launches or isolated saves/settings/deployed changes. Latest disposable
+case Sandbox/2026-10-05_19-04-21 and backup group
+runtime/backups/batched-follow-20261005-190349/Final-native remain unchanged.
+Gemini login succeeded; credentials are accessible outside Codex sandbox.
+Headless command permission is auto-denied; no global bypass/settings changes.
+Gemini provided code/tests with NO TOOLS; Codex reviewed, fixed caching/budget
+issues, applied and independently tested. Codex retains sole editing ownership.
+Next: offline inert adapter diagnostic specification (actual Lua exposure, enum
+mapping, bounded enumeration/fairness, session IDs and lifecycle invalidation).
+Lighting, responsive Follow and rendering native gates remain pending; external
+AI ON HOLD. No native tests/deployment until user resumes backed-up live testing.
+Historical local-state descriptions below are superseded by this block.
 
 # Agent handoff and checkpoint workflow
 

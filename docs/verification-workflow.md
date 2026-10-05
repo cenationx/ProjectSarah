@@ -1,3 +1,8 @@
+Current baseline (2026-10-06): 332 checks across 9 suites, including 64 offline
+coverage checks, plus 11 runner and 19 preflight self-tests. Examples below with
+smaller historical totals illustrate output format only. Coverage remains inert
+and native gameplay acceptance is separate.
+
 # Project Sarah: Offline Verification Workflow
 
 This document details the single-entry verification workflow for Project Sarah, documenting how to run, configure, and troubleshoot the offline test suite.

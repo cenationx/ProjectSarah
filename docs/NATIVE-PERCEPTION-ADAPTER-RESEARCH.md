@@ -187,3 +187,28 @@ sandbox and normal execution requested authentication in this session; cancelled
 before task execution, no Gemini edits. No global permission bypass or login.
 Codex reclaimed ownership and performed this investigation. Authentication must
 be re-established separately before relying on future Gemini dispatch.
+
+## Bytecode confirmation (Codex, 2026-10-05)
+
+Direct read-only parsing of the installed JNILighting.class Code attribute confirms
+that the -1 path bypasses the JNI refresh. In private update()V, byte offsets
+40-45 load playerIndex and compare it with -1; if_icmpeq at 45 jumps to 134.
+getSquareDirty is at 91 and getSquareLighting at 128, both skipped by that jump.
+The shared static lightInts buffer is subsequently loaded at 171,190,210,233,
+264,280 and 296; putfield IsoGridSquare.lightLevel occurs at 315. These are
+symbolic offsets/inspection facts, not copied class bytecode or game source.
+The ignored reader and local output are runtime/coverage-gemini-20261005/
+inspect-bytecode.py and lighting-bytecode.txt. No game classes initialized or
+native JNI invoked. This confirms the suspicious control flow independently of
+CFR; it does not measure runtime values or exhaust all other lighting APIs.
+Keep getLightLevel(-1)/getLightLevel2 out of the read-only sensory adapter.
+Independent lighting is still unresolved and visual detection stays unknown.
+
+## Coverage helper follow-up (2026-10-05)
+
+Coverage.lua is now implemented offline with explicit sample context, bounded
+halo-rectangle queries, private counters and no retained square cache. See
+[COVERAGE-OFFLINE.md](COVERAGE-OFFLINE.md) for API/limits and fixture evidence.
+It is not imported by production code or deployed. The earlier proposed helper
+is implemented, but native square exposure/geometry/freshness remains unverified.
+Lighting stays unknown; no confirmed sight or memory refresh from coverage alone.

@@ -1,23 +1,27 @@
-## Authoritative resume state: offline adapter investigation (2026-10-05)
+## Authoritative resume state: coverage helper checkpoint (2026-10-06)
 
-Codex owns checkout. Starting main/origin checkpoint fc9a8f7 verified clean.
-Offline exposure/coverage/lighting investigation completed; see
-[NATIVE-PERCEPTION-ADAPTER-RESEARCH.md](NATIVE-PERCEPTION-ADAPTER-RESEARCH.md).
-Geometry classes are registered for Lua; actual invocation remains unverified.
-Diagonal side squares require loaded coverage. Proposed bounded rectangle helper
-is specified, not implemented. No trustworthy independent lighting query found:
-getLightLevel(-1) has suspicious shared-buffer control flow and a square-field
-write; no darkness-aware sight claim. All 268 suite checks across 8 suites,
-11 runner and 19 preflight self-tests independently passed this session.
-No production source changes, integration, deployment, launches or isolated
-saves/settings changes. Native responsive Follow/rendering acceptance pending;
-latest deployed baseline remains 5fa6b9c. External/model AI ON HOLD.
-Gemini CLI requested authentication in both attempts; dispatch cancelled before
-execution, no Gemini edits; Codex reclaimed ownership and completed research.
-Next bounded offline task: injected conservative coverage helper and fixtures,
-then bytecode confirmation of lighting candidate before any later native probe.
-Historical entries below retain earlier counts/runtime state; this block and the
-latest dated handoff supersede them. Live testing remains deferred.
+Codex owns checkout. Started from clean main 8fddc76. Implemented inert offline
+Coverage.lua with injected read-only square lookup, same-floor bounded rectangle
+plus halo, private candidate/sample budgets, no cross-call cache, no callbacks
+or gameplay wiring. See COVERAGE-OFFLINE.md. Gemini 3.8 Flash HIGH returned a
+no-tools proposal; Codex reviewed/applied it and fixed stale cache/mutable budget
+risks. Added 64 actual-Lua checks; all 332 suite checks across 9 suites +11 runner
++19 preflight self-tests PASS. First aggregate run rejected Codex's summary
+format; corrected it to the runner contract before final passing verification.
+Codex confirmed via direct classfile Code inspection that light playerIndex -1
+jumps past native refresh, reads static lightInts and writes square.lightLevel.
+Independent lighting is unresolved; do not use that path or claim visual sight.
+No adapter integration/deployment/game launch/saves/settings changes. Native
+responsive Follow/rendering acceptance pending. Latest deployed baseline remains
+5fa6b9c; disposable case/Final-native backup unchanged. External/model AI ON HOLD.
+Gemini authentication works outside Codex sandbox; unattended RunCommand was
+auto-denied. No CLI permission bypass/settings changes. For now delegate using
+source-in-prompt no-tools proposals; Codex retains sole checkout editing/testing.
+Next bounded offline task: inert native adapter diagnostic specification for Lua
+exposure/enum normalization, enumeration budgets/fairness, session IDs/lifecycle
+invalidation; independent light investigation remains open. Live testing deferred.
+Historical entries below retain earlier counts/runtime state and are superseded
+by this block and the latest HANDOFF.
 
 # Current project state
 
@@ -998,3 +1002,7 @@ Perception V1 offline checkpoint (Codex, 2026-10-05): implemented pure Perceptio
 Offline adapter investigation IN PROGRESS (2026-10-05): clean main/origin verified at fc9a8f7; no agy/Claude/Java/game processes found via Get-Process (CIM query unavailable). Codex releases single-editor ownership to Gemini CLI for one bounded offline research batch. Only docs/NATIVE-PERCEPTION-ADAPTER-RESEARCH.md and ignored runtime/research-adapter-20261005 outputs may be written; no production integration, deployment, launches, saves/settings changes, commits or pushes by Gemini. Codex will review and reclaim ownership before edits. External/model AI ON HOLD; native Follow/rendering acceptance pending.
 
 Gemini dispatch cancelled before task execution: both sandbox and normal CLI attempts requested authentication, contrary to earlier connection baseline. No Gemini edits made. Codex reclaims checkout ownership and continues the same bounded offline investigation directly. No permission bypass or login performed.
+
+Coverage helper batch IN PROGRESS (2026-10-05): starting clean main 8fddc76, no other coding/game processes found. Gemini 3.8 Flash HIGH authenticated successfully after manual login. Codex releases single-editor ownership to Gemini for bounded offline coverage implementation/tests and bytecode lighting verification. No integration/deployment/game launches/save or settings changes. Codex reviews and alone commits/pushes. External/model AI ON HOLD.
+
+Gemini CLI credentials work outside Codex sandbox. Headless task stopped before edits because RunCommand permission was auto-denied. No bypass used. Codex reclaims single-editor ownership. Retry is a no-tools source-in-prompt generation/review batch: Gemini returns proposed code/tests only; Codex applies/reviews/tests. No permission settings changed.

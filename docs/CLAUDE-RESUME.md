@@ -1,16 +1,18 @@
-# Current Codex resume: offline adapter investigation (2026-10-05)
+# Current Codex resume: offline coverage helper (2026-10-06)
 
 Codex owns G:\Codex\Project Sarah. Read AGENTS, STATUS, ROADMAP, HANDOFF,
-PERCEPTION-V1 and NATIVE-PERCEPTION-ADAPTER-RESEARCH before editing. Verify clean
-Git main/origin and ownership. Offline research establishes registered geometry
-classes, diagonal loaded-square dependencies and an unverified shared-buffer
-lighting candidate. No native adapter implemented/integrated/deployed. All 268
-suite checks +11 runner +19 preflight self-tests passed. Next: conservative
-injected loaded-coverage helper/fixtures; keep lighting unknown. Live testing,
-launches, saves/settings changes and external/model AI stay deferred. Native
-Follow/rendering acceptance remains pending. Gemini CLI dispatch requested login
-in this session; cancelled without edits. Codex retained ownership and completed
-research directly. Historical guidance below is supplementary, not the next task.
+PERCEPTION-V1, COVERAGE-OFFLINE and NATIVE-PERCEPTION-ADAPTER-RESEARCH before editing.
+Verify clean Git main/origin and ownership. Coverage helper is implemented offline
+with injected queries/private budgets/no cross-call cache and 64 actual-Lua checks.
+All 332 suite +11 runner +19 preflight self-tests PASS. No production integration,
+deployment, game launch, saves/settings changes. Independent light unresolved:
+-1 light path refresh bypass/shared-buffer read/square write confirmed in bytecode.
+Next offline task: inert native adapter diagnostic specification for exposure,
+enums, bounded enumeration/fairness, session IDs and lifecycle reset boundaries.
+Live Follow/rendering tests remain pending and deferred; external/model AI ON HOLD.
+Gemini HIGH authentication works outside sandbox but headless command permission
+was denied. No bypass used; source-in-prompt NO-TOOLS proposals worked. Codex
+applies/reviews/tests and alone edits/commits/pushes. Historical guidance follows.
 
 # Superseding workflow note (2026-10-04)
 
