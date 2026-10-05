@@ -356,6 +356,12 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 self.active.stepGen=self.active.stepGen+1
                 self.active.stepState='idle'
                 self.active.stepTicks=0
+                self.active.stallTicks=0
+                local obsOk,obsData=pcall(self.observe,false)
+                if obsOk and type(obsData)=='table' and obsData.npc and isValidCoord(obsData.npc.x,obsData.npc.y,obsData.npc.z) then
+                    self.active.lastProgressX=obsData.npc.x
+                    self.active.lastProgressY=obsData.npc.y
+                end
                 self.active.currentTarget=nil
                 self.active.cooldown=0
                 self.active.summary='Following player (in range)'
@@ -443,6 +449,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             local minRetargetTicks=act.minRetargetTicks or 6
 
             if distSq<=4.0 then
+                act.stallTicks=0
+                act.lastProgressX=nx
+                act.lastProgressY=ny
                 if act.stepTicks>=minRetargetTicks then
                     if act.retireStep then
                         act.retireStep()
@@ -472,6 +481,22 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                     self:updateHistory(act.id,'running',act.summary)
                 end
                 return true
+            end
+
+            local lpx=act.lastProgressX or nx
+            local lpy=act.lastProgressY or ny
+            local movedSq=(nx-lpx)*(nx-lpx)+(ny-lpy)*(ny-lpy)
+            if movedSq>=0.25 then
+                act.lastProgressX=nx
+                act.lastProgressY=ny
+                act.stallTicks=0
+            else
+                act.stallTicks=(act.stallTicks or 0)+1
+                local maxStallTicks=act.maxStallTicks or maxStepTicks or 600
+                if act.stallTicks>=maxStallTicks then
+                    self:cancelActive('timeout')
+                    return false,'timeout'
+                end
             end
 
             if act.stepTicks>=minRetargetTicks then
@@ -524,6 +549,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
 
         if distSq<=4.0 then
+            act.stallTicks=0
+            act.lastProgressX=nx
+            act.lastProgressY=ny
             act.summary='Following player (in range)'
             self:updateHistory(act.id,'running',act.summary)
             return true
@@ -919,7 +947,11 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 stepGen=0,
                 stepState='idle',
                 stepTicks=0,
+                stallTicks=0,
+                lastProgressX=nx,
+                lastProgressY=ny,
                 maxStepTicks=600,
+                maxStallTicks=600,
                 minRetargetTicks=6,
                 cooldown=0,
                 summary=(distSq<=4.0) and 'Following player (in range)' or 'Following player'

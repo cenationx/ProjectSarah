@@ -24,8 +24,8 @@ Escape checks (first Escape closes console without menu; second Escape opens men
 corroborated by probe samples.
 
 Read `M1-console-test.md`, `STATUS.md`, `M1-native-checklist.md`, `M1-slice-c-checklist.md`, and `M1-batched-acceptance.md` for current checks.
-211 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
-36 console, 14 acceptance driver, 55 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
+222 automated checks passed across 7 suites (29 foundation, 15 engine adapter, 8 checkpoint readback, 54 command,
+36 console, 14 acceptance driver, 66 follow) plus 11 runner self-tests and 19 preflight tests. Native UI source inspected read-only against PZ 42.21.0
 ISUI (callback signatures, non-overlapping hit areas, focus behavior, auto-scrolling, and mid-walk stop accessibility verified).
 Slice A native acceptance passed (all 6 gates). Slice B idle-stop, history retention, and session-reset smoke checks passed natively;
 active moving-action cancellation tested natively alongside slice C.
@@ -36,7 +36,7 @@ Movable console panel implemented offline via title-bar mouse dragging with boun
 control click isolation, in-session position retention across close/open, session-reset to centered default on leaving world,
 and OnResolutionChange re-clamping. Shortcut toolbar expanded to 7 buttons ([Help], [Status], [Inventory], [History], [Walk Here], [Follow], [Stop]).
 Bounded manual follow-player command implemented offline and hardened against Codex review: safe player death observation in Observations.read, activation/tick death enforcement, completed-step callback retirement defusing duplicate completions and late failures during cooldown, symmetrical identity/lifecycle callback guards, and stale callback defusing.
-User-facing follow status distinctions (following while walking, waiting in range vs waiting before next walk during cooldown, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (unified disengagement + stop failure notice, console panel append, in-world halo notifications without polling or replay) implemented and verified offline. Responsive mid-walk retargeting implemented with bounded frequency (min 6 ticks), deadzone halting, single movement action enforcement, and callback retirement before stop (55 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
+User-facing follow status distinctions (following while walking, waiting in range vs waiting before next walk during cooldown, disengaged with reason, engine stop failure warning with blocked recovery) and asynchronous one-time failure feedback (unified disengagement + stop failure notice, console panel append, in-world halo notifications without polling or replay) implemented and verified offline. Responsive mid-walk retargeting implemented with bounded frequency (min 6 ticks), deadzone halting, single movement action enforcement, and callback retirement before stop, and bounded progress protection eliminating masked stalls during continuous player retargets (66 checks in `tools/test_follow.py` and 36 checks in `tools/test_console.py`).
 Consolidated M1 native acceptance session plan authored in `docs/M1-batched-acceptance.md` and read-only preflight tool in `tools/preflight.py`.
 Native distance refusal, context-menu refusal feedback, movable console dragging, and follow behavior remain pending live check by Codex.
 Keep external AI strictly on hold.
@@ -87,7 +87,7 @@ and scripts; the current engine adapter deliberately rejects other profile paths
 
 ## Automated checks
 
-From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (211 checks total) and generates detailed reports:
+From the project directory in PowerShell, the single-entry verification workflow runs all 7 offline test suites (222 checks total; 66 follow checks) and generates detailed reports:
 
 ```powershell
 & 'C:\Users\rudol\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' tools\run_tests.py
@@ -888,3 +888,39 @@ Codex review of Gemini ba25804 (2026-10-05): checkout released back to Codex; in
 Game CLOSED; deployed runtime, save and settings unchanged. Source reviewed offline only; native responsiveness remains pending. Next single batched native test: forward and turning follow, no jitter/starvation, halt within deadzone, resume after both normal arrival and deadzone halt, mid-stride Stop/no restart, leash feedback and reload idle. Preserve fresh game-closed backup and previous Commands.lua before deployment. Backup baseline runtime/backups/batched-follow-20261005-190349/Final-native remains intact. Codex owns checkout; external AI ON HOLD.
 
 Offline coding continuation (2026-10-05): user explicitly deferred live testing and requested coding. Checkout RELEASED to Gemini for a bounded Follow reliability and responsiveness stress pass based on 9ef621b. Scope: realistic advancing-NPC/moving-target scenarios, retarget budget and stalled-path behavior, synchronous stop notifications, stop failures and lifecycle races; fix demonstrated defects narrowly. Preserve all safety boundaries and native evidence. No new gameplay commands or broader AI/travel features. Codex reviews afterward; no game launch/runtime deployment/save/settings changes. Baseline 212 suite +11 runner +19 preflight PASS. Game CLOSED. Native regression for responsive Follow remains pending, not waived. Gemini must commit/push offline-verified checkpoint and release ownership back to Codex.
+
+### Advancing follow simulation, stall masking elimination, and stress pass (Gemini, 2026-10-05)
+
+Gemini completed offline implementation and automated verification of bounded progress protection and advancing follow stress scenarios across `Commands.lua` and `tools/test_follow.py` (offline only; no game launches, desktop automation, or runtime modifications):
+- **Stall masking defect diagnosis & bounded progress protection (`Commands.lua`)**:
+  - *Demonstrated defect*: In `Commands.lua`, `dispatchFollowStep` previously reset `act.stepTicks = 0` on every retarget. If Sarah was physically blocked/stalled while the player kept moving in range (triggering retargets every 6 ticks), `stepTicks` was repeatedly reset to 0 and never reached `maxStepTicks = 600`, masking physical stalls indefinitely.
+  - *Narrow fix*: Introduced bounded progress protection tracking `act.stallTicks`, `act.lastProgressX`, `act.lastProgressY`, and `act.maxStallTicks = 600`:
+    1. Resets `stallTicks = 0` whenever Sarah achieves observable physical progress (>= 0.5 tiles delta: `(nx - lastProgressX)^2 + (ny - lastProgressY)^2 >= 0.25`), updating `lastProgressX` and `lastProgressY`.
+    2. Resets `stallTicks = 0` upon entering or idling within the 2-tile deadzone (`distSq <= 4.0`), as waiting within range is valid behavior, not a stall.
+    3. Resets `stallTicks = 0` upon step arrival (`onStepComplete`), updating progress reference coordinates.
+    4. While walking outside the deadzone without >= 0.5 tiles delta: increments `act.stallTicks = (act.stallTicks or 0) + 1` each tick, preserving accumulated stall ticks across mid-walk retargets.
+    5. If `stallTicks >= (act.maxStallTicks or 600)`: cancels active follow with `'timeout'`, halts the engine, records failure in history, and enqueues notice `Follow disengaged: timeout.`
+    6. Verified healthy long-running follow can run indefinitely (1200+ ticks tested without timeout) as progress continuously resets `stallTicks`, while any blocked stall with continuous retargets is strictly caught and halted at 600 ticks.
+- **Deterministic advancing simulation fixture (`tools/test_follow.py`)**:
+  - Implemented `makeAdvancingFixture(opts)` modeling physical NPC advancement toward active targets at configurable speed (`npcSpeed = 0.1` tiles/tick), arrival detection (`arrivalThreshold = 0.15`), engine callbacks (`onComplete`, `onFail`), stop callbacks (including synchronous fail and complete injection), and stall simulation (`stalled = true`).
+  - Added tests 57–66 (expanding `tools/test_follow.py` from 56 to 66 checks):
+    1. Test 57: Advancing NPC tracks player in steady forward movement with bounded retarget budget.
+    2. Test 58: Advancing NPC tracks player through repeated 90-degree orthogonal turns (cornering circuit).
+    3. Test 59: Advancing NPC halts cleanly upon entering 2-tile deadzone and resumes on first departure tick.
+    4. Test 60: Deadzone boundary oscillations do not cause path thrashing (throttled to bounded budget).
+    5. Test 61: Minor player movement within same target square continues walking without restarting step.
+    6. Test 62: Stalled movement while player causes retargets times out cleanly at 600 ticks (verifies stall masking fix).
+    7. Test 63: Healthy long-running follow runs for 1200 ticks without false timeout.
+    8. Test 64: Synchronous engine stop callbacks during user stop, retarget, and in-range halting are safely defused.
+    9. Test 65: Failed engine stop during deadzone halting blocks movement pending recovery.
+    10. Test 66: Lifecycle events (controller replacement, NPC replacement, session reset) during active advancing tracking cancel follow cleanly.
+- **Preserved boundaries & invariants**:
+  - Single movement action in engine, confirmed stop before replacement, callback retirement, 2-tile deadzone, 8-tile leash, same-floor restriction, liveness checks, one-time notices, and stop-failure recovery are strictly preserved.
+- **Automated test suite (252 total passing checks)**:
+  - `tools/run_tests.py`: 222 checks passing across 7 suites (29 foundation + 15 engine adapter + 8 checkpoint readback + 54 command + 36 console + 14 driver + 66 follow = 222 checks in 0.29s).
+  - `tools/test_runner.py`: 11 runner self-tests passing.
+  - `tools/test_preflight.py`: 19 preflight tests passing.
+- **State and ownership**:
+  - Game is CLOSED (SAVED a, GameThread exited, no native window).
+  - Runtime, saves, and settings untouched.
+  - Checkout ownership is RELEASED to Codex. External AI remains strictly ON HOLD.

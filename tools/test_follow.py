@@ -1847,5 +1847,438 @@ test('retarget retires callbacks before synchronous engine stop notifications', 
     assert(d.stopFailed == nil and #d.noticeQueue == 0)
 end)
 
+-- =========================================================================
+-- Advancing NPC Simulation Fixture and Realistic Scenarios (Tests 57 - 66)
+-- =========================================================================
+
+local function makeAdvancingFixture(opts)
+    opts = opts or {}
+    local npcPos = opts.npcPos or {x = 10, y = 10, z = 0}
+    local playerPos = opts.playerPos or {x = 14, y = 10, z = 0}
+    local npcSpeed = opts.npcSpeed or 0.1
+    local arrivalThreshold = opts.arrivalThreshold or 0.15
+    local npcState = opts.npcState or 'active'
+    local stalled = (opts.stalled == true)
+    local stopShouldFail = (opts.stopFail == true)
+
+    local activeWalk = nil
+    local walkCalls = {}
+    local stopCalls = {}
+
+    local npcObj = {
+        getX = function() return npcPos.x end,
+        getY = function() return npcPos.y end,
+        getZ = function() return npcPos.z end,
+        getInventory = function()
+            local items = {
+                size = function() return 1 end,
+                get = function(_, i) return {getFullType = function() return 'Base.Bandage' end} end
+            }
+            return {getItems = function() return items end}
+        end
+    }
+
+    local adapter = {
+        meta = {},
+        listNPCs = function() return {npcObj} end,
+        isDead = function() return npcState == 'dead' end,
+        isResident = function() return npcState ~= 'nonresident' end,
+        isIncomplete = function() return npcState == 'incomplete' end,
+        validateTarget = function(n, target)
+            if opts.validateFail then return false, 'blocked' end
+            if opts.invalidTargets and opts.invalidTargets[target.x .. ',' .. target.y] then
+                return false, 'blocked'
+            end
+            if target.z ~= npcPos.z then return false, 'different floor' end
+            local dx = target.x + 0.5 - npcPos.x
+            local dy = target.y + 0.5 - npcPos.y
+            if dx * dx + dy * dy > 64.0 then return false, 'too far' end
+            return true, {x = target.x, y = target.y, z = target.z}
+        end,
+        walk = function(n, target, onComplete, onFail)
+            if opts.walkFail then return false, 'walk start failed' end
+            local record = {
+                target = {x = target.x, y = target.y, z = target.z},
+                onComplete = onComplete,
+                onFail = onFail,
+                ticks = 0
+            }
+            walkCalls[#walkCalls + 1] = record
+            activeWalk = record
+            return true
+        end,
+        stop = function(n)
+            stopCalls[#stopCalls + 1] = true
+            if stopShouldFail then return false, 'stop failed' end
+            local old = activeWalk
+            activeWalk = nil
+            if opts.syncStopFail and old and old.onFail then
+                old.onFail(nil, 'stopped')
+            elseif opts.syncStopComplete and old and old.onComplete then
+                old.onComplete()
+            end
+            return true
+        end
+    }
+    local controller = {npc = npcObj, adapter = adapter}
+
+    local observe = function(inv)
+        if npcState ~= 'active' then
+            return {state = npcState, inventory = nil}
+        end
+        local dead = (opts.playerDead == true) or (playerPos.dead == true) or (playerPos.isDead == true)
+        return {
+            state = 'active',
+            npc = {x = npcPos.x, y = npcPos.y, z = npcPos.z},
+            player = {
+                x = playerPos.x, y = playerPos.y, z = playerPos.z,
+                dead = dead,
+                isDead = dead,
+                alive = not dead
+            },
+            playerDead = dead,
+            playerAlive = not dead,
+            inventory = inv and {total = 1, items = {{type = 'Base.Bandage', count = 1}}} or nil
+        }
+    end
+
+    local f = {
+        controller = controller,
+        npc = npcObj,
+        adapter = adapter,
+        npcPos = npcPos,
+        playerPos = playerPos,
+        observe = observe,
+        identityProvider = function() return controller, npcObj end,
+        walkCalls = walkCalls,
+        stopCalls = stopCalls,
+        getActiveWalk = function() return activeWalk end,
+        setActiveWalk = function(w) activeWalk = w end,
+        setStalled = function(s) stalled = s end,
+        isStalled = function() return stalled end,
+        setNpcState = function(s) npcState = s end,
+        setStopFail = function(sf) stopShouldFail = sf end
+    }
+
+    function f:advancePhysical()
+        if activeWalk and not stalled then
+            local tgt = activeWalk.target
+            local tx = tgt.x + 0.5
+            local ty = tgt.y + 0.5
+            local dx = tx - npcPos.x
+            local dy = ty - npcPos.y
+            local dist = math.sqrt(dx * dx + dy * dy)
+            if dist <= arrivalThreshold or dist <= npcSpeed then
+                npcPos.x = tx
+                npcPos.y = ty
+                local walk = activeWalk
+                activeWalk = nil
+                if walk.onComplete then
+                    walk.onComplete()
+                end
+            else
+                npcPos.x = npcPos.x + (dx / dist) * npcSpeed
+                npcPos.y = npcPos.y + (dy / dist) * npcSpeed
+            end
+        end
+    end
+
+    function f:step(d, n, playerFn)
+        n = n or 1
+        for i = 1, n do
+            if playerFn then playerFn(i, self) end
+            self:advancePhysical()
+            d:tick()
+        end
+    end
+
+    return f
+end
+
+-- 57. Advancing NPC tracks player in steady forward movement with bounded retargets
+test('advancing NPC tracks player in steady forward movement with bounded retargets', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(#f.walkCalls == 1)
+
+    -- Player walks East at 0.05 tiles/tick for 80 ticks
+    f:step(d, 80, function(i, fix)
+        fix.playerPos.x = fix.playerPos.x + 0.05
+    end)
+
+    -- Sarah advanced significantly
+    assert(f.npcPos.x > 15.0)
+    -- Follow is still active
+    assert(d.active and d.active.command == 'follow' and d.active.stepState == 'walking')
+    -- Distance between Sarah and player stayed well within 8-tile leash
+    local dist = math.abs(f.playerPos.x - f.npcPos.x)
+    assert(dist <= 4.0 and dist >= 1.0)
+    -- Retargeting is bounded (not every tick; ~4-10 walk calls over 80 ticks)
+    assert(#f.walkCalls >= 4 and #f.walkCalls <= 10)
+    assert(#d.noticeQueue == 0)
+end)
+
+-- 58. Advancing NPC tracks player through repeated 90-degree orthogonal turns
+test('advancing NPC tracks player through repeated 90-degree orthogonal turns', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 13, y = 10, z = 0}, npcSpeed = 0.1})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+
+    -- Leg 1: East for 25 ticks (delta X = +2.0)
+    f:step(d, 25, function(i, fix) fix.playerPos.x = fix.playerPos.x + 0.08 end)
+    assert(d.active and d.active.command == 'follow')
+
+    -- Leg 2: North for 25 ticks (delta Y = +2.0)
+    f:step(d, 25, function(i, fix) fix.playerPos.y = fix.playerPos.y + 0.08 end)
+    assert(d.active and d.active.command == 'follow')
+
+    -- Leg 3: West for 25 ticks (delta X = -2.0)
+    f:step(d, 25, function(i, fix) fix.playerPos.x = fix.playerPos.x - 0.08 end)
+    assert(d.active and d.active.command == 'follow')
+
+    -- Leg 4: South for 25 ticks (delta Y = -2.0)
+    f:step(d, 25, function(i, fix) fix.playerPos.y = fix.playerPos.y - 0.08 end)
+    assert(d.active and d.active.command == 'follow')
+
+    -- Sarah successfully navigated around the loop
+    local dx = f.playerPos.x - f.npcPos.x
+    local dy = f.playerPos.y - f.npcPos.y
+    local distSq = dx * dx + dy * dy
+    assert(distSq <= 16.0, 'Sarah stayed within tracking range across turns')
+    assert(#f.walkCalls >= 4 and #f.walkCalls <= 15)
+    assert(d.active ~= nil)
+end)
+
+-- 59. Advancing NPC halts upon entering 2-tile deadzone and resumes on departure
+test('advancing NPC halts upon entering 2-tile deadzone and resumes on departure', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+
+    -- Player stays stationary at (14, 10). Sarah advances toward (13, 10).
+    -- After ~25-35 ticks, Sarah enters deadzone (dist <= 2.0) and minRetargetTicks elapses
+    f:step(d, 35)
+
+    -- Sarah halted cleanly into idle state within deadzone
+    assert(d.active and d.active.stepState == 'idle')
+    assert(d.active.summary == 'Following player (in range)')
+    local walksBeforeRest = #f.walkCalls
+    local stoppedNpcX = f.npcPos.x
+
+    -- Player stays stationary for another 30 ticks: Sarah stays put, no new walks
+    f:step(d, 30)
+    assert(d.active and d.active.stepState == 'idle')
+    assert(#f.walkCalls == walksBeforeRest)
+    assert(f.npcPos.x == stoppedNpcX)
+
+    -- Player departs to (17, 10): Sarah resumes on first tick!
+    f.playerPos.x = 17
+    d:tick()
+    assert(#f.walkCalls == walksBeforeRest + 1)
+    assert(d.active and d.active.stepState == 'walking')
+    assert(d.active.currentTarget.x == 16 and d.active.currentTarget.y == 10)
+end)
+
+-- 60. Deadzone boundary oscillations do not cause path thrashing
+test('deadzone boundary oscillations do not cause path thrashing', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 12.05, y = 10, z = 0}, npcSpeed = 0.05})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+    local initWalks = #f.walkCalls
+
+    -- Player oscillates back and forth across 2-tile boundary (x = 12.05 <-> 11.95) every 2 ticks
+    f:step(d, 40, function(i, fix)
+        fix.playerPos.x = (i % 2 == 0) and 12.05 or 11.95
+    end)
+
+    -- Retarget budget is strictly throttled, no thrashing
+    local addedWalks = #f.walkCalls - initWalks
+    assert(addedWalks <= 4, 'boundary oscillations throttled to <= 4 walk steps')
+    assert(d.active ~= nil)
+end)
+
+-- 61. Minor player movement within same target square continues walking without restarting step
+test('minor player movement within same target square continues walking without restarting step', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14.1, y = 10.1, z = 0}, npcSpeed = 0.05})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+    assert(#f.walkCalls == 1)
+    local initialTarget = d.active.currentTarget
+
+    -- Player shifts slightly within square 14, 10 (target candidate square 13, 10 remains unchanged)
+    f:step(d, 20, function(i, fix)
+        fix.playerPos.x = 14.1 + (i % 3) * 0.05
+        fix.playerPos.y = 10.1 + (i % 2) * 0.05
+    end)
+
+    -- Zero path restarts: step 1 continues undisturbed
+    assert(#f.walkCalls == 1)
+    assert(d.active.currentTarget.x == initialTarget.x and d.active.currentTarget.y == initialTarget.y)
+    assert(f.npcPos.x > 10.5, 'Sarah advanced without interruption')
+end)
+
+-- 62. Stalled movement while player causes retargets times out cleanly at 600 ticks
+test('stalled movement while player causes retargets times out cleanly at 600 ticks', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, stalled = true})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+    assert(d.active and d.active.command == 'follow')
+
+    -- Player alternates between (14, 10) and (14, 13) every 6 ticks (shift = 3 tiles, triggering retarget each time)
+    -- Sarah is stalled (position remains at 10, 10)
+    for tick = 1, 599 do
+        f:step(d, 1, function(i, fix)
+            if tick % 6 == 0 then
+                fix.playerPos.y = (fix.playerPos.y == 10) and 13 or 10
+            end
+        end)
+        assert(d.active ~= nil, 'still active at tick ' .. tick)
+        assert(d.active.stepTicks <= 6, 'stepTicks kept resetting on retarget')
+        assert(d.active.stallTicks == tick, 'stallTicks accumulated across retargets')
+    end
+
+    -- Tick 600: stallTicks reaches 600 -> timeout cancellation fires!
+    f:step(d, 1)
+    assert(d.active == nil, 'follow timed out at tick 600')
+    assert(d.lastAction.state == 'cancelled')
+    assert(d.lastAction.reason == 'timeout')
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    assert(notices[1].reason == 'timeout')
+    assert(notices[1].message:find('Follow disengaged: timeout%.'))
+end)
+
+-- 63. Healthy long-running follow runs for 1200 ticks without false timeout
+test('healthy long-running follow runs for 1200 ticks without false timeout', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+
+    -- Player walks East at 0.06 tiles/tick for 1200 ticks (twice the maxStallTicks bound)
+    f:step(d, 1200, function(i, fix)
+        fix.playerPos.x = fix.playerPos.x + 0.06
+    end)
+
+    -- Follow is still running healthily
+    assert(d.active ~= nil)
+    assert(d.active.command == 'follow')
+    assert(d.active.stallTicks < 20, 'stallTicks continuously reset by progress')
+    assert(f.npcPos.x > 70.0, 'Sarah traveled distance with player')
+    assert(#d.noticeQueue == 0)
+end)
+
+-- 64. Synchronous engine stop callbacks during user stop, retarget, and in-range halting are defused
+test('synchronous engine stop callbacks during user stop, retarget, and in-range halting are defused', function()
+    -- Part A: synchronous fail callback during retarget
+    local f1 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, syncStopFail = true})
+    local d1 = Commands.new(f1.observe, function(r) return f1.adapter.stop() end, f1.identityProvider, function(t, onC, onF) return f1.adapter.walk(nil, t, onC, onF) end)
+    d1:execute('follow')
+    -- Player moves at tick 6 to trigger retarget
+    f1:step(d1, 6, function(i, fix) fix.playerPos.x = 16 end)
+    -- Retarget succeeded, synchronous fail was defused
+    assert(d1.active and d1.active.stepState == 'walking' and d1.active.currentTarget.x == 15)
+    assert(#d1.noticeQueue == 0)
+
+    -- Part B: synchronous complete callback during in-range halt
+    local f2 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 13.5, y = 10, z = 0}, syncStopComplete = true})
+    local d2 = Commands.new(f2.observe, function(r) return f2.adapter.stop() end, f2.identityProvider, function(t, onC, onF) return f2.adapter.walk(nil, t, onC, onF) end)
+    d2:execute('follow')
+    f2.playerPos.x = 11.5 -- move inside deadzone
+    f2:step(d2, 6)
+    assert(d2.active and d2.active.stepState == 'idle')
+    assert(d2.active.summary == 'Following player (in range)')
+
+    -- Part C: synchronous fail callback during user stop command
+    local f3 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, syncStopFail = true})
+    local d3 = Commands.new(f3.observe, function(r) return f3.adapter.stop() end, f3.identityProvider, function(t, onC, onF) return f3.adapter.walk(nil, t, onC, onF) end)
+    d3:execute('follow')
+    local stopRes = d3:execute('stop')
+    assert(stopRes.state == 'completed')
+    assert(d3.active == nil)
+    assert(d3.lastAction.reason == 'stopped by user')
+    assert(#d3.noticeQueue == 0)
+end)
+
+-- 65. Failed engine stop during deadzone halting blocks movement pending recovery
+test('failed engine stop during deadzone halting blocks movement pending recovery', function()
+    local f = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 13.5, y = 10, z = 0}})
+    local d = Commands.new(f.observe, function(r) return f.adapter.stop() end, f.identityProvider, function(t, onC, onF) return f.adapter.walk(nil, t, onC, onF) end)
+    d:execute('follow')
+    assert(d.active and d.active.stepState == 'walking')
+
+    -- Player enters deadzone
+    f.playerPos.x = 11.5
+    f:step(d, 5)
+    -- Next tick triggers in-range stop; make engine stop fail
+    f.setStopFail(true)
+    d:tick()
+
+    -- Follow disengages with stop failed
+    assert(d.active == nil)
+    assert(d.stopFailed == 'stop failed')
+    local notices = d:consumeNotices()
+    assert(#notices == 1)
+    assert(notices[1].message:find('Warning: engine stop failed %(stop failed%)'))
+    assert(notices[1].message:find('movement blocked pending recovery%.'))
+
+    -- Subsequent follow is blocked
+    local blkRes = d:execute('follow')
+    assert(blkRes.state == 'rejected')
+    assert(blkRes.lines[1]:find('movement blocked until stop recovers%.'))
+
+    -- Recovery via successful stop
+    f.setStopFail(false)
+    local recRes = d:execute('stop')
+    assert(recRes.state == 'completed')
+    assert(d.stopFailed == nil)
+    assert(hasLine(recRes.lines, 'Prior engine stop failure cleared; movement recovered%.'))
+end)
+
+-- 66. Lifecycle events during active advancing tracking cancel follow cleanly
+test('lifecycle events during active advancing tracking cancel follow cleanly', function()
+    -- Case A: Controller replacement during advancing tracking
+    local f1 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local currentCtrl1 = f1.controller
+    local d1 = Commands.new(f1.observe, function(r) return f1.adapter.stop() end, function() return currentCtrl1, f1.npc end, function(t, onC, onF) return f1.adapter.walk(nil, t, onC, onF) end)
+    d1:execute('follow')
+    f1:step(d1, 3)
+    assert(d1.active ~= nil)
+    -- Controller replaced
+    currentCtrl1 = {npc = f1.npc, adapter = f1.adapter}
+    d1:tick()
+    assert(d1.active == nil)
+    assert(d1.lastAction.reason == 'controller replaced')
+
+    -- Case B: NPC replacement during advancing tracking
+    local f2 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local currentNpc2 = f2.npc
+    local d2 = Commands.new(f2.observe, function(r) return f2.adapter.stop() end, function() return f2.controller, currentNpc2 end, function(t, onC, onF) return f2.adapter.walk(nil, t, onC, onF) end)
+    d2:execute('follow')
+    f2:step(d2, 3)
+    assert(d2.active ~= nil)
+    -- NPC replaced
+    currentNpc2 = {getX = function() return 10 end, getY = function() return 10 end, getZ = function() return 0 end}
+    d2:tick()
+    assert(d2.active == nil)
+    assert(d2.lastAction.reason == 'npc replaced')
+
+    -- Case C: Session reset during advancing tracking
+    local f3 = makeAdvancingFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}, npcSpeed = 0.1})
+    local d3 = Commands.new(f3.observe, function(r) return f3.adapter.stop() end, f3.identityProvider, function(t, onC, onF) return f3.adapter.walk(nil, t, onC, onF) end)
+    d3:execute('follow')
+    f3:step(d3, 3)
+    local s1Walk = f3.getActiveWalk()
+    d3:reset()
+    assert(d3.active == nil)
+    assert(d3.sequence == 0)
+    -- Old callback from session 1 cannot mutate session 2
+    if s1Walk and s1Walk.onComplete then s1Walk.onComplete() end
+    assert(d3.active == nil)
+    d3:execute('follow')
+    assert(d3.active and d3.active.session == 2 and d3.active.id == 1)
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')
