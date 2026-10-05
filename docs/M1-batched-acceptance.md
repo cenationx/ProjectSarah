@@ -375,3 +375,5 @@ Evidence: evidence/batched-follow-native.txt; backup: runtime/backups/batched-fo
 - Follow mid-stride Stop and no automatic resumption PASS by user report; no independent screenshot of transition.
 - F1, F4, F5 and F6 remain unverified natively. Do not induce an engine stop failure solely for this test.
 - User noted slow tracking; responsiveness concern retained for later refinement, no source adjustment.
+
+Native F6 PASS (Codex visual inspection, 2026-10-05): after user ran beyond leash with console closed, screenshot showed red in-world Follow disengaged: player out of range (>8 tiles). Game paused with message visible. Resumed normally; halo expired. Context-menu console reopen displayed only initial command/binding headers, no replayed notice or automatic command. Moved panel position retained. Game running, console open; Follow cancelled. F5 open-panel delivery remains pending, F6 closed-panel feedback/no-replay accepted.
