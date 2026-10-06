@@ -1,3 +1,23 @@
+## Latest checkpoint: read-only native resolver audit (2026-10-06)
+
+Started clean main7d7d37d; Codex sole editor. Installed jar hash unchanged.
+Selected Kahlua lookup/type/equality/receiver/exception paths freshly inspected
+and corroborated by direct class Code/exception-table reads, no target execution.
+Gemini3.8 Flash HIGH reviewed sanitized findings; Codex corrected overclaims.
+See NATIVE-RESOLVER-AUDIT.md and evidence/resolver-audit-offline-20261006.txt.
+Standard class method lookup retrieves stored invokers; JavaFunction maps to Lua
+function. Callable __index paths/cache mutations prevent universal purity claims.
+MethodCaller can log/consume target exceptions: pcall success alone insufficient;
+expected return domain plus separate native/log evidence needed for later getters.
+41 symbol fixtures rerun PASS. Prior649 suite +11 runner +19 preflight baseline
+unchanged, full suite not rerun for docs-only work. No runtime/helper changes.
+Next: explicitly resume isolated native Follow/rendering acceptance; later resolver/
+getter diagnostics require audited paths/operation manifest and staging revision.
+Stop generic scaffolding. Live tests remain deferred until user explicitly resumes.
+No deployment/game launch/saves/settings changes. Stop unchanged, light unknown,
+model AI ON HOLD; deployed baseline5fa6b9c. Codex alone later deploys/launches.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: narrowed symbol diagnostic (2026-10-06)
 
 Started clean main f289c49; Codex sole editor. Gemini3.8 Flash HIGH authored

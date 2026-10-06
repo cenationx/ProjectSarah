@@ -20,7 +20,10 @@
 - [x] Narrow symbol diagnostic contract/code with injected markers and explicit
   unassessed native capabilities; no runtime wiring.41 cases;649+11+19 PASS.
   Stop generic scaffolding; see SYMBOL-EXPOSURE-OFFLINE.md.
-- [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
+- [x] Bounded read-only Kahlua resolver/type/exception audit; see
+  NATIVE-RESOLVER-AUDIT.md. No runtime caller or native acceptance.
+- [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
+  exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/
 tests/commits/pushes. Live tests remain here and deferred. Model AI ON HOLD.
