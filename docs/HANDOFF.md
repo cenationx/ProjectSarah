@@ -1,3 +1,15 @@
+## Pace access result (2026-10-06)
+
+The user resumed the debugger. The wrapped collection probe completed and logged
+AIComponent method lookup failure: getHumanControlVars is not exposed to Lua on
+Sarah's actual component. This closes the direct-controller-access candidate for
+the current runtime. No final AI-only probe is needed; do not ask the user to
+repeat it. Protected calls still triggered Break On Error, causing the blocking
+debugger; avoid further invalid component indexing. No running flags mutated.
+Next: offline review of exposed movement hooks and timing, then a bounded Gemini
+implementation only if a supported route is established. Pace remains unfixed.
+Do not claim a fixture or setter signature proves native running. Game remains
+open; no deployment until clean exit and fresh disposable-state preservation.
 ## IN PROGRESS: Follow pace correction (2026-10-06)
 
 User confirmed smoother Follow direction changes and mid-stride Stop/no automatic
