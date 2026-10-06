@@ -1,3 +1,34 @@
+## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
+
+Gemini handed ownership back; Codex reviewed actual source and reproduced702
+checks/16 suites +11 runner +42 preflight PASS. Stop cleanup errors propagate
+through Console into dispatcher blocking. Runtime ownership stays outside saved
+modData and survives Engine reload; same-NPC stale action/adapter, failed ownership
+admission, partial queue startup and reentrant step regressions included.
+Candidate approved for isolated live evaluation, not native acceptance.
+No deployment/launch/save/settings changes. Rendering guard remains unchanged;
+independent rendering remains an open gate, not a completed feature.
+Next: recheck closed-game state, fresh verified disposable world/mod/profile
+backup and restore plan, then deploy reviewed source and test pace, Stop,
+WalkHere and reload. No AI integration. Batch B may do independent offline
+inspection; do not enable later native behavior before applicable gates pass.
+## Batch A: Follow pace, stop failure propagation, ownership, and reentrant step corrections implemented offline (2026-10-06)
+
+- [x] Observations.read player running sampling via confirmed methods (isRunning, isSprinting).
+- [x] Commands.invokeWalk contract tuple/single compatibility with Console.walkSarah.
+- [x] Engine.SarahWalkAction instance adapter/token binding and ownership guarding.
+- [x] NPC modData live object removal; runtime ownership record in Engine.runtimeOwnership with explicit lifecycle cleanup.
+- [x] Stale adapter.stop protection: prevents clearing newer same-NPC ownership, running flag, queue, or path.
+- [x] Ownership checks fail closed when runtime record is missing, invalid, or unreadable.
+- [x] Queue admission safety against failure, synchronous completion, and re-entry; rejected walk admission on failed setOwnership prevents ownerless actions.
+- [x] Engine runtime ownership continuity across module reload on SAME NPC via _G._SarahRuntimeOwnership.
+- [x] adapter.stop failure propagation: attempts all safe cleanup and returns false, reason; Console/Commands stopFailed blocking preserved.
+- [x] Retired actions guarded from base methods that mutate pathfinding/queues.
+- [x] Follow step pace matching, mid-stride acceleration/deceleration, deadzone reset, WalkHere walking invariant.
+- [x] Dispatcher stepAction assignment and failure handling guarded against synchronous callbacks, retirement, cancellation, and re-entry (never clobbers newer step generations).
+- [x] Offline test suite updated and passing: 702 suite checks (+4 new checks) across 16 suites, 11 runner self-tests, 42 preflight self-tests.
+- [ ] Gate A: Codex review, closed-game fresh backup, deployment, and isolated live acceptance testing.
+
 ## Manual Gemini coding batches authorized (2026-10-06)
 
 User requested substantial ordered coding slices to move most implementation and

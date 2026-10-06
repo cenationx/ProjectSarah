@@ -124,16 +124,17 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
     end
     function self:invokeWalk(target,onComplete,onFail,action)
         if not self.walkCallback then return false,'walk callback unavailable' end
-        local ok,ret,err=pcall(self.walkCallback,target,onComplete,onFail,action)
+        local ok,ret,extra=pcall(self.walkCallback,target,onComplete,onFail,action)
         if not ok then
             local clean=tostring(ret):match(':%d+: (.*)') or tostring(ret)
             return false,clean:sub(1,60)
         end
         if ret==false then
-            local clean=tostring(err or 'walk failed')
+            local clean=tostring(extra or 'walk failed')
             return false,clean:sub(1,60)
         end
-        return true,ret
+        local actionObj=(type(ret)=='table' and ret) or (type(extra)=='table' and extra) or (ret~=false and ret)
+        return true,actionObj
     end
     function self:cancelActive(reason,isUserStop)
         if not self.active then return false,'nothing active' end
@@ -286,6 +287,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         act.stepGen=(act.stepGen or 0)+1
         local curStepGen=act.stepGen
         act.stepState='walking'
+        act.pace=(data and data.playerRunning) and 'run' or 'walk'
         act.stepTicks=0
         act.currentTarget=chosenTarget
         act.lastTarget=chosenTarget
@@ -357,6 +359,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 self.active.stepState='idle'
                 self.active.stepTicks=0
                 self.active.stallTicks=0
+                self.active.pace='walk'
                 local obsOk,obsData=pcall(self.observe,false)
                 if obsOk and type(obsData)=='table' and obsData.npc and isValidCoord(obsData.npc.x,obsData.npc.y,obsData.npc.z) then
                     self.active.lastProgressX=obsData.npc.x
@@ -380,15 +383,19 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             self:cancelActive(reason or 'path failed')
         end
 
-        local walkOk,walkErr=self:invokeWalk(chosenTarget,onStepComplete,onStepFail,act)
+        local walkOk,actOrErr=self:invokeWalk(chosenTarget,onStepComplete,onStepFail,act)
         if not walkOk then
             stepRetired=true
-            if self.active then
+            if self.active and self.active == act and self.active.id == actId and self.active.token == actToken and self.active.stepGen == curStepGen then
+                act.stepAction=nil
                 self.active.retireStep=nil
                 self.active.stepGen=self.active.stepGen+1
+                self:cancelActive(actOrErr or 'walk failed to start')
             end
-            self:cancelActive(walkErr or 'walk failed to start')
-            return false,walkErr
+            return false,actOrErr
+        end
+        if not stepRetired and self.active and self.active == act and self.active.id == actId and self.active.token == actToken and self.active.stepGen == curStepGen and self.active.stepState == 'walking' then
+            act.stepAction = (type(actOrErr) == 'table') and actOrErr or nil
         end
         return true
     end
@@ -446,12 +453,21 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 return false,'timeout'
             end
 
+            local desiredPace=(data and data.playerRunning) and 'run' or 'walk'
+            if act.pace~=desiredPace then
+                act.pace=desiredPace
+                if act.stepAction and act.stepAction.setPace then
+                    act.stepAction:setPace(desiredPace)
+                end
+            end
+
             local minRetargetTicks=act.minRetargetTicks or 6
 
             if distSq<=4.0 then
                 act.stallTicks=0
                 act.lastProgressX=nx
                 act.lastProgressY=ny
+                act.pace='walk'
                 if act.stepTicks>=minRetargetTicks then
                     if act.retireStep then
                         act.retireStep()
@@ -809,6 +825,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 npc=npcOwner,
                 maxTicks=600,
                 ticks=0,
+                pace='walk',
                 details={targetX=tx,targetY=ty,targetZ=tz}
             }
             self.active=action

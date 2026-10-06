@@ -1,3 +1,31 @@
+## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
+
+Gemini handed ownership back; Codex reviewed actual source and reproduced702
+checks/16 suites +11 runner +42 preflight PASS. Stop cleanup errors propagate
+through Console into dispatcher blocking. Runtime ownership stays outside saved
+modData and survives Engine reload; same-NPC stale action/adapter, failed ownership
+admission, partial queue startup and reentrant step regressions included.
+Candidate approved for isolated live evaluation, not native acceptance.
+No deployment/launch/save/settings changes. Rendering guard remains unchanged;
+independent rendering remains an open gate, not a completed feature.
+Next: recheck closed-game state, fresh verified disposable world/mod/profile
+backup and restore plan, then deploy reviewed source and test pace, Stop,
+WalkHere and reload. No AI integration. Batch B may do independent offline
+inspection; do not enable later native behavior before applicable gates pass.
+## Batch A: Stop failure propagation, admission rejection, reload continuity, and reentrant step corrections completed offline (2026-10-06)
+
+Gemini completed offline corrections addressing all items in the latest Codex review:
+1. Stop failure propagation (`Engine.lua` & `Console.lua`): `adapter.stop` attempts all safe cleanup steps (`clearOwnership`, `setRunning(false)`, `queue.clear`, `path.cancel`, `setPath2(nil)`), collects any errors in `failures`, and returns `false, table.concat(failures, "; ")` when any native cleanup method throws. `Console.lua` `stopSarah` captures `ret == false` and propagates `false, err` to `Commands.lua` `invokeStop`, properly setting `self.stopFailed` and blocking subsequent `walk here` and `follow` movement pending recovery. When native methods succeed, a subsequent Stop cleanly clears the failure and restores movement. Verified with production-source pipeline regressions in `tools/test_render.py`.
+2. Admission rejection on failed `setOwnership` (`Engine.lua`): In `adapter.walk`, if `Engine.setOwnership(npc, rec)` fails, walk admission is immediately rejected (`a.finished = true`, `adapter.currentAction = nil`, returns `false, err`) before calling `ISTimedActionQueue.add`. Ownerless actions are never added to the queue (`tools/test_render.py`).
+3. Runtime ownership continuity across Engine module reload (`Engine.lua`): `Engine.runtimeOwnership` is anchored to `_G._SarahRuntimeOwnership or {}`, ensuring continuity across actual `Engine.lua` module reloads on the SAME NPC. When a new module instance starts a newer action on the same NPC, older adapters recognize they are no longer current owner and do not disrupt the newer action's ownership, running flag, queue, or path (`tools/test_render.py`).
+4. Reentrant same-Follow step handling (`Commands.lua`): In `dispatchFollowStep`, post-invoke handling for both success and failure guards against clobbering newer step generations. If re-entry occurs during `invokeWalk` and starts a newer step generation (`stepGen > curStepGen`), the older dispatch's post-invoke guard does not clear `act.stepAction`, does not increment `stepGen`, and does not cancel the active follow. Verified in `tools/test_follow.py` (test 71).
+5. Offline test verification: 702 checks across 16 suites in `run_tests.py` PASS (+4 new checks total: `test_render.py` [22 checks] and `test_follow.py` [71 checks]), 11 `test_runner.py` checks PASS, 42 `test_preflight.py` checks PASS.
+6. Verification & boundary status:
+   - Implemented code: `Observations.lua`, `Console.lua`, `Engine.lua`, `Commands.lua`.
+   - Offline verification: 702 checks across 16 suites in `run_tests.py` PASS.
+   - Pending native acceptance: All native behavior (pace matching, deadzone halting, WalkHere invariant, mid-stride Stop, same-NPC adapter recreation, reload continuity, and rendering independence) strictly pending Codex live verification in the isolated profile.
+   - Game status: Game is CLOSED. No deployment or game launch performed. Working tree uncommitted and undeployed for Codex inspection.
+
 ## Manual Gemini coding batches authorized (2026-10-06)
 
 User requested substantial ordered coding slices to move most implementation and

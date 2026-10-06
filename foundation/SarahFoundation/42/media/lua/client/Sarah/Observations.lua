@@ -15,6 +15,18 @@ local function position(npc)
     end
     return nil
 end
+local function checkCharacterRunning(char)
+    if not char then return false end
+    if type(char.isRunning)=='function' then
+        local ok,running=pcall(char.isRunning,char)
+        if ok and running==true then return true end
+    end
+    if type(char.isSprinting)=='function' then
+        local ok,sprinting=pcall(char.isSprinting,char)
+        if ok and sprinting==true then return true end
+    end
+    return false
+end
 local function checkCharacterLiveness(char)
     if not char then return 'unknown' end
     if type(char.isDead)=='function' then
@@ -43,14 +55,19 @@ function Observations.read(controller,player,includeInventory)
             local liveness=checkCharacterLiveness(player)
             local dead=(liveness=='dead')
             local alive=(liveness=='alive')
+            local running=checkCharacterRunning(player)
             pPos.liveness=liveness
             pPos.dead=dead
             pPos.isDead=dead
             pPos.alive=alive
+            pPos.running=running
+            pPos.isRunning=running
             data.player=pPos
             data.playerLiveness=liveness
             data.playerDead=dead
             data.playerAlive=alive
+            data.playerRunning=running
+            data.playerIsRunning=running
         end
     end
     if not controller then data.reason='Foundation is not ready.'; return data end

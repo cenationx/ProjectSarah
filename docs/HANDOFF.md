@@ -1,3 +1,44 @@
+## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
+
+Gemini handed ownership back; Codex reviewed actual source and reproduced702
+checks/16 suites +11 runner +42 preflight PASS. Stop cleanup errors propagate
+through Console into dispatcher blocking. Runtime ownership stays outside saved
+modData and survives Engine reload; same-NPC stale action/adapter, failed ownership
+admission, partial queue startup and reentrant step regressions included.
+Candidate approved for isolated live evaluation, not native acceptance.
+No deployment/launch/save/settings changes. Rendering guard remains unchanged;
+independent rendering remains an open gate, not a completed feature.
+Next: recheck closed-game state, fresh verified disposable world/mod/profile
+backup and restore plan, then deploy reviewed source and test pace, Stop,
+WalkHere and reload. No AI integration. Batch B may do independent offline
+inspection; do not enable later native behavior before applicable gates pass.
+## Batch A: Stop failure propagation, admission rejection, reload continuity, and reentrant step corrections completed offline (2026-10-06)
+
+Gemini completed offline coding and verification for Batch A, addressing all items in the latest Codex review. Checkout is prepared for Codex review:
+- Source changes completed offline:
+  * Observations.lua: sampled player isRunning and isSprinting via pcall; speculative IsRunning and raw running/sprinting fields eliminated.
+  * Console.lua: walkSarah forwards action.pace to adapter.walk; stopSarah captures `ret == false` and propagates failure reason (`false, err`) so Commands.lua properly triggers stopFailed blocking.
+  * Commands.lua: invokeWalk accepts (true, actionObj) tuple return while preserving backward compatibility; dispatchFollowStep matches player pace; tickFollow adjusts pace mid-stride and resets to walk when entering deadzone; WalkHere invariant enforces strictly walking; stepAction assignment and failure handling after invokeWalk guard against clobbering or cancelling newer step generations.
+  * Engine.lua: Removed live action objects from NPC modData (SarahActiveAction completely eliminated). Created runtime ownership record anchored to `_G._SarahRuntimeOwnership` across module reloads; isCurrentOwner() fails closed if record is missing, invalid, or unreadable; rejected walk admission if setOwnership fails (never queues ownerless action); adapter.stop attempts all safe cleanup steps and propagates failures as `false, reason` when native cleanup methods throw.
+- Offline tests: 702 checks across 16 suites in run_tests.py PASS (+4 new checks in test_render.py [22 checks] and test_follow.py [71 checks]); 11 runner self-tests PASS; 42 preflight self-tests PASS.
+- Rendering independence review: Native IsoPlayer rendering requires playerIndex square visibility and light info in the engine FBO pass. No fake visibility introduced; independent rendering remains pending native engine investigation.
+- Verification & boundary status:
+  * Implemented code: Observations.lua, Console.lua, Engine.lua, Commands.lua.
+  * Offline verification: 702 checks across 16 suites in run_tests.py PASS.
+  * Pending native acceptance: All native behavior (pace matching, deadzone halting, WalkHere invariant, mid-stride Stop, same-NPC adapter recreation, reload continuity, and rendering independence) strictly pending Codex live verification in the isolated profile.
+- Live checklist & safety requirements for Codex:
+  1. Verify Project Zomboid is CLOSED (no javaw.exe / java.exe process, no Project Zomboid window).
+  2. Take a separate fresh verified backup of the disposable world, deployed mod, and isolated profile BEFORE deploying or launching. (Note: tools/preflight.py is strictly a read-only validator and DOES NOT create backups).
+  3. Deploy reviewed files from foundation/SarahFoundation/ to runtime/isolated/mods/SarahFoundation/.
+  4. Launch isolated profile (tools/launch-isolated.ps1).
+  5. Verify 5 observable criteria in live gameplay:
+     - Pace matching: Sarah runs when player runs, walks when player walks, and accelerates/decelerates mid-stride.
+     - Deadzone halt: Sarah halts cleanly within 2 tiles and pace resets to walk.
+     - WalkHere invariant: 'walk here' strictly walks regardless of player running.
+     - Mid-stride Stop: immediate halt, no automatic resume, no queue corruption.
+     - Same-NPC recreation / reload safety: recreation of adapter or controller does not cause stale actions to cancel newer movement or corrupt queues.
+- Checkout handoff: Released to Codex for review, deployment, and live testing. Working tree contains uncommitted Batch A changes for inspection.
+
 ## Manual Gemini coding batches authorized (2026-10-06)
 
 User requested substantial ordered coding slices to move most implementation and

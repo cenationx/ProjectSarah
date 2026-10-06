@@ -2281,5 +2281,274 @@ test('lifecycle events during active advancing tracking cancel follow cleanly', 
     assert(d3.active and d3.active.session == 2 and d3.active.id == 1)
 end)
 
+-- 67. Observations.read extracts player running status using confirmed methods safely
+test('Observations.read extracts player running status using confirmed methods safely', function()
+    local mockNpc = {
+        getX = function() return 10 end,
+        getY = function() return 10 end,
+        getZ = function() return 0 end
+    }
+    local mockAdapter = {
+        meta = {},
+        isDead = function() return false end,
+        isResident = function() return true end,
+        isIncomplete = function() return false end,
+        listNPCs = function() return {mockNpc} end
+    }
+    local controller = {npc = mockNpc, adapter = mockAdapter}
+
+    -- Confirmed isRunning returning true
+    local runningPlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end,
+        isRunning = function() return true end
+    }
+    local dataRun = Observations.read(controller, runningPlayer, false)
+    assert(dataRun.playerRunning == true)
+    assert(dataRun.playerIsRunning == true)
+    assert(dataRun.player.running == true)
+    assert(dataRun.player.isRunning == true)
+
+    -- Confirmed isSprinting returning true
+    local sprintingPlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end,
+        isRunning = function() return false end,
+        isSprinting = function() return true end
+    }
+    local dataSprint = Observations.read(controller, sprintingPlayer, false)
+    assert(dataSprint.playerRunning == true)
+
+    -- Erroring method fails safely to false
+    local errorPlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end,
+        isRunning = function() error('native isRunning crash') end
+    }
+    local dataErr = Observations.read(controller, errorPlayer, false)
+    assert(dataErr.playerRunning == false)
+
+    -- Speculative IsRunning (capital I) and raw fields are ignored
+    local speculativePlayer = {
+        getX = function() return 12 end,
+        getY = function() return 12 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end,
+        IsRunning = function() return true end,
+        running = true,
+        sprinting = true
+    }
+    local dataSpec = Observations.read(controller, speculativePlayer, false)
+    assert(dataSpec.playerRunning == false)
+end)
+
+-- 68. invokeWalk contract preserves compatibility with (true, actionObj), (actionObj), (true), and (false, err)
+test('invokeWalk preserves compatibility with (true, actionObj), (actionObj), (true), and (false, err)', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+    local d = Commands.new(f.observe, nil, f.identityProvider)
+
+    -- Case A: Console.walkSarah pattern: returns (true, actionTable)
+    d.walkCallback = function(t, onC, onF, a) return true, {id = 'actionTableA', pace = a.pace} end
+    local okA, actA = d:invokeWalk({x = 10, y = 10, z = 0}, nil, nil, {pace = 'run'})
+    assert(okA == true)
+    assert(type(actA) == 'table' and actA.id == 'actionTableA' and actA.pace == 'run')
+
+    -- Case B: Direct adapter return: returns (actionTable)
+    d.walkCallback = function(t, onC, onF, a) return {id = 'actionTableB'} end
+    local okB, actB = d:invokeWalk({x = 10, y = 10, z = 0}, nil, nil, {pace = 'run'})
+    assert(okB == true)
+    assert(type(actB) == 'table' and actB.id == 'actionTableB')
+
+    -- Case C: Legacy boolean mock: returns (true)
+    d.walkCallback = function(t, onC, onF, a) return true end
+    local okC, actC = d:invokeWalk({x = 10, y = 10, z = 0}, nil, nil, {pace = 'run'})
+    assert(okC == true)
+    assert(actC == true)
+
+    -- Case D: Failure return: returns (false, 'error')
+    d.walkCallback = function(t, onC, onF, a) return false, 'blocked square' end
+    local okD, errD = d:invokeWalk({x = 10, y = 10, z = 0}, nil, nil, {pace = 'run'})
+    assert(okD == false)
+    assert(errD == 'blocked square')
+end)
+
+-- 69. Follow pace matching, mid-stride acceleration/deceleration, and walk here walking invariant
+test('follow pace matches player running state and supports mid-stride pace change', function()
+    local playerRunning = true
+    local activeWalkAction = nil
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+
+    local customObserve = function()
+        local base = f.observe()
+        base.playerRunning = playerRunning
+        base.playerIsRunning = playerRunning
+        return base
+    end
+
+    local walkCallback = function(target, onComplete, onFail, actionTable)
+        local actionObj = {
+            target = target,
+            pace = (actionTable and actionTable.pace) or 'walk',
+            setPace = function(self, p) self.pace = p end
+        }
+        activeWalkAction = actionObj
+        return true, actionObj
+    end
+
+    local d = Commands.new(customObserve, function()
+        if activeWalkAction then activeWalkAction = nil end
+        return true
+    end, f.identityProvider, walkCallback)
+
+    -- 69a. Initial follow dispatch when player is running dispatches run pace
+    local resFollow = d:execute('follow')
+    assert(resFollow.state == 'running')
+    assert(d.active and d.active.command == 'follow')
+    assert(d.active.pace == 'run')
+    assert(d.active.stepAction ~= nil and d.active.stepAction.pace == 'run')
+
+    -- 69b. Mid-stride deceleration when player slows down to walk
+    playerRunning = false
+    d:tick()
+    assert(d.active.pace == 'walk')
+    assert(d.active.stepAction.pace == 'walk')
+
+    -- 69c. Mid-stride acceleration when player resumes running
+    playerRunning = true
+    d:tick()
+    assert(d.active.pace == 'run')
+    assert(d.active.stepAction.pace == 'run')
+
+    -- 69d. Deadzone entry resets pace to walk
+    f.playerPos.x = 11; f.playerPos.y = 10
+    d:tick()
+    assert(d.active.pace == 'walk')
+
+    -- 69e. Walk here invariant: strictly remains walking even when player is running
+    d:execute('stop')
+    assert(d.active == nil)
+    playerRunning = true
+    local resWalkHere = d:execute('walk here', {x = 12, y = 10, z = 0})
+    assert(resWalkHere.state == 'running')
+    assert(d.active.command == 'walk here')
+    assert(d.active.pace == 'walk')
+    assert(activeWalkAction ~= nil and activeWalkAction.pace == 'walk')
+
+    -- 69f. User stop clears running follow cleanly
+    d:execute('stop')
+    assert(d.active == nil)
+    assert(activeWalkAction == nil)
+end)
+
+-- 70. Guard dispatcher stepAction assignment against synchronous completion, failure, cancellation, and re-entry
+test('dispatcher stepAction assignment is guarded against synchronous callbacks, retirement, cancellation, and re-entry', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+
+    -- 70a: Synchronous completion during invokeWalk
+    local dummyActionA = {id = 'syncCompletedAction', setPace = function() end}
+    local dSyncComp = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete, onFail)
+        onComplete()
+        return true, dummyActionA
+    end)
+    dSyncComp:execute('follow')
+    assert(dSyncComp.active ~= nil)
+    assert(dSyncComp.active.stepState == 'idle')
+    -- Must NOT assign stale stepAction!
+    assert(dSyncComp.active.stepAction == nil)
+
+    -- 70b: Synchronous failure during invokeWalk
+    local dummyActionB = {id = 'syncFailedAction', setPace = function() end}
+    local dSyncFail = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete, onFail)
+        onFail(nil, 'immediate obstacle')
+        return true, dummyActionB
+    end)
+    dSyncFail:execute('follow')
+    assert(dSyncFail.active == nil)
+
+    -- 70c: Synchronous cancellation/stop during invokeWalk
+    local dummyActionC = {id = 'syncCancelledAction', setPace = function() end}
+    local dSyncCancel
+    dSyncCancel = Commands.new(f.observe, function() return true end, f.identityProvider, function(target, onComplete, onFail)
+        dSyncCancel:execute('stop')
+        return true, dummyActionC
+    end)
+    dSyncCancel:execute('follow')
+    assert(dSyncCancel.active == nil)
+
+    -- 70d: Normal asynchronous start assigns stepAction
+    local dummyActionD = {id = 'asyncAction', setPace = function() end}
+    local dAsync = Commands.new(f.observe, nil, f.identityProvider, function(target, onComplete, onFail)
+        return true, dummyActionD
+    end)
+    dAsync:execute('follow')
+    assert(dAsync.active ~= nil)
+    assert(dAsync.active.stepState == 'walking')
+    assert(dAsync.active.stepAction == dummyActionD)
+end)
+
+-- 71. Reentrant same-Follow step dispatch preserves newer step generation stepAction on both replacement and failure
+test('reentrant same-Follow step dispatch preserves newer step generation stepAction on replacement and failure', function()
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 14, y = 10, z = 0}})
+
+    -- 71a: Synchronous replacement: re-entrant step dispatch during invokeWalk
+    local action1 = {id = 'step1Action', pace = 'walk', setPace = function(self, p) self.pace = p end}
+    local action2 = {id = 'step2Action', pace = 'walk', setPace = function(self, p) self.pace = p end}
+    local reentered = false
+    local dReentrant = nil
+
+    dReentrant = Commands.new(f.observe, function() return true end, f.identityProvider, function(target, onComplete, onFail, act)
+        if not reentered then
+            reentered = true
+            -- Trigger a re-entrant dispatchFollowStep for a newer step generation (Step 2)
+            local okInner = dReentrant:dispatchFollowStep(f.observe(), 10, 10, 0, 14, 10, 0, {x = 13, y = 10, z = 0})
+            assert(okInner == true, 'inner dispatch must succeed')
+            assert(dReentrant.active.stepAction == action2, 'inner dispatch must assign stepAction to action2')
+            -- Now outer invokeWalk returns for Step 1
+            return true, action1
+        else
+            -- Inner dispatch returns action2
+            return true, action2
+        end
+    end)
+
+    dReentrant:execute('follow')
+    assert(dReentrant.active ~= nil)
+    assert(dReentrant.active.stepState == 'walking')
+    assert(dReentrant.active.stepGen == 2, 'stepGen must be 2 after inner dispatch')
+    -- Outer dispatch's post-invoke guard must NOT clobber newer stepAction!
+    assert(dReentrant.active.stepAction == action2, 'newer stepAction must survive outer dispatch completion')
+
+    -- 71b: Synchronous failure of older dispatch: Step 1 fails, but Step 2 had already replaced it
+    local action3 = {id = 'step3Action', pace = 'walk', setPace = function(self, p) self.pace = p end}
+    local reenteredFail = false
+    local dReentrantFail = nil
+
+    dReentrantFail = Commands.new(f.observe, function() return true end, f.identityProvider, function(target, onComplete, onFail, act)
+        if not reenteredFail then
+            reenteredFail = true
+            -- Trigger re-entrant dispatch for Step 2
+            local okInner = dReentrantFail:dispatchFollowStep(f.observe(), 10, 10, 0, 14, 10, 0, {x = 13, y = 10, z = 0})
+            assert(okInner == true, 'inner dispatch must succeed')
+            assert(dReentrantFail.active.stepAction == action3, 'inner dispatch must assign stepAction to action3')
+            -- Outer invokeWalk fails
+            return false, 'step 1 native walk failed'
+        else
+            return true, action3
+        end
+    end)
+
+    dReentrantFail:execute('follow')
+    assert(dReentrantFail.active ~= nil, 'newer step generation must NOT be cancelled by older step failure')
+    assert(dReentrantFail.active.stepState == 'walking')
+    assert(dReentrantFail.active.stepGen == 2)
+    assert(dReentrantFail.active.stepAction == action3, 'newer stepAction must remain intact after older step failure')
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')

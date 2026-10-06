@@ -46,9 +46,9 @@ local function stopSarah(reason,action)
         if actionNpc and actionNpc~=controller.npc then
             return false,'stale npc'
         end
-        local ok,err=pcall(controller.adapter.stop,controller.npc)
-        if not ok then return false,tostring(err) end
-        if err==false then return false,'adapter stop failed' end
+        local ok,ret,stopErr=pcall(controller.adapter.stop,controller.npc)
+        if not ok then return false,tostring(ret) end
+        if ret==false then return false,tostring(stopErr or 'adapter stop failed') end
         return true
     end
     return true
@@ -77,7 +77,7 @@ local function walkSarah(target,onComplete,onFail,action)
         end
         validSq=sqOrErr
     end
-    local ok,ret=controller.adapter.walk(controller.npc,validSq,onComplete,onFail)
+    local ok,ret=controller.adapter.walk(controller.npc,validSq,onComplete,onFail,action and action.pace)
     if not ok then return false,tostring(ret) end
     return true,ret
 end

@@ -1,17 +1,102 @@
 local Engine = {}
 local function log(message) print("[SarahFoundation] " .. tostring(message)) end
+
+if type(_G) == "table" then
+    _G._SarahRuntimeOwnership = _G._SarahRuntimeOwnership or {}
+    Engine.runtimeOwnership = _G._SarahRuntimeOwnership
+else
+    Engine.runtimeOwnership = Engine.runtimeOwnership or {}
+end
+
+function Engine.getOwnership(npc)
+    if not npc then return nil end
+    local ok, rec = pcall(function()
+        return Engine.runtimeOwnership[npc]
+    end)
+    if not ok or type(rec) ~= "table" then return nil end
+    return rec
+end
+
+function Engine.setOwnership(npc, record)
+    if not npc then return false, "missing npc" end
+    if type(record) ~= "table" then return false, "invalid record" end
+    local ok, err = pcall(function()
+        Engine.runtimeOwnership[npc] = record
+    end)
+    if not ok then return false, tostring(err) end
+    return true
+end
+
+function Engine.clearOwnership(npc, expectedRecord)
+    if not npc then return false, "missing npc" end
+    local ok, err = pcall(function()
+        if expectedRecord == nil or Engine.runtimeOwnership[npc] == expectedRecord then
+            Engine.runtimeOwnership[npc] = nil
+        end
+    end)
+    if not ok then return false, tostring(err) end
+    return true
+end
+
 local function getWalkActionClass()
     if not Engine.SarahWalkAction and ISWalkToTimedAction then
         local cls = ISWalkToTimedAction:derive("SarahWalkAction")
-        function cls:new(character, location, onSuccess, onFail)
+        function cls:new(character, location, onSuccess, onFail, pace, token, adapter)
             local o = ISWalkToTimedAction.new(self, character, location)
             o.onSuccess = onSuccess
             o.onFail = onFail
             o.finished = false
+            o.pace = pace or "walk"
+            o.token = token
+            o.adapter = adapter
             return o
         end
+        function cls:isCurrentOwner()
+            if self.finished then return false end
+            if not self.adapter or not self.token then return false end
+            if self.adapter.actionToken ~= self.token then return false end
+            if self.adapter.currentAction ~= self then return false end
+            if not self.character then return false end
+            if self.adapter.isDead and self.adapter.isDead(self.character) then return false end
+
+            local rec = Engine.getOwnership(self.character)
+            -- Ownership checks must fail closed when the required record is missing or unreadable
+            if not rec or type(rec) ~= "table" then
+                return false
+            end
+            if rec.action ~= self or rec.token ~= self.token or rec.adapter ~= self.adapter then
+                return false
+            end
+            return true
+        end
+        function cls:setPace(pace)
+            local newPace = pace or "walk"
+            if self.finished then return false, "finished" end
+            if not self:isCurrentOwner() then
+                return false, "retired"
+            end
+            self.pace = newPace
+            pcall(self.character.setRunning, self.character, newPace == "run")
+            return true
+        end
+        function cls:update()
+            if not self.finished and self:isCurrentOwner() then
+                local shouldRun = (self.pace == "run")
+                pcall(self.character.setRunning, self.character, shouldRun)
+                ISWalkToTimedAction.update(self)
+            end
+        end
         function cls:perform()
-            ISWalkToTimedAction.perform(self)
+            if self.finished then return end
+            local isOwner = self:isCurrentOwner()
+            if isOwner then
+                pcall(self.character.setRunning, self.character, false)
+                if self.adapter and self.adapter.actionToken == self.token then
+                    self.adapter.currentAction = nil
+                end
+                Engine.clearOwnership(self.character, Engine.getOwnership(self.character))
+                ISWalkToTimedAction.perform(self)
+            end
             if not self.finished then
                 self.finished = true
                 if self.onSuccess then
@@ -21,8 +106,17 @@ local function getWalkActionClass()
             end
         end
         function cls:stop()
+            if self.finished then return end
+            local isOwner = self:isCurrentOwner()
             local isFailed = (BehaviorResult and self.result == BehaviorResult.Failed)
-            ISWalkToTimedAction.stop(self)
+            if isOwner then
+                pcall(self.character.setRunning, self.character, false)
+                if self.adapter and self.adapter.actionToken == self.token then
+                    self.adapter.currentAction = nil
+                end
+                Engine.clearOwnership(self.character, Engine.getOwnership(self.character))
+                ISWalkToTimedAction.stop(self)
+            end
             if not self.finished then
                 self.finished = true
                 if self.onFail then
@@ -124,7 +218,7 @@ function Engine.new()
         if not sq:isFree(false) then return false, "Target square is occupied or blocked." end
         return true, sq
     end
-    function adapter.walk(npc, square, onSuccess, onFail)
+    function adapter.walk(npc, square, onSuccess, onFail, pace)
         if not npc or not square then return false, "NPC or target square missing." end
         local walkCls = getWalkActionClass()
         if not walkCls then
@@ -136,16 +230,111 @@ function Engine.new()
             end
             return false, "Walk action class unavailable."
         end
-        local ok, act = pcall(function()
-            local a = walkCls:new(npc, square, onSuccess, onFail)
+        adapter.actionToken = (adapter.actionToken or 0) + 1
+        local token = adapter.actionToken
+        local a = walkCls:new(npc, square, onSuccess, onFail, pace, token, adapter)
+        adapter.currentAction = a
+        local rec = { adapter = adapter, action = a, token = token, character = npc }
+        local okOwner, errOwner = Engine.setOwnership(npc, rec)
+        if not okOwner then
+            a.finished = true
+            if adapter.actionToken == token and adapter.currentAction == a then
+                adapter.currentAction = nil
+            end
+            return false, "failed to set ownership: " .. tostring(errOwner)
+        end
+
+        local ok, err = pcall(function()
             ISTimedActionQueue.add(a)
-            return a
         end)
-        if not ok then return false, tostring(act) end
-        return true, act
+        if not ok then
+            a.finished = true
+            local currentRec = Engine.getOwnership(npc)
+            if currentRec and currentRec.action == a and currentRec.token == token and currentRec.adapter == adapter then
+                Engine.clearOwnership(npc, currentRec)
+                pcall(npc.setRunning, npc, false)
+                if npc.getPathFindBehavior2 then
+                    local okPf, pf = pcall(npc.getPathFindBehavior2, npc)
+                    if okPf and pf and pf.cancel then pcall(pf.cancel, pf) end
+                end
+                if npc.setPath2 then pcall(npc.setPath2, npc, nil) end
+            end
+            if adapter.actionToken == token and adapter.currentAction == a then
+                adapter.currentAction = nil
+            end
+            return false, tostring(err)
+        end
+        if a.finished then
+            local currentRec = Engine.getOwnership(npc)
+            if currentRec and currentRec.action == a then
+                Engine.clearOwnership(npc, currentRec)
+            end
+            if adapter.actionToken == token and adapter.currentAction == a then
+                adapter.currentAction = nil
+            end
+        end
+        return true, a
     end
-    function adapter.stop(npc) ISTimedActionQueue.clear(npc); npc:getPathFindBehavior2():cancel(); npc:setPath2(nil) end
-    function adapter.remove(npc) npc:removeFromWorld(); npc:removeFromSquare() end
+    function adapter.stop(npc)
+        adapter.actionToken = (adapter.actionToken or 0) + 1
+        adapter.currentAction = nil
+        if not npc then return true end
+
+        local rec = Engine.getOwnership(npc)
+        if rec and rec.adapter and rec.adapter ~= adapter then
+            -- Stale adapter: do not touch newer adapter's same-NPC ownership, running flag, queue or path
+            return true
+        end
+
+        local failures = {}
+        local okClear, errClear = Engine.clearOwnership(npc, rec)
+        if not okClear then
+            failures[#failures+1] = "clearOwnership: " .. tostring(errClear)
+        end
+
+        if npc.setRunning then
+            local okRun, errRun = pcall(npc.setRunning, npc, false)
+            if not okRun then
+                failures[#failures+1] = "setRunning: " .. tostring(errRun)
+            end
+        end
+
+        if ISTimedActionQueue and ISTimedActionQueue.clear then
+            local okQ, errQ = pcall(ISTimedActionQueue.clear, npc)
+            if not okQ then
+                failures[#failures+1] = "queue.clear: " .. tostring(errQ)
+            end
+        end
+
+        if npc.getPathFindBehavior2 then
+            local okPf, pf = pcall(npc.getPathFindBehavior2, npc)
+            if okPf and pf and pf.cancel then
+                local okCancel, errCancel = pcall(pf.cancel, pf)
+                if not okCancel then
+                    failures[#failures+1] = "path.cancel: " .. tostring(errCancel)
+                end
+            elseif not okPf then
+                failures[#failures+1] = "getPathFindBehavior2: " .. tostring(pf)
+            end
+        end
+
+        if npc.setPath2 then
+            local okP2, errP2 = pcall(npc.setPath2, npc, nil)
+            if not okP2 then
+                failures[#failures+1] = "setPath2: " .. tostring(errP2)
+            end
+        end
+
+        if #failures > 0 then
+            return false, table.concat(failures, "; ")
+        end
+        return true
+    end
+    function adapter.remove(npc)
+        Engine.clearOwnership(npc)
+        npc:removeFromWorld()
+        npc:removeFromSquare()
+    end
     local function construct(square, record)
         if not square or not square:isFree(false) then error("spawn square unavailable") end
         local previous, npc = IsoPlayer.getInstance(), nil
