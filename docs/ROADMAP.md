@@ -26,8 +26,10 @@
   EQUIPMENT-ACTION-OFFLINE-REVIEW.md. Preparatory only, no equipment implementation.
 - [x] Concrete ownership/container and
   worn-slot conflict audit: OWNERSHIP-WORN-SLOT-OFFLINE.md. Static only.
-- [ ] Concrete narrow manual equip adapter proposal resolving UI/precommit
+- [x] Concrete narrow manual equip adapter proposal resolving UI/precommit
   integration before implementation; no auto-selection or runtime wiring.
+- [ ] Dormant narrow manual-equip request/state coding with explicit refusal gates;
+  actual native event/UI isolation still unverified. See MANUAL-EQUIP-ADAPTER-PROPOSAL.md.
 - [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 

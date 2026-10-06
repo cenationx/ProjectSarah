@@ -1,0 +1,35 @@
+Manual equip proposal review, 2026-10-06
+Baseline main3692172. Sole checkout editor Codex; Gemini 3.8 Flash HIGH
+authored/revised design from sanitized findings through Antigravity CLI.
+No game classes initialized or invoked.
+
+Installed projectzomboid.jar SHA256:
+E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33
+
+Selected direct Code/source observations:
+IsoGameCharacter.setPrimaryHandItem: equip-parent changes precede
+leftHandItem write offset143, OnEquipPrimary offset156, model reset offset160.
+IsoGameCharacter.isLocal: NetworkComponent optional query with true default.
+zombie.util.lambda.PZOptional.ifPresent(T,R,Function): absent value returns default.
+IsoPlayer.getPlayerNum delegates getIndex reading playerIndex.
+
+Selected installed Lua subscriber SHA256:
+FishingHandler.lua
+6975228698AB3219B4DEC4838B6171ECAD7645E6C49265B894F8C76D6B4B02CF
+ISRadioWindow.lua
+704976F04B887FEEB22E1C05DFC8A4350F6ED1AD27156A0D905E68978CD7ECFA
+
+Fishing subscriber checks isLocal and uses getPlayerNum key; non-rod branch
+destroys existing fishing manager. Radio handler has local-player equality guard.
+Selected listeners are not an exhaustive audit. Sarah's actual locality/index
+and effects are unobserved. No native safety or damage claim.
+
+Gemini revision reviewed and supplemented: ownership multiplicity also post-check;
+fresh boundary checks; protected cleanup; precharge lookup separate invocation;
+unknown event isolation refuses; no rollback or blind completion; failures after
+attempt cannot be clean cancellation. Native exposure/overloads remain unknown.
+
+No implementation or new fixtures. Prior649 suite +11 runner +19 preflight PASS
+unchanged, not rerun for documentation-only batch. Live tests deferred.
+No deployment, game launch, saves/settings changes. External/model AI on hold.
+Raw exports, class inspections and decompiled source remain ignored runtime files.

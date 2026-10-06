@@ -1,3 +1,21 @@
+## Latest checkpoint: reviewed manual equip proposal (2026-10-06)
+
+Started clean main3692172; Codex sole editor. Gemini3.8 Flash HIGH authored
+and revised the bounded proposal; Codex corrected/reviewed against selected
+installed source and direct class Code. See MANUAL-EQUIP-ADAPTER-PROPOSAL.md.
+Prefer dormant direct-primary-setter candidate over player timed equip action.
+Setter mutates equip parents/hand before equip events; no atomic Stop guarantee.
+Selected fishing handler can destroy an existing manager for a non-rod item.
+isLocal defaults true without NetworkComponent; actual Sarah context unobserved.
+Event/UI isolation remains an admission gate, not a caller boolean certificate.
+No implementation/runtime hooks/new tests. Prior649+11+19 baseline unchanged,
+not rerun for documentation-only work. Native equipment/Follow/rendering pending.
+Next Gemini coding: narrow dormant request/state logic with a concrete injected
+operation contract and rejection/cancellation/partial-commit tests; no native
+resolver, invented admission proof or generic helper framework.
+Live testing remains deferred. No deployment/game launch/saves/settings changes.
+Stop unchanged, independent light unknown, external/model AI ON HOLD;
+deployed5fa6b9c untouched. Older blocks below are historical and superseded.
 ## Latest checkpoint: ownership and worn-slot audit (2026-10-06)
 
 Started clean main2676f98; Codex sole editor. Gemini3.8 Flash HIGH reviewed
