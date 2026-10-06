@@ -1,0 +1,10 @@
+Offline equipment action research2026-10-06;baselinec30e5db;Codex sole editor.
+Userexplicitly notready for live tests; Gemini3.8FlashHIGH sanitizedreview/revision.
+Installed equip/wear/base/queue Lua read-only, sourcehashes in reviewedreport.
+SamehashjarE1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33.
+NativeupdateInternal perform1334/client1337/complete1344 corroborated directCode.
+LuaTimedActionNew callbackpaths and BaseAction playerprogressUI also inspected.
+No targetclassinitialization/nativegamecalls/deployment/sourceimplementation.
+Prior649+11+19 baselineunchanged;notrerun docs-only research.
+NPCequipment identity/conservation/UI/Stop/persistence remain unaccepted.
+No rawgameclasses/source/logs/credentials published/exported toGemini.

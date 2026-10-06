@@ -1,3 +1,23 @@
+## Latest checkpoint: offline equipment action review (2026-10-06)
+
+User not ready for live testing; requested useful continued Gemini work. Started
+clean mainc30e5db, Codex sole editor. Gemini3.8 Flash HIGH reviewed sanitized
+installed equip/wear/base/queue findings; Codex corrected invented API/ownership/
+Stop claims and independently narrowed native single-player routing with fresh
+class Code inspection. See EQUIPMENT-ACTION-OFFLINE-REVIEW.md and sanitized evidence.
+Player equip/wear actions couple hotbar/inventory/progress UI and can drop heavy
+items/convert special clothing. No unchanged-action reuse or native safety claim.
+Inspected engine path perform THEN complete; perform may advance queue before
+slot mutation. Future settlement needs verified post-commit identity/ownership/
+slots, no blind rollback/retry, existing Stop preserved. No equipment code/helpers.
+Prior649 suite +11 runner +19 preflight baseline unchanged; no tests rerun for
+source-unchanged research. No new native equipment/Follow/rendering acceptance.
+Possible next Gemini offline task: concrete ownership/container/worn-slot conflict
+semantics audit; narrow NPC adapter proposal only if selected, no auto-equipment.
+No game launch/deployment/saves/settings changes; live tests remain deferred.
+Stop unchanged, light unknown, external/model AI ON HOLD; deployed5fa6b9c.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: read-only native resolver audit (2026-10-06)
 
 Started clean main7d7d37d; Codex sole editor. Installed jar hash unchanged.

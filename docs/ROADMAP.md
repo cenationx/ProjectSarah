@@ -22,6 +22,10 @@
   Stop generic scaffolding; see SYMBOL-EXPOSURE-OFFLINE.md.
 - [x] Bounded read-only Kahlua resolver/type/exception audit; see
   NATIVE-RESOLVER-AUDIT.md. No runtime caller or native acceptance.
+- [x] Bounded offline equipment-action/UI/commit review; see
+  EQUIPMENT-ACTION-OFFLINE-REVIEW.md. Preparatory only, no equipment implementation.
+- [ ] Optional next offline equipment scope: concrete ownership/container and
+  worn-slot conflicts before a narrow adapter proposal; no auto-selection.
 - [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 
