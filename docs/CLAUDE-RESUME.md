@@ -1,3 +1,22 @@
+## Latest checkpoint: ownership and worn-slot audit (2026-10-06)
+
+Started clean main2676f98; Codex sole editor. Gemini3.8 Flash HIGH reviewed
+sanitized findings; Codex corrected/reviewed and corroborated selected direct
+class Code paths without target initialization. See OWNERSHIP-WORN-SLOT-OFFLINE.md.
+getItemWithID(int)/contains(InventoryItem) are direct in inspected overloads;
+getItemById(long)/getItemWithIDRecursiv recurse. Backpointer/ID alone insufficient.
+Worn setter removes first nonmulti target entry and all exclusive worn entries;
+character default setter can drop captured prior target item under capacity/floor
+conditions. Empty target doesn't rule out conflicts elsewhere. Actual Lua exposure,
+overloads, item identity/uniqueness and native behavior remain pending.
+No runtime implementation/helper/new tests. Prior649+11+19 baseline unchanged,
+not rerun docs-only research. No new equipment/Follow/rendering acceptance.
+Recommended next Gemini offline task: concrete narrow owned-onehanded manual equip
+adapter proposal, resolve UI/precommit integration choice before implementation.
+User not ready for live testing. No deployment/game launch/saves/settings changes.
+Stop unchanged, light unknown, external/model AI ON HOLD; deployed5fa6b9c.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: offline equipment action review (2026-10-06)
 
 User not ready for live testing; requested useful continued Gemini work. Started

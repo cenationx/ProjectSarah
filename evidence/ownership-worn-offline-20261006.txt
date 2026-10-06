@@ -1,0 +1,10 @@
+Ownership and worn-slot audit2026-10-06,clean main2676f98 baseline,Codex sole editor.
+Gemini3.8FlashHIGH sanitizedstaticfact review/revision; Codex corrections/Codeaudit.
+GamejarSHA256 E1A69EB743EDE60B213A0FE7F8B83D4FCAB773036D256CC4543A336F3B058A33.
+BodyLocations.luaSHA256 CD1A7F06EE4AAAAF2B7267CCAB5B69BFC9B1E37441FDA93551D6E9BC725D29FA.
+Selected direct class Code corroborates direct-vs-recursive lookup and wornset/drop.
+No target init/nativegamecalls/helperimplementation/save/settings/deployment.
+Prior649+11+19 baselineunchanged;notrerun docs-only research.
+Native item identity/overload/UI/equipment/Follow/rendering acceptance pending.
+User live testing explicitly deferred; Stopunchanged/modelAI ON HOLD.
+Rawgameclass/source/export artifacts ignored,notpublished/exportedtoGemini.

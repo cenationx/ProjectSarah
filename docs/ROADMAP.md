@@ -24,8 +24,10 @@
   NATIVE-RESOLVER-AUDIT.md. No runtime caller or native acceptance.
 - [x] Bounded offline equipment-action/UI/commit review; see
   EQUIPMENT-ACTION-OFFLINE-REVIEW.md. Preparatory only, no equipment implementation.
-- [ ] Optional next offline equipment scope: concrete ownership/container and
-  worn-slot conflicts before a narrow adapter proposal; no auto-selection.
+- [x] Concrete ownership/container and
+  worn-slot conflict audit: OWNERSHIP-WORN-SLOT-OFFLINE.md. Static only.
+- [ ] Concrete narrow manual equip adapter proposal resolving UI/precommit
+  integration before implementation; no auto-selection or runtime wiring.
 - [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 
