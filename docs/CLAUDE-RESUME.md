@@ -1,3 +1,14 @@
+## Manual Gemini coding batches authorized (2026-10-06)
+
+User requested substantial ordered coding slices to move most implementation and
+offline testing to Gemini, with Codex review/deployment/live tests here.
+See GEMINI-CODING-QUEUE.md: 18 slices, five batches with native admission gates.
+This expands the older research-only scope; model AI stays ON HOLD.
+Manual Antigravity prompts replace CLI dispatch. Codex currently owns checkout;
+Gemini editing starts only on explicit user handoff. Start Batch A (corrected
+pace implementation, ownership/handle fixes, rendering review and live checklist).
+No batch has been applied yet; current game/runtime state must be rechecked.
+No deployment/save/settings changes or new source tests in this queue checkpoint.
 ## Pace access result (2026-10-06)
 
 The user resumed the debugger. The wrapped collection probe completed and logged
