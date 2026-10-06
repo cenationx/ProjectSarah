@@ -24,6 +24,26 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 import preflight
 
 
+from run_tests import DEFAULT_SUITES
+
+def _complete_mock_report(commit="mockcommit1234567890abcdef", dirty=False, failed=False):
+    rows = [
+        {"name": name, "outcome": "passed", "checks": 1,
+         "returncode": 0, "duration_seconds": 0}
+        for name in DEFAULT_SUITES
+    ]
+    if failed:
+        rows[0].update(outcome="failed", checks=0, returncode=1)
+    n = len(rows)
+    return {
+        "git": {"available": True, "commit": commit, "branch": "main", "dirty": dirty},
+        "summary": {"overall": "failed" if failed else "passed",
+                    "total_checks": n-int(failed), "passed_suites": n-int(failed),
+                    "failed_suites": int(failed), "total_suites": n, "duration_seconds": 0},
+        "suites": rows,
+    }
+
+
 class TestPreflight(unittest.TestCase):
     """Test suite for tools/preflight.py."""
 
@@ -92,11 +112,7 @@ class TestPreflight(unittest.TestCase):
         # 6. Test report in mock_repo/tools/reports/test-report.json
         test_rep_dir = self.mock_repo / "tools/reports"
         test_rep_dir.mkdir(parents=True, exist_ok=True)
-        report_data = {
-            "timestamp": "2026-10-05T12:00:00+00:00",
-            "git": {"commit": "mockcommit1234567890abcdef", "branch": "main", "dirty": False},
-            "summary": {"overall": "passed", "total_checks": 153},
-        }
+        report_data = _complete_mock_report()
         (test_rep_dir / "test-report.json").write_text(json.dumps(report_data), encoding="utf-8")
 
     def _mock_git(self, commit="mockcommit1234567890abcdef", branch="main", dirty=False):
@@ -128,6 +144,20 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(data["checks"]["isolated_profile"]["status"], "ready")
         self.assertEqual(data["checks"]["test_report"]["status"], "synced")
 
+    def test_partial_report_blocks_ready_environment(self):
+        report = _complete_mock_report()
+        report["suites"] = report["suites"][:1]
+        report["summary"].update(total_checks=1, passed_suites=1, total_suites=1)
+        path = self.mock_repo / "tools/reports/test-report.json"
+        path.write_text(json.dumps(report), encoding="utf-8")
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "BLOCKED")
+        self.assertEqual(data["checks"]["test_report"]["status"], "incomplete")
+        self.assertTrue(any("every required suite" in msg for msg in data["blockers"]))
+
     def test_missing_test_report(self):
         """Missing test-report.json blocks readiness with clear message."""
         report_file = self.mock_repo / "tools/reports/test-report.json"
@@ -145,10 +175,7 @@ class TestPreflight(unittest.TestCase):
     def test_stale_test_report(self):
         """Stale test report (commit mismatch) blocks readiness."""
         report_file = self.mock_repo / "tools/reports/test-report.json"
-        stale_data = {
-            "git": {"commit": "oldcommit0000000000000000"},
-            "summary": {"overall": "passed", "total_checks": 153},
-        }
+        stale_data = _complete_mock_report(commit="oldcommit0000000000000000")
         report_file.write_text(json.dumps(stale_data), encoding="utf-8")
 
         with patch("preflight.get_git_info", return_value=self._mock_git(commit="newcommit1111111111111111")), \
@@ -163,10 +190,7 @@ class TestPreflight(unittest.TestCase):
     def test_failed_test_report(self):
         """Test report showing failed checks blocks readiness."""
         report_file = self.mock_repo / "tools/reports/test-report.json"
-        failed_data = {
-            "git": {"commit": "mockcommit1234567890abcdef"},
-            "summary": {"overall": "failed", "total_checks": 150},
-        }
+        failed_data = _complete_mock_report(failed=True)
         report_file.write_text(json.dumps(failed_data), encoding="utf-8")
 
         with patch("preflight.get_git_info", return_value=self._mock_git()), \
@@ -360,10 +384,7 @@ class TestPreflight(unittest.TestCase):
     def test_passing_report_from_dirty_run_blocks_readiness(self):
         """A passing test report generated against a dirty working tree does NOT prove clean HEAD tested and blocks."""
         report_file = self.mock_repo / "tools/reports/test-report.json"
-        dirty_run_data = {
-            "git": {"commit": "mockcommit1234567890abcdef", "branch": "main", "dirty": True},
-            "summary": {"overall": "passed", "total_checks": 153},
-        }
+        dirty_run_data = _complete_mock_report(dirty=True)
         report_file.write_text(json.dumps(dirty_run_data), encoding="utf-8")
 
         with patch("preflight.get_git_info", return_value=self._mock_git()), \
@@ -425,6 +446,360 @@ class TestPreflight(unittest.TestCase):
         self.assertIn("Project Sarah Native Acceptance Preflight", r.stdout)
         self.assertTrue((self.reports_dir / "preflight-report.json").is_file())
         self.assertTrue((self.reports_dir / "preflight-report.md").is_file())
+
+
+class TestSuiteEvidence(unittest.TestCase):
+    def setUp(self):
+        self.tmp_base = REPO_ROOT / "tools" / "reports" / "self-test-tmp"
+        self.tmp_base.mkdir(parents=True, exist_ok=True)
+        try:
+            import run_tests
+            self.default_suites = run_tests.DEFAULT_SUITES
+        except ImportError:
+            from tools import run_tests
+            self.default_suites = run_tests.DEFAULT_SUITES
+
+    def _make_report(self, commit="abc1234", dirty=False, available=True, overall="passed", suites=None):
+        if suites is None:
+            suites = [
+                {
+                    "name": s,
+                    "outcome": "passed",
+                    "checks": 1,
+                    "returncode": 0,
+                    "duration_seconds": 0.05,
+                    "failure_details": None,
+                }
+                for s in self.default_suites
+            ]
+        passed = sum(1 for s in suites if s.get("outcome") == "passed")
+        failed = sum(1 for s in suites if s.get("outcome") == "failed")
+        total_checks = sum(s.get("checks", 0) for s in suites if s.get("outcome") == "passed")
+        dur = sum(s.get("duration_seconds", 0.0) for s in suites)
+        return {
+            "git": {
+                "available": available,
+                "commit": commit,
+                "branch": "main",
+                "dirty": dirty,
+            },
+            "summary": {
+                "overall": overall,
+                "total_checks": total_checks,
+                "passed_suites": passed,
+                "failed_suites": failed,
+                "total_suites": len(suites),
+                "duration_seconds": round(dur, 3),
+            },
+            "suites": suites,
+        }
+
+    def _write_report(self, root, report_dict):
+        rep_dir = root / "tools" / "reports"
+        rep_dir.mkdir(parents=True, exist_ok=True)
+        with open(rep_dir / "test-report.json", "w", encoding="utf-8") as f:
+            json.dump(report_dict, f)
+
+    def test_01_complete_synced(self):
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            root = Path(td)
+            rep = self._make_report(commit="abc1234", dirty=False)
+            self._write_report(root, rep)
+            git_info = {"available": True, "commit": "abc1234", "short_commit": "abc1234", "status": "clean"}
+            status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+            self.assertIsNone(status)
+            self.assertIsNone(reason)
+            res = preflight.check_test_report(root, git_info)
+            self.assertEqual(res.get("status"), "synced")
+
+    def test_02_coherent_truncated_passed_incomplete(self):
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            root = Path(td)
+            # Truncate required suites list by omitting the first suite
+            truncated_suites = [
+                {
+                    "name": s,
+                    "outcome": "passed",
+                    "checks": 1,
+                    "returncode": 0,
+                    "duration_seconds": 0.05,
+                    "failure_details": None,
+                }
+                for s in self.default_suites[1:]
+            ]
+            rep = self._make_report(suites=truncated_suites)
+            self._write_report(root, rep)
+            git_info = {"available": True, "commit": "abc1234", "short_commit": "abc1234", "status": "clean"}
+            status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+            self.assertEqual(status, "incomplete")
+            self.assertEqual(reason, "missing_required_suites")
+            res = preflight.check_test_report(root, git_info)
+            self.assertEqual(res.get("status"), "incomplete")
+
+    def test_03_fake_top_pass_with_failed_row_corrupt(self):
+        rep = self._make_report(overall="passed")
+        rep["suites"][0]["outcome"] = "failed"
+        rep["suites"][0]["returncode"] = 1
+        status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(status, "corrupt")
+        self.assertIn(reason, ("passed_suites_mismatch", "overall_passed_with_failures"))
+
+    def test_04_duplicate_suite_names_corrupt(self):
+        rep = self._make_report()
+        dup_row = dict(rep["suites"][0])
+        rep["suites"].append(dup_row)
+        rep["summary"]["total_suites"] = len(rep["suites"])
+        status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(status, "corrupt")
+        self.assertEqual(reason, "duplicate_suite_name")
+
+    def test_05_mismatch_totals_corrupt(self):
+        rep = self._make_report()
+        rep["summary"]["total_checks"] = rep["summary"]["total_checks"] + 10
+        status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(status, "corrupt")
+        self.assertEqual(reason, "total_checks_mismatch")
+
+    def test_06_bool_float_string_count_and_code_corrupt(self):
+        # bool for checks
+        rep1 = self._make_report()
+        rep1["suites"][0]["checks"] = True
+        s1, _ = preflight._validate_suite_evidence(rep1, self.default_suites)
+        self.assertEqual(s1, "corrupt")
+
+        # float for checks
+        rep2 = self._make_report()
+        rep2["suites"][0]["checks"] = 1.5
+        s2, _ = preflight._validate_suite_evidence(rep2, self.default_suites)
+        self.assertEqual(s2, "corrupt")
+
+        # bool for returncode
+        rep3 = self._make_report()
+        rep3["suites"][0]["returncode"] = True
+        s3, _ = preflight._validate_suite_evidence(rep3, self.default_suites)
+        self.assertEqual(s3, "corrupt")
+
+    def test_07_non_dict_arrays_nested_bad_corrupt(self):
+        cases = [
+            [],
+            "not_dict",
+            None,
+            {"git": None, "summary": {}, "suites": []},
+            {"git": {}, "summary": None, "suites": []},
+        ]
+        for c in cases:
+            s, _ = preflight._validate_suite_evidence(c, self.default_suites)
+            self.assertEqual(s, "corrupt")
+
+    def test_08_missing_dirty_wrong_type_corrupt(self):
+        rep1 = self._make_report()
+        del rep1["git"]["dirty"]
+        s1, _ = preflight._validate_suite_evidence(rep1, self.default_suites)
+        self.assertEqual(s1, "corrupt")
+
+        rep2 = self._make_report()
+        rep2["git"]["dirty"] = 1  # int, not bool
+        s2, _ = preflight._validate_suite_evidence(rep2, self.default_suites)
+        self.assertEqual(s2, "corrupt")
+
+    def test_09_nonfinite_negative_durations_corrupt(self):
+        rep = self._make_report()
+        rep["summary"]["duration_seconds"] = -1.0
+        s1, _ = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(s1, "corrupt")
+
+        rep2 = self._make_report()
+        rep2["suites"][0]["duration_seconds"] = float("nan")
+        s2, _ = preflight._validate_suite_evidence(rep2, self.default_suites)
+        self.assertEqual(s2, "corrupt")
+
+    def test_10_missing_empty_suites_corrupt(self):
+        rep = self._make_report()
+        rep["suites"] = []
+        s, _ = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(s, "corrupt")
+
+    def test_11_extra_distinct_suites_okay(self):
+        extra = ["tests/extra_suite_spec.lua"]
+        all_names = list(self.default_suites) + extra
+        suites = [
+            {
+                "name": s,
+                "outcome": "passed",
+                "checks": 2,
+                "returncode": 0,
+                "duration_seconds": 0.1,
+                "failure_details": None,
+            }
+            for s in all_names
+        ]
+        rep = self._make_report(suites=suites)
+        status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertIsNone(status)
+        self.assertIsNone(reason)
+
+    def test_12_coherent_failed_report_failed(self):
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            root = Path(td)
+            suites = [
+                {
+                    "name": s,
+                    "outcome": "passed" if i > 0 else "failed",
+                    "checks": 1 if i > 0 else 0,
+                    "returncode": 0 if i > 0 else 1,
+                    "duration_seconds": 0.05,
+                    "failure_details": None if i > 0 else "AssertionError",
+                }
+                for i, s in enumerate(self.default_suites)
+            ]
+            rep = self._make_report(overall="failed", suites=suites)
+            self._write_report(root, rep)
+            git_info = {"available": True, "commit": "abc1234", "short_commit": "abc1234", "status": "clean"}
+            status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+            self.assertIsNone(status)
+            self.assertIsNone(reason)
+            res = preflight.check_test_report(root, git_info)
+            self.assertEqual(res.get("status"), "failed")
+
+    def test_13_complete_dirty_stale_unavailable_remain_classified(self):
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            root = Path(td)
+            # Dirty git
+            rep_dirty = self._make_report(commit="abc1234", dirty=True)
+            self._write_report(root, rep_dirty)
+            git_dirty = {"available": True, "commit": "abc1234", "short_commit": "abc1234", "status": "dirty"}
+            res_dirty = preflight.check_test_report(root, git_dirty)
+            self.assertEqual(res_dirty.get("status"), "dirty_run")
+
+            # Stale commit
+            rep_stale = self._make_report(commit="old1234", dirty=False)
+            self._write_report(root, rep_stale)
+            git_stale = {"available": True, "commit": "new5678", "short_commit": "new5678", "status": "clean"}
+            res_stale = preflight.check_test_report(root, git_stale)
+            self.assertEqual(res_stale.get("status"), "stale")
+
+            self._write_report(root, self._make_report(available=False, commit="unavailable"))
+            res = preflight.check_test_report(root, {"available": False, "commit": "unavailable"})
+            self.assertEqual(res["status"], "unknown_commit")
+
+    def test_14_exact_names_not_basename(self):
+        # Basename instead of full path
+        bad_suites = [
+            {
+                "name": Path(s).name,
+                "outcome": "passed",
+                "checks": 1,
+                "returncode": 0,
+                "duration_seconds": 0.05,
+                "failure_details": None,
+            }
+            for s in self.default_suites
+        ]
+        rep = self._make_report(suites=bad_suites)
+        status, reason = preflight._validate_suite_evidence(rep, self.default_suites)
+        self.assertEqual(status, "incomplete")
+        self.assertEqual(reason, "missing_required_suites")
+
+    def test_15_malformed_shape_returns_no_exceptions(self):
+        malformed = [
+            {"git": {"available": False, "commit": "", "branch": "", "dirty": False}, "summary": {}, "suites": []},
+            {"git": {"available": True, "commit": "", "branch": "", "dirty": False}, "summary": {"overall": "passed"}, "suites": None},
+            {"git": {"available": True, "commit": "abc", "branch": "", "dirty": True}, "summary": {"overall": "passed", "total_checks": 0, "passed_suites": 0, "failed_suites": 0, "total_suites": 0, "duration_seconds": 0}, "suites": [None]},
+        ]
+        for m in malformed:
+            status, reason = preflight._validate_suite_evidence(m, self.default_suites)
+            self.assertEqual(status, "corrupt")
+            self.assertIsInstance(reason, str)
+
+
+    def test_review_each_required_suite_missing(self):
+        for missing in self.default_suites:
+            with self.subTest(missing=missing):
+                report = self._make_report()
+                rows = [r for r in report["suites"] if r["name"] != missing]
+                report = self._make_report(suites=rows)
+                self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                                 "incomplete")
+
+    def test_review_summary_types_and_all_totals(self):
+        for key in ("total_checks", "passed_suites", "failed_suites", "total_suites"):
+            for value in (True, False, 1.0, "1", None, -1):
+                with self.subTest(key=key, value=value):
+                    report = self._make_report()
+                    report["summary"][key] = value
+                    self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                                     "corrupt")
+            report = self._make_report()
+            report["summary"][key] += 1
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                             "corrupt")
+
+    def test_review_exit_codes_and_failed_count_accounting(self):
+        for code in (0, 1, None):
+            report = self._make_report()
+            report["suites"][0].update(outcome="failed", returncode=code, checks=900)
+            report = self._make_report(overall="failed", suites=report["suites"])
+            self.assertEqual(report["summary"]["total_checks"], len(self.default_suites)-1)
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites),
+                             (None, None))
+            del report["suites"][0]["returncode"]
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                             "corrupt")
+        for code in (True, False, 0.0, "0", None, 1):
+            report = self._make_report()
+            report["suites"][0]["returncode"] = code
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                             "corrupt")
+
+    def test_review_duration_types_and_large_integer(self):
+        for section in ("summary", "row"):
+            for value in (float("nan"), float("inf"), -float("inf"), -1, True, "0", None):
+                report = self._make_report()
+                target = report["summary"] if section == "summary" else report["suites"][0]
+                target["duration_seconds"] = value
+                self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                                 "corrupt")
+            report = self._make_report()
+            target = report["summary"] if section == "summary" else report["suites"][0]
+            target["duration_seconds"] = 10**400
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites),
+                             (None, None))
+
+    def test_review_shape_errors_are_safe_through_reader(self):
+        cases = [None, [], 1, "SECRET", {"git": []}, self._make_report()]
+        cases[-1]["suites"][0] = None
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            for report in cases:
+                root = Path(td)
+                self._write_report(root, report)
+                result = preflight.check_test_report(root, {"available": True, "commit": "abc1234"})
+                self.assertEqual(result["status"], "corrupt")
+                self.assertNotIn("SECRET", result["summary"])
+
+    def test_review_report_git_unavailable_never_synced(self):
+        with tempfile.TemporaryDirectory(dir=self.tmp_base) as td:
+            root = Path(td)
+            report = self._make_report(available=False)
+            self._write_report(root, report)
+            result = preflight.check_test_report(root, {
+                "available": True, "commit": "abc1234", "short_commit": "abc1234"})
+            self.assertEqual(result["status"], "unknown_commit")
+        for available in (True, False):
+            report = self._make_report(available=available, commit="")
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                             "corrupt")
+
+    def test_review_bad_rows_and_no_false_failure(self):
+        for field, value in (("name", None), ("name", ""), ("outcome", "unknown"),
+                             ("checks", 0), ("checks", -1), ("checks", "1")):
+            report = self._make_report()
+            report["suites"][0][field] = value
+            self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                             "corrupt")
+        report = self._make_report()
+        report["summary"]["overall"] = "failed"
+        self.assertEqual(preflight._validate_suite_evidence(report, self.default_suites)[0],
+                         "corrupt")
 
 
 if __name__ == "__main__":

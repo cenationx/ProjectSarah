@@ -12,12 +12,15 @@ import argparse
 import datetime
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from run_tests import DEFAULT_SUITES
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -132,6 +135,143 @@ def get_git_info(repo_root: Path) -> dict:
         return info
 
 
+
+def _validate_suite_evidence(data, required_suites):
+    """
+    Validate structure, internal consistency, and required suite completeness of test-report data.
+    Returns (None, None) if coherent and complete.
+    Returns ("corrupt", static_safe_reason) if malformed or internally inconsistent.
+    Returns ("incomplete", static_safe_reason) if structurally valid but missing required suites.
+    """
+    if type(data) is not dict:
+        return ("corrupt", "data_not_dict")
+
+    # 1. Validate git section
+    git = data.get("git")
+    if type(git) is not dict:
+        return ("corrupt", "git_not_dict")
+
+    avail = git.get("available")
+    if type(avail) is not bool:
+        return ("corrupt", "git_available_not_bool")
+
+    commit = git.get("commit")
+    if type(commit) is not str:
+        return ("corrupt", "git_commit_not_str")
+    if len(commit) == 0:
+        return ("corrupt", "git_commit_empty")
+
+    branch = git.get("branch")
+    if type(branch) is not str:
+        return ("corrupt", "git_branch_not_str")
+
+    dirty = git.get("dirty")
+    if type(dirty) is not bool:
+        return ("corrupt", "git_dirty_not_bool")
+
+    # 2. Validate summary section
+    summary = data.get("summary")
+    if type(summary) is not dict:
+        return ("corrupt", "summary_not_dict")
+
+    overall = summary.get("overall")
+    if overall not in ("passed", "failed"):
+        return ("corrupt", "summary_overall_invalid")
+
+    total_checks = summary.get("total_checks")
+    if type(total_checks) is not int or total_checks < 0:
+        return ("corrupt", "summary_total_checks_invalid")
+
+    passed_suites = summary.get("passed_suites")
+    if type(passed_suites) is not int or passed_suites < 0:
+        return ("corrupt", "summary_passed_suites_invalid")
+
+    failed_suites = summary.get("failed_suites")
+    if type(failed_suites) is not int or failed_suites < 0:
+        return ("corrupt", "summary_failed_suites_invalid")
+
+    total_suites = summary.get("total_suites")
+    if type(total_suites) is not int or total_suites < 0:
+        return ("corrupt", "summary_total_suites_invalid")
+
+    dur_summary = summary.get("duration_seconds")
+    if type(dur_summary) is bool or type(dur_summary) not in (int, float) or (type(dur_summary) is float and not math.isfinite(dur_summary)) or dur_summary < 0:
+        return ("corrupt", "summary_duration_invalid")
+
+    # 3. Validate suites list
+    suites = data.get("suites")
+    if type(suites) is not list or len(suites) == 0:
+        return ("corrupt", "suites_not_nonempty_list")
+
+    seen_names = set()
+    calc_passed_suites = 0
+    calc_failed_suites = 0
+    calc_passed_checks = 0
+
+    for row in suites:
+        if type(row) is not dict:
+            return ("corrupt", "suite_row_not_dict")
+
+        name = row.get("name")
+        if type(name) is not str or len(name) == 0:
+            return ("corrupt", "suite_name_invalid")
+        if name in seen_names:
+            return ("corrupt", "duplicate_suite_name")
+        seen_names.add(name)
+
+        outcome = row.get("outcome")
+        if outcome not in ("passed", "failed"):
+            return ("corrupt", "suite_outcome_invalid")
+
+        checks = row.get("checks")
+        if type(checks) is not int or checks < 0:
+            return ("corrupt", "suite_checks_invalid")
+
+        if "returncode" not in row:
+            return ("corrupt", "suite_returncode_missing")
+        rc = row.get("returncode")
+        dur = row.get("duration_seconds")
+        if type(dur) is bool or type(dur) not in (int, float) or (type(dur) is float and not math.isfinite(dur)) or dur < 0:
+            return ("corrupt", "suite_duration_invalid")
+
+        if outcome == "passed":
+            if checks <= 0:
+                return ("corrupt", "passed_suite_checks_zero")
+            if type(rc) is not int or rc != 0:
+                return ("corrupt", "passed_suite_returncode_invalid")
+            calc_passed_suites += 1
+            calc_passed_checks += checks
+        else:
+            if rc is not None and (type(rc) is not int):
+                return ("corrupt", "failed_suite_returncode_invalid")
+            calc_failed_suites += 1
+
+    # 4. Consistency checks between summary and suites rows
+    if total_suites != len(suites):
+        return ("corrupt", "total_suites_mismatch")
+    if passed_suites != calc_passed_suites:
+        return ("corrupt", "passed_suites_mismatch")
+    if failed_suites != calc_failed_suites:
+        return ("corrupt", "failed_suites_mismatch")
+    if total_checks != calc_passed_checks:
+        return ("corrupt", "total_checks_mismatch")
+
+    if overall == "passed":
+        if calc_failed_suites > 0 or calc_passed_suites != len(suites):
+            return ("corrupt", "overall_passed_with_failures")
+    elif overall == "failed":
+        if calc_failed_suites == 0:
+            return ("corrupt", "overall_failed_without_failures")
+
+    # 5. Completeness check against required suites (only after consistency confirmed)
+    if required_suites is not None:
+        for req in required_suites:
+            if req not in seen_names:
+                return ("incomplete", "missing_required_suites")
+
+    return (None, None)
+
+
 def check_test_report(repo_root: Path, git_info: dict) -> dict:
     """Inspect tools/reports/test-report.json against Git state."""
     report_path = repo_root / "tools/reports/test-report.json"
@@ -153,6 +293,21 @@ def check_test_report(repo_root: Path, git_info: dict) -> dict:
     result["exists"] = True
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
+        invalid_status, invalid_reason = _validate_suite_evidence(data, DEFAULT_SUITES)
+        if invalid_status:
+            result["status"] = invalid_status
+            if invalid_status == "incomplete":
+                result["summary"] = (
+                    "Offline test report does not include every required suite. "
+                    "Run tools/run_tests.py without --suites."
+                )
+            else:
+                result["summary"] = (
+                    "Offline test report is malformed or inconsistent "
+                    f"({invalid_reason}). Re-run tools/run_tests.py."
+                )
+            return result
+
         rep_git = data.get("git", {})
         rep_commit = rep_git.get("commit")
         rep_dirty = rep_git.get("dirty", False)
@@ -166,7 +321,7 @@ def check_test_report(repo_root: Path, git_info: dict) -> dict:
         result["overall"] = overall
         result["total_checks"] = total_checks
 
-        if git_info.get("available") and git_info.get("commit") != "unavailable":
+        if rep_git["available"] and git_info.get("available") and git_info.get("commit") != "unavailable":
             head_commit = git_info["commit"]
             if rep_commit == head_commit:
                 result["matches_head"] = True
@@ -199,7 +354,7 @@ def check_test_report(repo_root: Path, git_info: dict) -> dict:
         return result
     except Exception as e:
         result["status"] = "corrupt"
-        result["summary"] = f"Test report exists but is invalid JSON: {e}"
+        result["summary"] = "Offline test report is malformed or unreadable. Re-run tools/run_tests.py."
         return result
 
 
@@ -539,7 +694,7 @@ def evaluate_preflight(checks: dict) -> dict:
         blockers.append(checks["test_report"]["summary"])
     elif rep_st == "failed":
         blockers.append("Offline test suite has failed checks; fix issues before native testing.")
-    elif rep_st == "corrupt":
+    elif rep_st in ("corrupt", "incomplete"):
         blockers.append(checks["test_report"]["summary"])
     elif rep_st == "dirty_run":
         blockers.append(checks["test_report"]["summary"])

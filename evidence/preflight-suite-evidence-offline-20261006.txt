@@ -1,0 +1,28 @@
+Preflight report completeness fix, 2026-10-06
+Baseline515edcf. Codex sole editor. Gemini3.8 Flash HIGH authored internal validator
+and15 regression groups from standalone schema. Codex reviewed/integrated and
+added8 groups. NO TOOLS requested from Gemini; raw exports ignored runtime files.
+
+Reproduced with synthetic report in project-local temporary directory:
+one required suite, passed, coherent1 check/1 suite, clean matching mock commit.
+Before: check_test_report status synced.
+After: status incomplete; full mock-environment regression overall BLOCKED.
+
+Validation sources required suite names from run_tests.DEFAULT_SUITES.
+Checks duplicate/missing names; exact numeric/bool types; coherent row outcomes,
+return codes, counts and totals; finite nonnegative durations; typed Git metadata.
+No raw report/error payloads in failure messages.
+Unavailable report Git never establishes synced evidence.
+Extras allowed if distinct; completeness does not prove report authenticity.
+
+Review: corrected dirty_run expectation and missing unavailable-Git test;
+updated existing19 fixtures to complete valid reports; fixed large integer
+duration conversion overflow, required failed returncode field, empty commit.
+Tested each missing default suite and actual readiness blocker.
+Read-only fixture invariant still PASS; no production/runtime file mutations.
+
+Full690 checks/16 suites PASS; runner self-tests11 PASS;
+preflight self-tests42 PASS (prior19 +15 Gemini +8 Codex).
+Native gameplay/exposure/equipment/Follow/rendering/lighting pending.
+No game launch/deployment/saves/settings changes; deployed5fa6b9c untouched.
+External/model AI ON HOLD.

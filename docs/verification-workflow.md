@@ -1,3 +1,26 @@
+## Current verification baseline and required evidence (2026-10-06)
+
+Default run:690 checks across16 suites. Runner self-tests11; preflight self-tests42.
+Earlier totals below are historical. Actual Lua55 policy fixtures remain distinct
+from native Kahlua/gameplay acceptance.
+
+Preflight now validates the report's suite rows before accepting its summary:
+every exact name in run_tests.DEFAULT_SUITES must appear once, with coherent
+outcomes, exit codes, check totals and suite counts. Additional distinct suites
+are allowed. Missing required suites produce incomplete and block readiness;
+malformed/inconsistent reports produce corrupt. Summary-only historical reports
+are insufficient. Run the full default tools/run_tests.py without --suites.
+Targeted runs remain useful diagnostics but cannot establish full-suite readiness.
+
+A report must still match clean HEAD and record a clean run. Unavailable report
+Git metadata cannot establish sync. This checks report consistency/completeness,
+not authenticity or native behavior, and does not authorize deployment or launch.
+The preflight remains read-only with respect to source, runtime, saves and processes.
+
+Gemini authored validator/15 regression groups; Codex corrected/integrated and
+added8 review groups. Reproduction: a coherent one-suite passing report was
+previously synced; now incomplete and overall mock preflight BLOCKED.
+No game-runtime changes; live testing remains deferred.
 ## Latest offline baseline (2026-10-06, caller policies)
 
 Default runner includes14 suites and608 checks including53 caller epoch/accounting

@@ -1,3 +1,19 @@
+## Latest checkpoint: preflight report completeness fix (2026-10-06)
+
+Started clean main515edcf; Codex sole editor. Gemini3.8 Flash HIGH authored
+an internal report validator and15 regression groups; Codex reviewed/integrated,
+corrected edge cases and added8 review groups. No game-runtime changes.
+Reproduced coherent one-suite passing report wrongly accepted as synced;
+now incomplete and blocks preflight readiness. Required names sourced from
+run_tests.DEFAULT_SUITES, no duplicated list. Report totals/rows/types/exit codes
+validated before Git freshness; unavailable report Git cannot establish sync.
+Full690 checks/16 suites +11 runner +42 preflight self-tests PASS.
+See verification-workflow.md and sanitized preflight evidence.
+Older/partial summary-only reports now require a full default test run.
+Native adapter/event/UI isolation and Follow/rendering remain unverified.
+Live testing deferred; no deployment/game launch/saves/settings changes.
+Stop unchanged; independent light unknown; external/model AI ON HOLD;
+deployed5fa6b9c untouched. Older notes below are historical and superseded.
 ## Latest checkpoint: fixture-only manual equip policy (2026-10-06)
 
 Started clean main0814d5c; Codex sole editor. Gemini3.8 Flash HIGH authored

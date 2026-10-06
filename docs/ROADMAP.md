@@ -31,6 +31,8 @@
 - [x] Dormant narrow manual-equip request/state coding, fixture-only policy;
   41 groups;690 suite +11 runner +19 preflight PASS. See MANUAL-EQUIP-POLICY-OFFLINE.md.
   Actual native adapter/event/UI isolation still unimplemented and unverified.
+- [x] Preflight report completeness/consistency fix: partial passing report blocks;
+  required suites share runner defaults.690 suite +11 runner +42 preflight PASS.
 - [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 
