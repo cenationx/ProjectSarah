@@ -17,8 +17,9 @@
   No native token proof or automatic reset propagation.
 - [x] Review dormant one-shot caller/bridge design: exact token provenance, reset
   propagation and per-operation accounting, no native invocation or runtime hooks.
-- [ ] Narrow symbol diagnostic contract/code with injected markers and explicit
-  unassessed native capabilities; no runtime wiring, then stop generic scaffolding.
+- [x] Narrow symbol diagnostic contract/code with injected markers and explicit
+  unassessed native capabilities; no runtime wiring.41 cases;649+11+19 PASS.
+  Stop generic scaffolding; see SYMBOL-EXPOSURE-OFFLINE.md.
 - [ ] Native identity/exposure, loaded-world coverage and Follow/render acceptance.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/

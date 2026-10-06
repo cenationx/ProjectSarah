@@ -1,0 +1,11 @@
+Narrowed symbol diagnostic,2026-10-06, baseline f289c49.
+Gemini3.8 Flash HIGH source/base fixtures, Codex sole checkout editor/reviewer.
+Corrected fixture syntax, nil-hole, cancellation reason, guarded environment.
+41 actual-module fixture groups PASS; 12 Codex review groups included.
+Full runner649 checks/15 suites PASS,11 runner and19 preflight self-tests PASS.
+Lupa Lua55 fixtures only; intendedLua5.1 syntax not nativeKahlua acceptance.
+Framework/revision/cancelled markers only, max54capture/26read attempts.
+Results compare supplied refs; identity/liveness/residency/generation/invocation
+explicitly unassessed. No native resolver, hooks, deployment or game launch.
+No saves/settings changes. Stop unchanged. Lightunknown, external AI ON HOLD.
+Generic scaffolding stops; native tests deferred until explicit resumption.

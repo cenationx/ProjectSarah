@@ -1,3 +1,21 @@
+## Latest checkpoint: narrowed symbol diagnostic (2026-10-06)
+
+Started clean main f289c49; Codex sole editor. Gemini3.8 Flash HIGH authored
+standalone SymbolExposureProbe/base fixtures; Codex corrected fixtures and added
+12 review groups. 41 symbol cases; all649 suite checks/15 suites +11 runner +19
+preflight self-tests PASS. See SYMBOL-EXPOSURE-OFFLINE.md and sanitized evidence.
+Markers require only framework/revision/cancelled, freshly compared; no observer
+coordinates/alive/resident assumptions. Every outcome explicitly leaves native
+identity/liveness/residency/world generation/invocation unassessed. Max54 marker
+captures/26 supplied-reference reads; no native resolver or automatic Stop wiring.
+Existing NativeExposureProbe/DiagnosticSampler remain unchanged; no production
+imports/hooks/actions, deployment, game launch or saves/settings changes.
+Next: stop generic offline scaffolding. Actual binding/resolver and native
+Follow/rendering acceptance require explicitly resumed isolated testing and an
+audited operation manifest/staging revision. Lighting remains unknown; model AI
+ON HOLD; Stop unchanged; deployed baseline5fa6b9c. Codex alone deploys/launches.
+Older checkpoint/workflow blocks below are historical and superseded here.
+
 ## Latest checkpoint: dormant bridge design review (2026-10-06)
 
 Started clean main ab3c548; Codex remains sole checkout editor. User explicitly
