@@ -1,3 +1,25 @@
+## IN PROGRESS: Follow pace correction (2026-10-06)
+
+User confirmed smoother Follow direction changes and mid-stride Stop/no automatic
+resume in the isolated session. Codex visually confirmed Stop #9 completed and
+the game paused, Sarah idle. These are user-observed behavior results, not measured
+movement timing. User found Sarah walks when the player runs; pace matching is
+the next fix, not accepted yet. Rendering independence remains pending.
+
+Codex owns the checkout. Gemini 3.8 Flash HIGH reviewed a sanitized pace contract;
+no Gemini checkout edits. Static inspection suggests the native NPC controller
+overwrites the ordinary running flag. Live read-only probe confirmed isRunning,
+setRunning and getECSComponentMap are callable methods. Controller control access
+and actual run behavior remain unverified; second read-only probe pending.
+No pace code or deployment yet. Do not blindly apply setRunning or scalar speed
+multipliers. Preserve 8-tile leash, 2-tile deadzone and Stop/ownership cleanup.
+Game PID48240 remains open and paused; do not deploy while open. Existing backup:
+runtime/backups/follow-resume-20261006-111728-UTC. Before restart/deployment, close
+cleanly and freshly preserve the current disposable world/mod/profile.
+690 suite checks +11 runner +42 preflight last passed at source baseline8ae4301;
+not rerun for these notes. Normal saves/settings untouched; model AI ON HOLD.
+Earlier live-launch/deferral blocks below are historical.
+
 ## Current offline next step (2026-10-06)
 
 - [x] Caller-token identity and exact-reference obstruction policies: inert/offline.

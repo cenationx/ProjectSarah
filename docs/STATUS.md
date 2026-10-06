@@ -1,3 +1,25 @@
+## IN PROGRESS: Follow pace correction (2026-10-06)
+
+User confirmed smoother Follow direction changes and mid-stride Stop/no automatic
+resume in the isolated session. Codex visually confirmed Stop #9 completed and
+the game paused, Sarah idle. These are user-observed behavior results, not measured
+movement timing. User found Sarah walks when the player runs; pace matching is
+the next fix, not accepted yet. Rendering independence remains pending.
+
+Codex owns the checkout. Gemini 3.8 Flash HIGH reviewed a sanitized pace contract;
+no Gemini checkout edits. Static inspection suggests the native NPC controller
+overwrites the ordinary running flag. Live read-only probe confirmed isRunning,
+setRunning and getECSComponentMap are callable methods. Controller control access
+and actual run behavior remain unverified; second read-only probe pending.
+No pace code or deployment yet. Do not blindly apply setRunning or scalar speed
+multipliers. Preserve 8-tile leash, 2-tile deadzone and Stop/ownership cleanup.
+Game PID48240 remains open and paused; do not deploy while open. Existing backup:
+runtime/backups/follow-resume-20261006-111728-UTC. Before restart/deployment, close
+cleanly and freshly preserve the current disposable world/mod/profile.
+690 suite checks +11 runner +42 preflight last passed at source baseline8ae4301;
+not rerun for these notes. Normal saves/settings untouched; model AI ON HOLD.
+Earlier live-launch/deferral blocks below are historical.
+
 ## IN PROGRESS: isolated live acceptance resumed (2026-10-06)
 
 User authorized resuming live tests. Codex sole editor/live operator.
@@ -16,6 +38,20 @@ retarget and Stop, then rendering observations. Injected F9 did not open console
 mouse context Sarah:console worked. No automatic Follow or AI/native equip wiring.
 Normal saves/settings untouched; independent lighting still unknown.
 Offline690+11runner+42preflight last PASS; no source changes in this launch session.
+### Live observations, same PID48240 (2026-10-06)
+
+User reported physical F9 first opens GameEditorState, second press opens Sarah
+console; corresponding yield/exit/reenter GameEditorState log entries observed.
+Treat as debug-mode interaction, not accepted clean toggle; mouse shortcut works.
+User moved player to8266.27,11679.27,0 (~7.2tiles fromSarah), then paused.
+Follow #3 accepted target8267,11679,0. Status #4 walking wording captured WHILE
+PAUSED, so not proof of status sampled during actual movement.
+Unpaused via pause icon; Sarah visibly moved toward player. Stop #5 cancelled #3;
+Status #6 idle/disengaged stopped by user; NPC8267.88,11679.50 (~1.6tiles).
+Midstride Stop timing NOT established because already within2tiles at postcheck.
+Follow #7 re-engaged within2tiles. Status #8 waiting within range; sameNPCcoords.
+Console closed; game running with Follow #7 active, awaiting user short movement
+and direction change. Retarget/rendering acceptance and final snapshot still pending.
 Older deferred-testing notes below are historical; latest user explicitly resumed.
 ## Latest checkpoint: preflight report completeness fix (2026-10-06)
 
@@ -1373,3 +1409,19 @@ Historical exposure batch start (now completed) (2026-10-06): clean main40bc5aa 
 Codex sole checkout editor. Gemini NO-TOOLS fixed13-symbol policy/fixtures draft
 pending. Artifact under tools only; no returned methods invoked, native lighting
 queries, game/deployment/save/settings changes. Live acceptance remains deferred.
+
+### Native pace probe result
+
+The second read-only probe reached the component map but failed at
+values():iterator(): returned Collection has no exposed iterator access in Lua.
+Its diagnostic identified an AIComponent among Sarah's existing components,
+which is presence evidence only. No native movement/control state was changed.
+Corrected read-only probe uses ArrayList.new(collection), a constructor pattern
+present in installed Lua, then checks component access inside protected calls.
+Result pending. Gemini's suggested direct setter experiments are mutations,
+despite its "read-only" heading, and have not been executed. Its additional
+distance-based catch-up thresholds are proposals, not approved requirements.
+The ArrayList wrapper successfully returned component objects. First component
+method lookup failed because that component is not exposed to Lua. This does not
+establish AIComponent accessibility. Final read-only probe selects AIComponent
+by its diagnostic name before protected getter lookup; awaiting user result.
