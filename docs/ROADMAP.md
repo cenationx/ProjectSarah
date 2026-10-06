@@ -33,7 +33,7 @@
   Actual native adapter/event/UI isolation still unimplemented and unverified.
 - [x] Preflight report completeness/consistency fix: partial passing report blocks;
   required suites share runner defaults.690 suite +11 runner +42 preflight PASS.
-- [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
+- [ ] IN PROGRESS: user resumed isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 
 See SAMPLER-OFFLINE.md. Gemini handles coding drafts; Codex alone edits/reviews/

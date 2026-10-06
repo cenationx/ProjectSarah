@@ -1,3 +1,22 @@
+## IN PROGRESS: isolated live acceptance resumed (2026-10-06)
+
+User authorized resuming live tests. Codex sole editor/live operator.
+Baseline8ae4301 clean and690-test report synced; game closed verified via process
+query and window inventory. Fresh381-file world backup verified:
+runtime/backups/follow-resume-20261006-111728-UTC (world, deployed mod, profile).
+RESTORE.txt requires preserving current test state before scoped restore.
+Updated only isolated Commands.lua from reviewed source; preflight READY.
+Launched PID48240 with isolated cachedir; Continue selected existing disposable
+Sandbox/2026-10-05_19-04-21. Native console Status #1 completed:
+Sarah active; Action idle; player8263.17,11679.95,0; npc8273.45,11679.50,0.
+No new Follow/render acceptance. Player initially ~10.3 tiles away, beyond8 leash.
+Console closed for user movement toward Sarah; game remains running.
+Next: user physically approach within8tiles; open console/Follow, test midwalk
+retarget and Stop, then rendering observations. Injected F9 did not open console;
+mouse context Sarah:console worked. No automatic Follow or AI/native equip wiring.
+Normal saves/settings untouched; independent lighting still unknown.
+Offline690+11runner+42preflight last PASS; no source changes in this launch session.
+Older deferred-testing notes below are historical; latest user explicitly resumed.
 ## Latest checkpoint: preflight report completeness fix (2026-10-06)
 
 Started clean main515edcf; Codex sole editor. Gemini3.8 Flash HIGH authored
