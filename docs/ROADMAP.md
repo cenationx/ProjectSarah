@@ -28,8 +28,9 @@
   worn-slot conflict audit: OWNERSHIP-WORN-SLOT-OFFLINE.md. Static only.
 - [x] Concrete narrow manual equip adapter proposal resolving UI/precommit
   integration before implementation; no auto-selection or runtime wiring.
-- [ ] Dormant narrow manual-equip request/state coding with explicit refusal gates;
-  actual native event/UI isolation still unverified. See MANUAL-EQUIP-ADAPTER-PROPOSAL.md.
+- [x] Dormant narrow manual-equip request/state coding, fixture-only policy;
+  41 groups;690 suite +11 runner +19 preflight PASS. See MANUAL-EQUIP-POLICY-OFFLINE.md.
+  Actual native adapter/event/UI isolation still unimplemented and unverified.
 - [ ] Explicitly resume isolated native Follow/rendering acceptance, then audited
   exposure/getter paths and loaded-world evidence; no more generic scaffolding.
 

@@ -1,0 +1,22 @@
+Manual equip policy implementation, 2026-10-06
+Baseline0814d5c. Gemini3.8 Flash HIGH authored offline draft; Codex sole editor
+applied/reviewed and corrected. No tools requested from Gemini, no native execution.
+
+Source tools/ManualEquipPolicy.lua, tests tools/test_manual_equip.py.
+Dormant tools-only policy. Evidence scope fixture_only, nativeAcceptance=false.
+Fixed max10 capture/3 inspect/1 commit; supplied root entry ceiling64.
+No production imports, resolver, event registration, AI integration or game launch.
+Callbacks are injected and not sandboxed; no native operation-cost/time claim.
+
+29 Gemini test groups +12 Codex review groups =41 PASS.
+Full runner report summary:
+overall passed; total_checks690; passed_suites16; failed_suites0.
+Runner self-tests11 PASS; preflight self-tests19 PASS.
+Tests execute actual Lua via Lupa Lua55, not native game/Kahlua.
+
+Review fixes: harness callbacks/import/summary; actual commit-only fixture mutation;
+sticky failures; no callback after commit error; session drift cancellation;
+late failure postVerifiedfalse; private error status; bounded snapshot copying.
+Static native setter/event observations are prior research, not new live evidence.
+Runtime remains deployed5fa6b9c. Native Follow/rendering/equip/lighting pending.
+No deployment/save/settings changes. External/model AI ON HOLD.

@@ -37,6 +37,7 @@ DEFAULT_SUITES = [
     "tools/test_exposure_probe.py",
     "tools/test_caller_context.py",
     "tools/test_symbol_probe.py",
+    "tools/test_manual_equip.py",
 ]
 
 DISCLAIMER = "These are offline fixture checks and do not establish native gameplay acceptance."

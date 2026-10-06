@@ -1,3 +1,19 @@
+## Latest checkpoint: fixture-only manual equip policy (2026-10-06)
+
+Started clean main0814d5c; Codex sole editor. Gemini3.8 Flash HIGH authored
+tools/ManualEquipPolicy.lua and29 initial groups; Codex applied, corrected and
+added12 review groups. See MANUAL-EQUIP-POLICY-OFFLINE.md.
+41 manual groups PASS; full690 checks/16 suites +11 runner +19 preflight PASS.
+This is tools-only supplied-fixture policy, NOT a native adapter or integration.
+All outcomes nativeAcceptance=false; completed means fixture policy only.
+Cancellation/reset/drift, bounded ownership/ID/reference checks, guarded post-state,
+re-entry and partial-commit failures covered. No retries/rollback/queue/Stop edits.
+No production imports/native resolver/event registration/admission certificate.
+Next gate: actual native exposure/event/UI isolation and Follow/rendering;
+do not add generic scaffolding to substitute for native evidence.
+User not ready for live testing. No game launch/deployment/saves/settings changes.
+Independent light unknown; external/model AI ON HOLD; deployed5fa6b9c untouched.
+Older blocks below are historical and superseded.
 ## Latest checkpoint: reviewed manual equip proposal (2026-10-06)
 
 Started clean main3692172; Codex sole editor. Gemini3.8 Flash HIGH authored
