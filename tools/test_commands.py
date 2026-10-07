@@ -1333,5 +1333,181 @@ test('Console and Commands reset wiring resets adapter sampler, identity, and kn
     assert(#k:snapshot(50.0)==0,'Dead state observation while idle must reset knowledge')
     assert(resetPerceptionCount>0,'Dead state observation while idle must reset perception')
 end)
+test('Observations->Commands->Knowledge composition: idle and active nonresident, incomplete, inconsistency, recovery blocks and recovery', function()
+    local n = {
+        getX = function() return 10 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+    }
+    local items = { size = function() return 0 end, get = function() return nil end }
+    n.getInventory = function() return { getItems = function() return items end } end
+
+    local player = {
+        getX = function() return 10 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        isDead = function() return false end,
+        isAlive = function() return true end,
+        isRunning = function() return false end,
+    }
+
+    local resetPerceptionCount = 0
+    local a = {
+        meta = {},
+        listNPCs = function() return {n} end,
+        isDead = function() return false end,
+        isResident = function() return true end,
+        isIncomplete = function() return false end,
+        stop = function() return true end,
+        walk = function(char, target, onComplete, onFail) return true end,
+        validateTarget = function(char, target) return true, target end,
+        resetPerception = function() resetPerceptionCount = resetPerceptionCount + 1 end,
+    }
+    local c = { npc = n, adapter = a }
+
+    local k = Knowledge.new()
+    local function seedKnowledge(time)
+        k:update({
+            results = {
+                { id = 'z1', kind = 'zombie', geometric = 'visible', visual = 'visible', position = { x = 12, y = 20, z = 0 } }
+            }
+        }, time or 100.0)
+    end
+
+    local d = Commands.new(
+        function(inventory) return Observations.read(c, player, inventory) end,
+        function(reason, action) return a.stop() end,
+        function() return c, c.npc end,
+        function(target, onComplete, onFail, action) return a.walk(n, target, onComplete, onFail) end,
+        function(target) return a.validateTarget(n, target) end,
+        function() return { status = 'sampled', lighting = 'unknown', results = {} } end,
+        k,
+        function() return 100.0 end,
+        function() a.resetPerception() end
+    )
+
+    -- 1. Idle nonresident transition: invalidates Knowledge and perception
+    seedKnowledge(100.0)
+    assert(#k:snapshot(100.0) == 1, 'Knowledge must contain seeded observation')
+    resetPerceptionCount = 0
+
+    a.isResident = function() return false end
+    local obs1 = Observations.read(c, player, false)
+    assert(obs1.state == 'blocked', 'Observations must report blocked for nonresident NPC')
+    local tickOk1, reason1 = d:tick()
+    assert(not tickOk1 and reason1 == 'blocked', 'd:tick() must fail with blocked for nonresident NPC')
+    assert(#k:snapshot(100.0) == 0, 'Knowledge must be reset on idle nonresident transition')
+    assert(resetPerceptionCount > 0, 'resetPerception must be called on idle nonresident transition')
+
+    -- Subsequent recovery to active
+    a.isResident = function() return true end
+    assert(Observations.read(c, player, false).state == 'active', 'Observations must recover to active')
+    assert(d:tick() == true, 'd:tick() must succeed after recovery')
+    seedKnowledge(101.0)
+    assert(#k:snapshot(101.0) == 1, 'Knowledge must accept observations after recovery')
+
+    -- 2. Active nonresident transition: cancels active follow, resets Knowledge, preserves ownership
+    local followRes = d:execute('follow')
+    assert(followRes.state == 'running', 'Follow command must start')
+    assert(d.active ~= nil and d.active.command == 'follow', 'Sarah must have active follow action')
+
+    resetPerceptionCount = 0
+    a.isResident = function() return false end
+    local tickOk2, reason2 = d:tick()
+    assert(not tickOk2 and reason2 == 'blocked', 'd:tick() must reject nonresident while active')
+    assert(d.active == nil, 'Active follow action must be cancelled on nonresident transition')
+    assert(d.lastAction.state == 'cancelled', 'Action state must be cancelled')
+    assert(#k:snapshot(101.0) == 0, 'Knowledge must be reset on active nonresident transition')
+    assert(resetPerceptionCount > 0, 'resetPerception must be called on active nonresident transition')
+
+    -- Recover
+    a.isResident = function() return true end
+    assert(d:tick() == true, 'd:tick() must succeed after recovery')
+
+    -- 3. Incomplete NPC transition (idle and active)
+    seedKnowledge(102.0)
+    assert(#k:snapshot(102.0) == 1)
+    resetPerceptionCount = 0
+    a.isIncomplete = function() return true end
+    assert(Observations.read(c, player, false).state == 'blocked')
+    d:tick()
+    assert(#k:snapshot(102.0) == 0, 'Knowledge must be reset when NPC is incomplete (idle)')
+    assert(resetPerceptionCount > 0)
+
+    -- Recover and test active follow with incomplete transition
+    a.isIncomplete = function() return false end
+    d:tick()
+    d:execute('follow')
+    assert(d.active ~= nil)
+    seedKnowledge(103.0)
+    assert(#k:snapshot(103.0) == 1)
+    a.isIncomplete = function() return true end
+    d:tick()
+    assert(d.active == nil, 'Active action must be cancelled when NPC becomes incomplete')
+    assert(#k:snapshot(103.0) == 0, 'Knowledge must be reset when active NPC becomes incomplete')
+    a.isIncomplete = function() return false end
+    d:tick()
+
+    -- 4. Registration inconsistency: duplicate listed NPCs & foreign listed NPC
+    seedKnowledge(104.0)
+    assert(#k:snapshot(104.0) == 1)
+    a.listNPCs = function() return { n, { getX = function() return 0 end } } end
+    assert(Observations.read(c, player, false).state == 'blocked')
+    d:tick()
+    assert(#k:snapshot(104.0) == 0, 'Knowledge must be reset on duplicate registration')
+
+    seedKnowledge(105.0)
+    assert(#k:snapshot(105.0) == 1)
+    a.listNPCs = function() return { { getX = function() return 0 end } } end
+    assert(Observations.read(c, player, false).state == 'blocked')
+    d:tick()
+    assert(#k:snapshot(105.0) == 0, 'Knowledge must be reset on foreign registered NPC')
+
+    a.listNPCs = function() return { n } end
+    d:tick()
+
+    -- 5. Recovery blocks: travelBlocked and verificationNPC
+    seedKnowledge(106.0)
+    assert(#k:snapshot(106.0) == 1)
+    c.travelBlocked = true
+    assert(Observations.read(c, player, false).state == 'blocked')
+    d:tick()
+    assert(#k:snapshot(106.0) == 0, 'Knowledge must be reset when travelBlocked is set')
+    c.travelBlocked = nil
+    d:tick()
+
+    seedKnowledge(107.0)
+    assert(#k:snapshot(107.0) == 1)
+    a.verificationNPC = {}
+    assert(Observations.read(c, player, false).state == 'blocked')
+    d:tick()
+    assert(#k:snapshot(107.0) == 0, 'Knowledge must be reset when verificationNPC is set')
+    a.verificationNPC = nil
+    d:tick()
+
+    -- 6. Subsequent recovery: status active and new observations admitted
+    assert(Observations.read(c, player, false).state == 'active')
+    local statRes = d:execute('status')
+    assert(statRes.state == 'completed' and statRes.lines[1] == 'Sarah: active')
+    seedKnowledge(108.0)
+    assert(#k:snapshot(108.0) == 1, 'Knowledge must admit records after recovery')
+
+    -- 7. Transient busy handling: does NOT cancel active action, does NOT wipe memory; Stop preserved
+    d:execute('follow')
+    assert(d.active ~= nil and d.active.command == 'follow')
+    c.busy = true
+    assert(Observations.read(c, player, false).state == 'busy')
+    local busyTickOk, busyTickReason = d:tick()
+    assert(not busyTickOk and busyTickReason == 'busy', 'tick must return false, busy')
+    assert(d.active ~= nil and d.active.command == 'follow', 'Transient busy must NOT cancel active action')
+    assert(#k:snapshot(108.0) == 1, 'Transient busy must NOT wipe Knowledge memory')
+
+    -- Stop command while busy cancels active follow and preserves Stop
+    local stopRes = d:execute('stop')
+    assert(stopRes.state == 'completed', 'Stop command must complete even when busy')
+    assert(d.active == nil, 'Active action must be cancelled by Stop command')
+    c.busy = false
+    d:tick()
+end)
 print('RESULT '..count..' command checks passed')
 ''')

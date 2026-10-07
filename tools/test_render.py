@@ -1284,5 +1284,170 @@ test('repeated samplePerception cross-sample list identity: unchanged fairness, 
 
     getCell = oldGetCell
 end)
+test('Perception read budget: charging before invocation bounds actual getter attempts under repeated late exceptions and nil returns', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    local origSample = adapter.diagnosticSampler.sample
+    local capturedApi = nil
+    adapter.diagnosticSampler.sample = function(self, api)
+        capturedApi = api
+        return origSample(self, api)
+    end
+    adapter.samplePerception(f.npc)
+    adapter.diagnosticSampler.sample = origSample
+    assert(capturedApi ~= nil, 'captured api must be available')
+
+    -- Case 1: 64-entry lists whose final getter (idx 63) throws
+    -- With readBudget = 512, previous code allowed 4,032 getter attempts across 63 listInfo calls.
+    -- With pre-charging, exactly 512 attempts must be made across the 63 calls.
+    capturedApi.nativeReads = 0
+    adapter.readBudget = 512
+    local actualGetterAttempts = 0
+    local throwingList = {
+        size = function() return 64 end,
+        get = function(self, idx)
+            actualGetterAttempts = actualGetterAttempts + 1
+            if idx == 63 then
+                error('simulated late getter exception at index 63')
+            end
+            return { isZombie = function() return true end, isDead = function() return false end }
+        end,
+    }
+    for i = 1, 63 do
+        local sq = {
+            getX = function() return 1000 + i end,
+            getY = function() return 2000 end,
+            getZ = function() return 0 end,
+            getMovingObjects = function() return throwingList end,
+        }
+        local ok, err = pcall(capturedApi.listInfo, sq)
+        assert(not ok, 'listInfo must fail closed on element read error')
+    end
+    assert(actualGetterAttempts == 512, 'getter attempts must be bounded to readBudget (got ' .. actualGetterAttempts .. ', expected 512)')
+    assert(capturedApi.nativeReads == 512, 'nativeReads must equal readBudget (512)')
+
+    -- Case 2: 64-entry lists whose final getter (idx 63) returns nil
+    capturedApi.nativeReads = 0
+    actualGetterAttempts = 0
+    local nilReturningList = {
+        size = function() return 64 end,
+        get = function(self, idx)
+            actualGetterAttempts = actualGetterAttempts + 1
+            if idx == 63 then
+                return nil
+            end
+            return { isZombie = function() return true end, isDead = function() return false end }
+        end,
+    }
+    for i = 1, 63 do
+        local sq = {
+            getX = function() return 3000 + i end,
+            getY = function() return 4000 end,
+            getZ = function() return 0 end,
+            getMovingObjects = function() return nilReturningList end,
+        }
+        local ok, err = pcall(capturedApi.listInfo, sq)
+        assert(not ok, 'listInfo must fail closed on nil element return')
+    end
+    assert(actualGetterAttempts == 512, 'nil return getter attempts must be bounded to readBudget (got ' .. actualGetterAttempts .. ', expected 512)')
+    assert(capturedApi.nativeReads == 512, 'nativeReads must equal readBudget (512)')
+
+    -- Case 3: Arbitrary budget boundary (readBudget = 100) stops exactly at budget
+    capturedApi.nativeReads = 0
+    adapter.readBudget = 100
+    actualGetterAttempts = 0
+    for i = 1, 63 do
+        local sq = {
+            getX = function() return 5000 + i end,
+            getY = function() return 6000 end,
+            getZ = function() return 0 end,
+            getMovingObjects = function() return throwingList end,
+        }
+        local ok, err = pcall(capturedApi.listInfo, sq)
+        assert(not ok, 'listInfo must fail closed')
+    end
+    assert(actualGetterAttempts == 100, 'getter attempts must stop exactly at budget 100 (got ' .. actualGetterAttempts .. ')')
+    assert(capturedApi.nativeReads == 100, 'nativeReads must equal budget 100')
+
+    adapter.readBudget = nil
+end)
+test('Integrated Engine / DiagnosticSampler / CandidateCollector full samplePerception bounds actual getter attempts under late exceptions and nil returns', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    local oldGetCell = getCell
+    local actualGetterCalls = 0
+    local shouldThrow = true
+
+    local mockHostileList = {
+        size = function() return 64 end,
+        get = function(self, idx)
+            actualGetterCalls = actualGetterCalls + 1
+            if idx == 63 then
+                if shouldThrow then
+                    error('hostile late getter failure at index 63')
+                else
+                    return nil
+                end
+            end
+            return {
+                isZombie = function() return true end,
+                isDead = function() return false end,
+                isAlive = function() return true end,
+                getX = function() return 10.0 end,
+                getY = function() return 20.0 end,
+                getZ = function() return 0.0 end,
+            }
+        end,
+    }
+
+    local mockCell = {
+        getGridSquare = function(self, x, y, z)
+            return {
+                getX = function() return x end,
+                getY = function() return y end,
+                getZ = function() return z end,
+                getMovingObjects = function() return mockHostileList end,
+            }
+        end,
+        getObjectList = function() return { contains = function() return true end } end,
+        getAddList = function() return { contains = function() return false end } end,
+        getRemoveList = function() return { contains = function() return false end } end,
+    }
+    getCell = function() return mockCell end
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    -- Run 1: Late exceptions with readBudget = 512
+    adapter.readBudget = 512
+    actualGetterCalls = 0
+    shouldThrow = true
+    local out1 = adapter.samplePerception(f.npc)
+    assert(out1 ~= nil, 'samplePerception must return result')
+    assert(actualGetterCalls == 512, 'integrated sweep must stop at readBudget=512 (got ' .. actualGetterCalls .. ')')
+
+    -- Run 2: Late nil returns with readBudget = 512
+    actualGetterCalls = 0
+    shouldThrow = false
+    local out2 = adapter.samplePerception(f.npc)
+    assert(out2 ~= nil, 'samplePerception must return result')
+    assert(actualGetterCalls == 512, 'integrated sweep with nil returns must stop at readBudget=512 (got ' .. actualGetterCalls .. ')')
+
+    adapter.readBudget = nil
+    getCell = oldGetCell
+end)
 print('RESULT '..count..' total engine adapter checks passed')
 ''')

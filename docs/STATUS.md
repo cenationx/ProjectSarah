@@ -1,3 +1,44 @@
+## Codex-reviewed Astra corrections (2026-10-08)
+
+Gemini returned sole editing ownership. Codex reviewed Engine/Commands diffs and
+independently verified787 checks/17 suites +11 runner +42 preflight PASS.
+Per-element snapshot reads are charged before attempts, including late failure;
+integrated regressions bound actual getter attempts to512. Actual Observations /
+Commands / Knowledge tests cover blocked/nonresident, incomplete, registration,
+recovery and transient busy states. Non-active non-busy states invalidate memory
+and perception. Busy skips dispatcher progression while retaining the action;
+this does not establish that native movement itself pauses. Explicit Stop during
+busy remains covered. Ownership guards and queue cancellation are unchanged.
+No deployment, launch or save/settings changes. Lighting remains unknown and
+production confirmed memory empty; external/model AI ON HOLD.
+Next: fresh verified isolated world/mod/profile backup and current Follow/Stop/
+render plus clock native acceptance; then bounded source access/calibration.
+Codex owns checkout; prior static/offline findings are not native acceptance.
+
+## Bounded correction: perception read budget and lifecycle invalidation (2026-10-08)
+
+Resolved two offline defects reproduced by Astra using actual project Lua:
+1. **Perception Read-Budget Bypass**:
+   - `Engine.lua`: `api.listInfo` previously charged `api.nativeReads = api.nativeReads + sz` only after the entire list read loop succeeded. Failing lists (e.g. 64-entry lists throwing or returning nil on the 64th element) failed before reaching the post-loop increment, allowing uncharged getter attempts across repeated calls (e.g. 4,032 attempts across 63 `listInfo` calls with `readBudget = 512`).
+   - Fixed by checking `(api.nativeReads + 1) > readLimit` and charging `api.nativeReads = api.nativeReads + 1` strictly BEFORE each `pcall(list.get, list, i)` invocation, including on exceptions and nil returns. Execution stops immediately before exceeding the remaining budget.
+   - Verified via direct `Engine` adapter and integrated `Engine` + `DiagnosticSampler` + `CandidateCollector` regressions in `tools/test_render.py` asserting exact getter call counts (`actualGetterAttempts == 512`, `nativeReads == 512`) under repeated late exceptions and nil returns across 63 square sweeps.
+2. **Lifecycle Invalidation Mismatch**:
+   - `Observations.lua` reports incomplete/nonresident NPCs, inconsistent registration, and recovery blocks as `state = "blocked"`. `Commands.lua` previously reset Knowledge and perception only for `'dead'`, `'unloaded'`, or `'absent'`, retaining observation memory across blocked states.
+   - Fixed `Commands.lua`:
+     - `checkLifecycle()`: Explicitly resets Knowledge and perception on observation error and all non-active non-busy states (`blocked`, `dead`, `unloaded`, `absent`, `deferred`, `unavailable`). Cancels active action on non-active states.
+     - Transient `busy` is handled deliberately: returns `false, "busy"` without wiping Knowledge/perception and without cancelling `self.active`. Single-action ownership and Stop guarantees are preserved.
+     - `cancelActive()`: Extended invalidation reasons to include `'deferred'`, `'unavailable'`, `'blocked'`, and `'observation error'`.
+     - `tickFollow()`, `look`/`perceive`, and idle `status`/`inventory`: Consistently preserve transient `busy` while invalidating memory for blocked/non-active states.
+   - Verified via end-to-end `Observations` -> `Commands` -> `Knowledge` composition regressions in `tools/test_commands.py` exercising idle and active nonresident transitions, incomplete NPCs, registration inconsistency (duplicate and foreign listed NPCs), recovery blocks (`travelBlocked` and `verificationNPC`), subsequent recovery (resuming active status, commands, and observation memory), and transient `busy` (preserving active Follow, preserving Knowledge, and allowing clean `stop`).
+3. **Safeguards & Verification**:
+   - Confirmed production memory remains empty because lighting is unknown; these fixes do not imply confirmed sight or autonomous behavior.
+   - Retired-action ownership guards, single-action ownership, and queue-wide Stop cancellation are strictly preserved.
+   - Full aggregate suite: 787 checks across 17 suites PASS (was 784).
+   - Runner self-tests: 11 tests PASS (`tools/test_runner.py`).
+   - Preflight self-tests: 42 tests PASS (`tools/test_preflight.py`).
+   - No deployment, game launch, saves/settings changes, external AI integration, commit or push.
+   - Sole editing ownership returned to Codex.
+
 ## Codex assessment of Gemini Pro review (2026-10-08)
 
 See REVIEW-ASSESSMENT-2026-10-08.md. Queue clearing is a documented single-owner

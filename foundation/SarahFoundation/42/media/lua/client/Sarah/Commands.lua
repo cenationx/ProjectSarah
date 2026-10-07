@@ -233,7 +233,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
 
         if reason == 'session reset' or reason == 'controller replaced' or reason == 'npc replaced'
            or reason == 'controller unavailable' or reason == 'npc unavailable'
-           or reason == 'dead' or reason == 'unloaded' or reason == 'absent' then
+           or reason == 'dead' or reason == 'unloaded' or reason == 'absent'
+           or reason == 'deferred' or reason == 'unavailable' or reason == 'blocked'
+           or reason == 'observation error' then
             self:resetKnowledge()
             self:resetPerception()
         end
@@ -287,16 +289,19 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         local ok,data=pcall(self.observe,false)
         if not ok or type(data)~='table' then
             local errReason='observation error'
+            self:resetKnowledge()
+            self:resetPerception()
             if self.active then
                 self:cancelActive(errReason)
             end
             return false,errReason
         end
         if data.state~='active' then
-            if data.state == 'dead' or data.state == 'unloaded' or data.state == 'absent' then
-                self:resetKnowledge()
-                self:resetPerception()
+            if data.state == 'busy' then
+                return false, 'busy'
             end
+            self:resetKnowledge()
+            self:resetPerception()
             if self.active then
                 self:cancelActive(data.state)
             end
@@ -518,6 +523,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return false,'observation error'
         end
         if data.state~='active' then
+            if data.state == 'busy' then
+                return false, 'busy'
+            end
             self:cancelActive(data.state)
             return false,data.state
         end
@@ -1232,7 +1240,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 return result
             end
             if data.state~='active' then
-                if data.state=='dead' or data.state=='unloaded' or data.state=='absent' then
+                if data.state~='busy' then
                     self:resetKnowledge()
                     self:resetPerception()
                 end
@@ -1353,7 +1361,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
         if self.active then
             self:checkLifecycle()
-        elseif data.state=='dead' or data.state=='unloaded' or data.state=='absent' then
+        elseif data.state~='active' and data.state~='busy' then
             self:resetKnowledge()
             self:resetPerception()
         end

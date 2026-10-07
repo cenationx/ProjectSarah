@@ -523,19 +523,22 @@ function Engine.new()
 
             -- Account for fingerprint/snapshot reads in native work budget
             local readLimit = adapter.readBudget or 512
-            if (api.nativeReads + sz) > readLimit then
+            if (api.nativeReads + 1) > readLimit then
                 error("native read budget exhausted")
             end
 
             local currentRefs = {}
             for i = 0, sz - 1 do
+                if (api.nativeReads + 1) > readLimit then
+                    error("native read budget exhausted")
+                end
+                api.nativeReads = api.nativeReads + 1
                 local okObj, obj = pcall(list.get, list, i)
                 if not okObj or not obj then
                     error("list element read error at index " .. i)
                 end
                 currentRefs[i + 1] = obj
             end
-            api.nativeReads = api.nativeReads + sz
 
             -- Bounded exact-reference snapshot comparison
             local prev = adapter.snapshots[coordKey]

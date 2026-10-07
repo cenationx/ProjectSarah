@@ -1,3 +1,27 @@
+## Codex-reviewed Astra corrections (2026-10-08)
+
+Gemini returned sole editing ownership. Codex reviewed Engine/Commands diffs and
+independently verified787 checks/17 suites +11 runner +42 preflight PASS.
+Per-element snapshot reads are charged before attempts, including late failure;
+integrated regressions bound actual getter attempts to512. Actual Observations /
+Commands / Knowledge tests cover blocked/nonresident, incomplete, registration,
+recovery and transient busy states. Non-active non-busy states invalidate memory
+and perception. Busy skips dispatcher progression while retaining the action;
+this does not establish that native movement itself pauses. Explicit Stop during
+busy remains covered. Ownership guards and queue cancellation are unchanged.
+No deployment, launch or save/settings changes. Lighting remains unknown and
+production confirmed memory empty; external/model AI ON HOLD.
+Next: fresh verified isolated world/mod/profile backup and current Follow/Stop/
+render plus clock native acceptance; then bounded source access/calibration.
+Codex owns checkout; prior static/offline findings are not native acceptance.
+
+## Bounded correction: perception read budget and lifecycle invalidation (2026-10-08)
+
+Resolved two offline defects reproduced by Astra using actual project Lua:
+1. Perception read-budget bypass: `Engine.lua` now charges `(api.nativeReads + 1)` and checks `readLimit` before each `list.get` invocation. Failed/nil returns count against the budget and stop before exceeding it. 31 checks in `test_render.py` pass (+2 new regressions verifying exact 512-attempt bounds under late throws and nil returns across 63 square sweeps).
+2. Lifecycle invalidation mismatch: `Commands.lua` now resets Knowledge and perception on observation error and all non-active non-busy states (`blocked`, `dead`, `unloaded`, `absent`, `deferred`, `unavailable`). Transient `busy` is handled deliberately (pauses without wiping memory or cancelling active follow). End-to-end `Observations` -> `Commands` -> `Knowledge` composition regressions added in `test_commands.py` (68 checks pass, +1 new suite).
+3. Production memory remains empty; lighting unknown; external AI ON HOLD; retired-action guards and Stop guarantees preserved. Full suite: 787 checks across 17 suites, 11 runner, 42 preflight self-tests PASS. Sole editing ownership returned to Codex.
+
 ## Codex assessment of Gemini Pro review (2026-10-08)
 
 See REVIEW-ASSESSMENT-2026-10-08.md. Queue clearing is a documented single-owner
