@@ -1,3 +1,163 @@
+## Codex accepted offline source snapshot and milestone checkpoint (2026-10-07)
+
+Gemini handed checkout ownership back. Codex reviewed the inert module and
+independently reproduced 784 checks across17 suites +11 runner +42 preflight
+self-tests PASS. Direct regressions confirm maxReads=1 reports1 charged read and
+missing building/switch metadata remains unknown rather than unrestricted/powered.
+The module stays inert: no callbacks, production wiring, target-light calculation,
+confirmed sight or Knowledge admission. Freshness remains unknown except positive
+stale discrepancies. Counters bound logical API/property operations; they do not
+measure arbitrary work inside injected functions or native getter implementations.
+Caller capture has a separate limit. Native exposure and power/source coverage
+semantics remain unverified. No fresh backup, deployment or launch was performed.
+Milestone review is integrated: M1 first playable, M2a observations, M2b equipment/
+exchange, M2c commanded work, M2d defense/construction, followed by held external AI.
+Implementation, offline verification and native acceptance are separate states.
+Next: Codex isolated Follow/Stop/render and clock acceptance after fresh verified
+world/mod/profile backup; source access/calibration needs a separately reviewed
+native invocation path. No further speculative illumination thresholds are admitted.
+Codex owns checkout; independent lighting OPEN and external/model AI ON HOLD.
+
+## Light source snapshot prototype defects corrected offline (2026-10-07)
+
+Gemini completed offline correction and verification of the diagnostic-only light source snapshot prototype (`LightSourceSnapshot.lua`) and suite (`test_light_snapshot.py`) resolving all Codex review defects:
+1. **Strict Pre-Operation Budget Enforcement**:
+   - `charge_read` checked strictly BEFORE every single charged operation: initial and final collection sizing scans, item lookups in initial reference snapshot, mid-traversal collection sizing, per-source item retrieval, all property reads (`getX`, `getY`, `getZ`, `getR`, `getG`, `getB`, `getRadius`, `isActive`, `isHydroPowered`, `getId`), `getLocalToBuilding`, building ID lookups on `building_ref` and `def_ref`, switch getter lookups, switch collection sizing (`inspect_collection(sw_ref)`), square lookups (`getSquare`), and square power queries (`sq:haveElectricity()`, `sq:hasGridPower()`).
+   - If `counts.total_reads >= max_reads`, operations are never executed and snapshot exits cleanly with `status = "budget_exhausted"`, `reason = "read_limit_reached"`, `incomplete = true`.
+   - `counts.total_reads <= max_reads` holds unconditionally on all exit paths. Tested across tiny budgets (`maxReads = 1..15`) with exact call counting confirming `maxReads = 1` halts immediately after `getLightSources` with `total_reads = 1` (zero collection sizing calls).
+2. **Missing/Malformed Metadata Preserved as Unknown**:
+   - Building restriction: only an authoritative `src:getLocalToBuilding()` getter returning legitimate `nil` establishes `"unrestricted"`. Unavailable getter, throwing getter, member-lookup exception, or non-nil building object with unresolved ID yields `"unknown"` (never defaults to `"unrestricted"` even if fields are absent).
+   - Switch count: only an authoritative `src:getSwitches()` returning a valid collection with integer `sz == 0` establishes `switchCount = 0`. Unavailable getter, throwing getter, member-lookup exception, or non-integer size yields `switchCount = nil`.
+   - Power status: `switchCount == nil or switchCount > 0` forces `powerStatus = "unknown"`. A source with missing switch getter never reports `"powered"`.
+3. **Getter Member-Lookup Exception Isolation**:
+   - `invoke_getter` distinguishes member-lookup exceptions (`not get_ok` from `__index` or userdata reflection error) and non-function non-nil properties (`fn ~= nil`) from truly unavailable getters (`fn == nil` with clean lookup).
+   - Throwing member lookups return `"throwing"`; `read_property` never falls back to raw fields on throwing lookups, marking the source malformed (`malformed_sources = 1`, `incomplete = true`).
+4. **Verification & Gates**:
+   - 53 unit tests in `tools/test_light_snapshot.py` PASS (+13 new regression checks).
+   - Full test runner: 784 checks across 17 suites PASS (0.905s).
+   - 11 runner self-tests in `tools/test_runner.py` PASS; 42 preflight self-tests in `tools/test_preflight.py` PASS.
+   - Pure inert prototype; no gameplay wiring, no deployment, game closed.
+   - Independent lighting remains strictly OPEN. Lighting and visual confirmation remain unknown; Knowledge admission disabled; external/model AI ON HOLD.
+   - Editing ownership handed back to Codex for verification and checkpoint commit.
+
+## Codex review: remaining source snapshot defects (2026-10-07)
+
+Gemini returned ownership; corrections remain uncommitted and undeployed.
+Direct actual-Lua review reproduced maxReads=1 returning total_reads=7; initial
+and final reference scans and per-source operations are not guarded per read.
+A source with unavailable building/switch getters and absent fields reports
+buildingRestriction=unrestricted, switchCount=0 and powerStatus=powered. Missing
+metadata must remain unknown. Getter member-lookup exceptions must not fall back
+to raw fields as if the getter were unavailable. New regressions must assert
+actual call limits and missing/malformed metadata, not merely result labels.
+Milestone updates are preserved. No commit/push until final correction/review.
+No deployment/game launch/saves/settings changes; independent lighting OPEN.
+Next: Gemini bounded correction, then Codex verification and combined checkpoint.
+
+## Light source snapshot prototype corrected offline (2026-10-07)
+
+Gemini completed offline correction and verification of the diagnostic-only light source snapshot prototype (`foundation/SarahFoundation/42/media/lua/client/Sarah/LightSourceSnapshot.lua`) and suite (`tools/test_light_snapshot.py`) addressing all Codex review findings:
+1. **Freshness Semantics**:
+   - Freshness is never promoted to `"verified"` from state agreement or `hydroPowered = false`.
+   - Freshness defaults to `"unknown"`, with `"stale"` flagged exclusively on positive discrepancy (`powerStatus == "unpowered"` while `active == true`).
+2. **Power Predicates & Switch Rules**:
+   - `sq:haveElectricity()` (generator power) and `sq:hasGridPower()` (grid power) are queried independently; a false generator result does not prevent checking grid power.
+   - Both results are reported distinctly in output records (`generatorPower`, `gridPower`).
+   - Switch presence (`switchCount > 0`) or unknown switch state keeps `powerStatus` `"unknown"`.
+3. **Collection Integrity & Same-Size Mutation**:
+   - Initial bounded reference snapshot (`initial_refs`) taken at start; checked mid-reads.
+   - Full post-read re-verification pass across all references (including after the final getter) detects same-size reordering, element replacement, or late collection mutations.
+   - Any mutation fails closed with `status = "collection_mutated"`, `reason = "collection_changed_during_iteration"` or `"size_changed_during_iteration"`, empty sources.
+4. **Getter Failure Isolation & Building Restrictions**:
+   - `read_property` / `invoke_getter` distinguishes `"ok"`, `"legitimate_nil"`, `"throwing"`, and `"unavailable"`.
+   - Authoritative getters that throw or return nil NEVER silently fall back to raw fields. Raw fields are inspected only if the getter is unavailable.
+   - Building restrictions strictly distinguish `"unrestricted"` (legitimate nil) from `"unknown"` (throwing or unresolvable building reference).
+5. **Exception Safety & Honest Accounting**:
+   - Reentrancy guard wrapped in `pcall` ensuring `busy = false` is unconditionally restored even on unhandled exceptions.
+   - Integral collection size validation rejects non-integers, strings, and NaNs.
+   - Honest read accounting tracks `getter_reads`, `square_lookups`, `power_queries`, and enforces `maxReads` against `total_reads` (sum of all native calls).
+6. **Documentation & Probe Plan Corrected**:
+   - Clarified that preflight checks backup file presence but does not take or verify a fresh backup (operator obligation prior to any live test).
+   - Clarified that matching player-facing outputs under fixed positions are an observation test only, not proof of complete cache independence.
+7. **Verification Evidence**:
+   - 40 unit test checks in `tools/test_light_snapshot.py` PASS.
+   - Full test runner: 771 checks across 17 suites PASS (0.91s).
+   - 11 runner self-tests PASS; 42 preflight self-tests PASS.
+8. **Blocker & Milestone Status**:
+   - Codex milestone review in `docs/ROADMAP.md` and `docs/MILESTONE-REVIEW-2026-10-07.md` preserved intact.
+   - Independent lighting remains strictly OPEN. Lighting and visual confirmation remain unknown; Knowledge admission disabled; external/model AI ON HOLD.
+
+## Codex review: source snapshot correction required; milestones updated (2026-10-07)
+
+Gemini returned ownership. Codex reproduced 771 checks/17 suites +11 runner +42
+preflight self-tests PASS. The inert prototype is NOT ACCEPTED: freshness is
+promoted without update evidence, size-only mutation checks miss replacements,
+and getter failures can silently fall back to raw fields. Power predicates need
+native-semantics review; unknown building restrictions must remain distinguishable.
+Exception cleanup and complete getter/read accounting also need regressions.
+Passing fixtures do not cover these review findings. No deployment/game launch.
+Current checkpoint remains eee1122; uncommitted batch and plan updates are pending
+correction and final verification. No new backup is established by preflight.
+Codex integrated the user-approved milestone review into ROADMAP and
+MILESTONE-REVIEW-2026-10-07.md. First playable M1 and survivor M2a-d now have separate
+exit gates; implementation, offline verification and native acceptance are distinct.
+Next: Gemini sole-editor correction after handoff, then Codex review/commit/push.
+Lighting stays unknown; native confirmed-memory admission and external AI stay held.
+
+## Light source snapshot prototype completed offline (2026-10-07)
+
+Gemini completed offline implementation and verification of a bounded, diagnostic-only light-source snapshot prototype (`foundation/SarahFoundation/42/media/lua/client/Sarah/LightSourceSnapshot.lua`) and suite (`tools/test_light_snapshot.py`):
+1. **Source Snapshot Implementation & Contract**:
+   - Pure inert prototype; no automatic callbacks, production perception wiring, or native invocation.
+   - Copied snapshot records containing only plain Lua primitives:
+     * `id`: session/pass token string (`src:<pass>:<index>` or `src:<srcId>:<pass>:<index>`).
+     * `x, y, z`: validated integer coordinates within world bounds (`[-1e6, 1e6]`, `z` in `[-32, 31]`).
+     * `r, g, b`: validated non-negative numbers in `[0.0, 10.0]`.
+     * `radius`: validated positive integer in `[1, 64]`.
+     * `active`: validated boolean.
+     * `hydroPowered`: validated boolean.
+     * `buildingRestriction`: `"unrestricted"`, `"restricted"`, or `"unknown"`.
+     * `buildingId`: integer building ID if restricted to building (`localToBuilding`), or `nil`. Never retains Java building reference.
+     * `squareLoaded`: boolean (true if source square is loaded, false if unloaded/missing).
+     * `powerStatus`: `"not_required"`, `"powered"`, `"unpowered"`, `"unloaded"`, or `"unknown"`.
+     * `generatorPower`: boolean or nil.
+     * `gridPower`: boolean or nil.
+     * `freshness`: `"stale"` (unpowered while active flag remains true) or `"unknown"`.
+   - Strict collection, read, square, capture, and output budgets:
+     * Oversized collections (`coll_size > maxCollectionSize`, default 128) fail closed with `status = "collection_oversized"`, `reason = "collection_exceeds_budget"`, `incomplete = true`, empty sources (never silently truncated).
+     * Collection integrity and mutation detection: initial reference snapshot, mid-read size/item checks, and full post-read re-verification pass across all references (including after final getter).
+     * Read, square, capture, and output budgets enforced with `budget_exhausted` and explicit reason.
+   - Strict lifecycle identity:
+     * Injected `api.capture()` validates caller identity and living/resident state at start, mid-pass, and end.
+     * Drift or reset during pass triggers immediate fail-closed abort (`status = "aborted"`, `reason = "lifecycle_drift"` or `"reset_during_snapshot"`).
+     * Re-entrancy guarded and rejected cleanly.
+   - Reference safety:
+     * No persistent Java references stored or returned; all values are copied plain tables.
+     * Mutation of returned snapshot table does not affect source objects.
+     * `inst:reset()` clears internal sequence and state, increments revision.
+   - Separate source facts from sight:
+     * Does NOT evaluate target illumination or return visual detections.
+     * Source presence does NOT imply sight; absent sources do NOT imply darkness.
+     * Knowledge admission remains disabled.
+2. **Static API Evidence & Freshness Limits** (`docs/SARAH-LIGHTING-SOURCE-CANDIDATE.md`):
+   - `IsoLightSource.java:34-263` (`@UsedFromLua`, getters `getX/Y/Z`, `getR/G/B`, `getRadius`, `isActive`, `isHydroPowered`, `getLocalToBuilding`; forbidden `update()`, `clearInfluence()`, setters).
+   - `IsoCell.java:2554-2565` (`getLamppostPositions()` returning live `Stack<IsoLightSource>`).
+   - `IsoGridSquare.java:8426, 10353` (`haveElectricity()`, `hasGridPower()`).
+   - `LightingJNI.java:280-352` (asynchronous `checkLights()` reconciliation; unpowered grid with stale active flag detected and flagged as `freshness = "stale"`).
+3. **Manual Native Probe Plan for Gate B Live Testing**:
+   - One artificial electrical lamp on loaded square in isolated sandbox profile:
+     * Operator must take fresh disposable world backup and verify restoration before testing (preflight only checks backup file presence).
+     * Test ON/OFF switch toggles -> active=true/false, powerStatus="unknown" (if switch present) or "powered", freshness="unknown".
+     * Test power loss -> cut generator power, verify unpowered status and stale freshness detection before engine reconciles active=false.
+     * Test chunk unload -> squareLoaded=false, powerStatus="unloaded", freshness="unknown".
+     * Test player-facing independence -> rotate human player 180 degrees away while Sarah, lamp, and player remain stationary; verify identical snapshot output (observation check only, not proof of complete cache independence).
+4. **Automated Verification**:
+   - 40 unit test checks in `tools/test_light_snapshot.py` PASS.
+   - Integrated into `run_tests.py`: 771 checks across 17 suites PASS (0.91s).
+   - 11 runner self-tests PASS; 42 preflight self-tests PASS.
+5. **Blocker Status**:
+   - Independent lighting remains OPEN. Lighting and visual confirmation remain unknown; Knowledge admission stays disabled. External/model AI remains ON HOLD.
+
 ## Codex lighting follow-up: source reconstruction route (2026-10-07)
 
 Codex owns checkout. Fresh offline inspection distinguishes globally registered

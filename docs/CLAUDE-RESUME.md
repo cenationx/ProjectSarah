@@ -1,3 +1,88 @@
+## Codex accepted offline source snapshot and milestone checkpoint (2026-10-07)
+
+Gemini handed checkout ownership back. Codex reviewed the inert module and
+independently reproduced 784 checks across17 suites +11 runner +42 preflight
+self-tests PASS. Direct regressions confirm maxReads=1 reports1 charged read and
+missing building/switch metadata remains unknown rather than unrestricted/powered.
+The module stays inert: no callbacks, production wiring, target-light calculation,
+confirmed sight or Knowledge admission. Freshness remains unknown except positive
+stale discrepancies. Counters bound logical API/property operations; they do not
+measure arbitrary work inside injected functions or native getter implementations.
+Caller capture has a separate limit. Native exposure and power/source coverage
+semantics remain unverified. No fresh backup, deployment or launch was performed.
+Milestone review is integrated: M1 first playable, M2a observations, M2b equipment/
+exchange, M2c commanded work, M2d defense/construction, followed by held external AI.
+Implementation, offline verification and native acceptance are separate states.
+Next: Codex isolated Follow/Stop/render and clock acceptance after fresh verified
+world/mod/profile backup; source access/calibration needs a separately reviewed
+native invocation path. No further speculative illumination thresholds are admitted.
+Codex owns checkout; independent lighting OPEN and external/model AI ON HOLD.
+
+## Light source snapshot prototype defects corrected offline (2026-10-07)
+
+Gemini completed offline correction and verification of LightSourceSnapshot.lua and
+test_light_snapshot.py resolving all review defects:
+1. Strict pre-operation budget enforcement: charge_read checked before every operation
+   (collection scans, initial refs, mid-traversal, property reads, building ID, switches,
+   collection sizing, square lookup, power queries). total_reads never exceeds maxReads.
+   Tiny budget regressions (maxReads=1..15) prove exact call-count match and immediate halt.
+2. Missing/malformed metadata preserved as unknown: only authoritative getLocalToBuilding
+   returning nil establishes unrestricted; only authoritative getSwitches returning empty
+   collection establishes switchCount=0. Unavailable getters or malformed values leave
+   metadata unknown, forcing powerStatus=unknown when switches are unknown.
+3. Getter member-lookup exception isolation: invoke_getter distinguishes __index or
+   reflection exceptions from unavailable getters; read_property never falls back to fields
+   on throwing lookups, marking sources malformed.
+53 unit test checks pass; full test runner: 784 checks across 17 suites, 11 runner, 42
+preflight self-tests pass. Pure inert prototype; independent lighting remains strictly OPEN;
+visual stays unknown; AI ON HOLD. Editing ownership handed back to Codex.
+
+## Codex review: remaining source snapshot defects (2026-10-07)
+
+Gemini returned ownership; corrections remain uncommitted and undeployed.
+Direct actual-Lua review reproduced maxReads=1 returning total_reads=7; initial
+and final reference scans and per-source operations are not guarded per read.
+A source with unavailable building/switch getters and absent fields reports
+buildingRestriction=unrestricted, switchCount=0 and powerStatus=powered. Missing
+metadata must remain unknown. Getter member-lookup exceptions must not fall back
+to raw fields as if the getter were unavailable. New regressions must assert
+actual call limits and missing/malformed metadata, not merely result labels.
+Milestone updates are preserved. No commit/push until final correction/review.
+No deployment/game launch/saves/settings changes; independent lighting OPEN.
+Next: Gemini bounded correction, then Codex verification and combined checkpoint.
+
+## Light source snapshot prototype corrected offline (2026-10-07)
+
+Gemini completed offline correction and verification of LightSourceSnapshot.lua and
+test_light_snapshot.py per Codex review: freshness defaults to unknown (stale on
+positive discrepancy; never promoted to verified); generator vs grid power evaluated
+independently and reported distinctly; initial reference snapshot plus full post-read
+re-verification detects same-size reordering/replacements; getter failures never fall
+back to raw fields; building restrictions distinguish unrestricted from unknown;
+reentrancy guard wrapped in pcall; integral collection sizes validated; honest read
+accounting tracks getter, square, power, and total reads against budget.
+40 actual-Lua unit tests pass; full runner 771 checks across 17 suites +11 runner +42
+preflight self-tests pass. Documentation and probe plan updated (preflight does not
+take fresh backup; matching outputs are observation check only). Editing ownership
+handed back to Codex. Blocker remains OPEN; visual stays unknown; AI ON HOLD.
+
+## Codex review: source snapshot correction required; milestones updated (2026-10-07)
+
+Gemini returned ownership. Codex reproduced 771 checks/17 suites +11 runner +42
+preflight self-tests PASS. The inert prototype is NOT ACCEPTED: freshness is
+promoted without update evidence, size-only mutation checks miss replacements,
+and getter failures can silently fall back to raw fields. Power predicates need
+native-semantics review; unknown building restrictions must remain distinguishable.
+Exception cleanup and complete getter/read accounting also need regressions.
+Passing fixtures do not cover these review findings. No deployment/game launch.
+Current checkpoint remains eee1122; uncommitted batch and plan updates are pending
+correction and final verification. No new backup is established by preflight.
+Codex integrated the user-approved milestone review into ROADMAP and
+MILESTONE-REVIEW-2026-10-07.md. First playable M1 and survivor M2a-d now have separate
+exit gates; implementation, offline verification and native acceptance are distinct.
+Next: Gemini sole-editor correction after handoff, then Codex review/commit/push.
+Lighting stays unknown; native confirmed-memory admission and external AI stay held.
+
 ## Codex lighting follow-up: source reconstruction route (2026-10-07)
 
 Codex owns checkout. Fresh offline inspection distinguishes globally registered

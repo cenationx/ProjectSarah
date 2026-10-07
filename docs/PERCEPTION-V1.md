@@ -184,3 +184,46 @@ Gemini completed bounded static inspection of new independent lighting candidate
 4. **Smallest Proposed Native Verification for Gate B**:
    - In isolated profile, position Sarah in an unlit windowless room at midnight. Verify `look` / `perceive` report geometry counts while visual confirmation remains strictly `0` with `lighting: unknown`.
    - Rotate human player away or step outside: verify Sarah's outputs remain identical, as an observation only, not proof of cache independence.
+
+## Bounded diagnostic-only light source snapshot prototype (2026-10-07)
+
+Implemented offline in `foundation/SarahFoundation/42/media/lua/client/Sarah/LightSourceSnapshot.lua`:
+- Inert prototype; no automatic callbacks, production perception wiring, or native invocation.
+- Copied snapshot records containing only plain Lua primitives:
+  * `id`: session/pass token string (`src:<pass>:<index>` or `src:<srcId>:<pass>:<index>`).
+  * `x, y, z`: validated integer coordinates within world bounds (`[-1e6, 1e6]`, `z` in `[-32, 31]`).
+  * `r, g, b`: validated non-negative numbers in `[0.0, 10.0]`.
+  * `radius`: validated positive integer in `[1, 64]`.
+  * `active`: validated boolean.
+  * `hydroPowered`: validated boolean.
+  * `buildingRestriction`: `"unrestricted"` (outdoors or legitimate nil building reference), `"restricted"` (valid building ID), or `"unknown"` (throwing or unresolvable building reference).
+  * `buildingId`: integer building ID if restricted to building (`localToBuilding`), or `nil`. Never retains Java building reference.
+  * `squareLoaded`: boolean (true if source square is loaded, false if unloaded/missing).
+  * `powerStatus`: `"not_required"`, `"powered"`, `"unpowered"`, `"unloaded"`, or `"unknown"`. Switch presence (`switchCount > 0`) keeps power status `"unknown"`.
+  * `generatorPower`: boolean or nil (reports `sq:haveElectricity()`).
+  * `gridPower`: boolean or nil (reports `sq:hasGridPower()`).
+  * `freshness`: `"stale"` (positive discrepancy: square unpowered while active flag remains true) or `"unknown"`. Never promoted to `"verified"` from mere state agreement or `hydroPowered=false`.
+- Strict collection, read, square, capture, and output budgets:
+  * Oversized collections (`coll_size > maxCollectionSize`, default 128) fail closed with `status = "collection_oversized"`, `reason = "collection_exceeds_budget"`, `incomplete = true`, empty sources (never silently truncated).
+  * Strict pre-operation budget enforcement: `charge_read` checked strictly BEFORE every single charged operation (initial/post-read collection scans, item lookups in initial snapshot, mid-traversal collection sizing, item reads, property reads, building ID, switches, switch collection sizing, square lookups, and power queries). `counts.total_reads` never exceeds `maxReads` on any path.
+  * Collection integrity and mutation detection: takes a bounded exact reference snapshot at start, checks size and item identity mid-traversal, and performs a full re-verification pass across all references after all source and getter reads (including after the final getter). Fails closed on any mutation, size change, or same-size reordering/replacement with `status = "collection_mutated"`, `reason = "size_changed_during_iteration"` or `"collection_changed_during_iteration"`, empty sources.
+  * Missing/malformed metadata unknown preservation: authoritative `getLocalToBuilding` returning nil required for unrestricted (otherwise unknown); authoritative `getSwitches` returning sz=0 required for switchCount=0 (otherwise unknown, forcing powerStatus=unknown).
+  * Getter member-lookup exception isolation: `invoke_getter` distinguishes member-lookup exceptions (`not get_ok` from `__index` or userdata reflection error) and non-function non-nil properties (`fn ~= nil`) from truly unavailable getters (`fn == nil` with clean lookup). Throwing member lookups return `"throwing"`; `read_property` never falls back to raw fields on throwing lookups, marking sources malformed.
+  * Reentrancy exception safety: execution wrapped in `pcall` ensuring `busy = false` is unconditionally restored even on unhandled exceptions. Integral collection size validation.
+  * Honest read accounting: tracks `getter_reads`, `square_lookups`, `power_queries`, and enforces `maxReads` against `total_reads` (sum of all native calls).
+- Strict lifecycle identity:
+  * Injected `api.capture()` validates caller identity and living/resident state at start, mid-pass, and end.
+  * Drift or reset during pass triggers immediate fail-closed abort (`status = "aborted"`, `reason = "lifecycle_drift"` or `"reset_during_snapshot"`).
+  * Re-entrancy guarded and rejected cleanly.
+- Reference safety:
+  * No persistent Java references stored or returned; all values are copied plain tables.
+  * Mutation of returned snapshot table does not affect source objects.
+  * `inst:reset()` clears internal sequence and state, increments revision.
+- Separate source facts from sight:
+  * Does NOT evaluate target illumination or return visual detections.
+  * Source presence does NOT imply sight; absent sources do NOT imply darkness.
+  * Knowledge admission remains disabled.
+- Automated verification:
+  * 53 unit test checks in `tools/test_light_snapshot.py` PASS; full test runner passes 784 checks across 17 suites; 11 runner self-tests PASS; 42 preflight self-tests PASS.
+- Blocker status:
+  * Independent lighting remains OPEN. Lighting and visual confirmation remain unknown; Knowledge admission stays disabled. External/model AI remains ON HOLD.

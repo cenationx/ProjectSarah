@@ -1,3 +1,40 @@
+## Current milestone overview (reviewed 2026-10-07)
+
+This overview supersedes historical progress labels below. Checkboxes in dated
+sections describe their stated evidence, not automatic native acceptance.
+See MILESTONE-REVIEW-2026-10-07.md for scope and acceptance requirements.
+
+| Milestone | Outcome | Current state | Exit gate |
+|---|---|---|---|
+| M0 Foundation | One persistent NPC; safe death/unload/recovery | Narrow native evidence accepted; wider limits open | Supported-scope recovery and no duplicates/resurrection |
+| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Implemented; partial live evidence; current pace/render gate pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
+| M2a Independent observations | Sarah-relative geometry, admitted lighting and bounded memory | Offline candidates and source snapshot verified; native lighting OPEN | Native exposure/coverage, calibrated lighting, expiry and lifecycle resets |
+| M2b Equipment and exchange | Melee equip, one garment, one-item give/take | Policy/proposals; native adapters unaccepted | Exact item conservation, appearance, capacity, cancellation and restart |
+| M2c Commanded work | One-container loot, then room/house; equipment improvement | Planned | Accepted discovery, reachability, partial results, capacity and Stop |
+| M2d Defense and construction | One-threat defense/retreat; one real build action | Planned | Native hit/cooldown, resource consumption and safe interruption |
+| M3 External AI | One model-to-accepted-command loop | ON HOLD | Useful native core accepted, then explicit user approval |
+| M4 Continuity/personality | Selected dialogue and continuity | Proposed | Scope based on demonstrated needs |
+| M5 Release | Version-scoped installable/recoverable mod | Proposed | Install/uninstall, backup/restore, compatibility and licensing checks |
+
+Track each capability as not started, implemented, offline verified, native
+accepted or blocked. Record owner, code revision, deployed revision, evidence,
+limitation and next action. Test totals are not completion percentages.
+
+Priority: inert light-source snapshot accepted offline; run a small
+isolated Follow/Stop/render and clock acceptance batch; calibrate one explicit
+lamp; decide the lighting route. Independent manual equip work may proceed where
+its action/target safety is established, without granting autonomous sight.
+No source presence or geometric clarity implies confirmed sight.
+
+Add acceptance criteria for Stop during commit boundaries, inventory/appearance
+persistence, no stale task resumption, measured performance, ordinary travel and
+floor transitions, and truthful partial-failure results. Keep larger user goals;
+do not add hunger/hearing/multiplayer/distant simulation as current blockers.
+
+## Light source snapshot prototype defects corrected offline (2026-10-07)
+
+Gemini corrected and verified offline the diagnostic-only light source snapshot prototype (`LightSourceSnapshot.lua`, 53 tests in `test_light_snapshot.py`) resolving all review defects: strict pre-operation budget enforcement (total_reads never exceeds maxReads on any path; tiny budgets maxReads=1..15 halt cleanly with exact call-count match), missing/malformed building and switch metadata strictly preserved as unknown (requiring authoritative getLocalToBuilding returning nil for unrestricted, and authoritative getSwitches returning sz=0 for switchCount=0; unknown switches force powerStatus=unknown), getter member-lookup exception isolation (never falling back to raw fields on throwing lookups; marked malformed), freshness defaulting to unknown (stale on positive discrepancy), independent generator vs grid power evaluation, same-size collection replacement/reordering detection via initial snapshot and full post-read re-verification pass, exception-safe reentrancy guard (`pcall` releasing busy), and honest read accounting. Separate source facts from sight; no confirmed target illumination or sight evaluated. Knowledge admission remains disabled; independent lighting blocker remains OPEN; external/model AI ON HOLD. Full test runner passes 784 checks across 17 suites, 11 runner self-tests, 42 preflight self-tests.
+
 ## Codex lighting follow-up: source reconstruction route (2026-10-07)
 
 Codex owns checkout. Fresh offline inspection distinguishes globally registered
@@ -53,10 +90,10 @@ ownership handoff; no sight-driven behavior may bypass the open lighting gate.
 
 - [x] Slice 6: Offline candidate native enumeration and Sarah-relative facing (`IsoGameCharacter.getForwardDirectionX/Y`). Bounded exact-reference snapshot enumeration via `sq:getMovingObjects()`, cross-sample list identity with stable tokens for unchanged lists (cursor fairness) and nonreused tokens for changed/reordered lists, bounded lifecycle-cleared snapshots (FIFO 128), fail-closed rejection for oversized lists (>64), native read budget accounting, strict boolean liveness requirement, collision-safe short identity tokens (`so:e<epoch>:s<seq>:<kind>:<oid>`), exclusion of dead/self/non-characters, no permanent Java handles.
 - [x] Slice 7: Conservative loaded coverage (`Coverage.lua`) and exact obstruction normalization (`ObstructionNormalizer.lua`), preserving door/window distinctions. Unloaded intermediate squares and missing geometry fail closed to unknown.
-- [x] Slice 8: Extended independent lighting investigation (`INDEPENDENT-LIGHTING-AUDIT.md`). Refused JNI -1 mutation and player camera slots. Inspected `IsoZombie` vision logic, `IsoGameCharacter.CanSee`, `interpolateLight`, `getDarkMulti`/`getVertLight`, `resultLightCount`, `lightInfluence`, `IsoLightSource`, `RoomDef.lightsActive`, `ServerLOS`, `getSkyLightLevel`, and `IsoChunk` player lighting arrays. All candidates rejected; lighting strictly preserved as `lighting = "unknown"` unconditionally and the independent lighting blocker remains OPEN. No claim that no suitable API exists anywhere in the engine. Unknown lighting never implies sight (visual confirmed = 0).
+- [x] Slice 8: Extended independent lighting investigation (`INDEPENDENT-LIGHTING-AUDIT.md`) and diagnostic-only light source snapshot prototype (`LightSourceSnapshot.lua`, `SARAH-LIGHTING-SOURCE-CANDIDATE.md`). Refused JNI -1 mutation and player camera slots. Inspected `IsoZombie` vision logic, `IsoGameCharacter.CanSee`, `interpolateLight`, `getDarkMulti`/`getVertLight`, `resultLightCount`, `lightInfluence`, `IsoLightSource`, `RoomDef.lightsActive`, `ServerLOS`, `getSkyLightLevel`, and `IsoChunk` player lighting arrays. All candidates rejected; lighting strictly preserved as `lighting = "unknown"` unconditionally and the independent lighting blocker remains OPEN. No claim that no suitable API exists anywhere in the engine. Unknown lighting never implies sight (visual confirmed = 0). Implemented and corrected inert diagnostic light source snapshot prototype capturing copied parameters, loaded squares, independent generator/grid power availability, freshness (defaults to unknown; stale on positive discrepancy), and distinct building restrictions with strict budgets, same-size mutation detection, getter failure isolation, and honest read accounting; separate source facts from sight; no confirmed target illumination or sight evaluated. Knowledge admission remains disabled.
 - [x] Slice 9: Diagnostic commands `'look'` and `'perceive'` in `Commands.lua` and `Console.lua`. Read-only execution (strictly requires active observation state; never invokes checkLifecycle or disturbs follow/walk). Geometry and visual results reported separately; bounded memory snapshots with last-seen age in seconds (`math.max(0, now - rec.observedAt)`). Monotonic time provider injected via bounded engine delta accumulation (`getGameTime():getTimeDelta()`, fail-closed pause validation via boolean pause state or speed controls, speed-scaled, unclamped simulation delta to prevent discarding elapsed time or prolonging freshness, fail-closed without silent zero or wall-clock fallbacks); missing, throwing, or invalid delta invalidates observation memory immediately and recovery does not retain records of unknown elapsed age; memory invalidated on clock reversal; `state.reset()` clears accumulated time. Full pipeline idle lifecycle checks wired: `checkLifecycle()` detects death, unload, and controller/NPC replacement while idle, invalidating Knowledge and adapter perception without initiating/cancelling movement.
-- [x] Offline test suite updated and passing: 731 suite checks (+29 new checks across Batch B: +13 in `tools/test_commands.py`, +9 in `tools/test_console.py`, +7 in `tools/test_render.py`) across 16 suites, 11 runner self-tests, 42 preflight self-tests.
-- [ ] Gate B: Codex review, isolated live acceptance (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry). Independent sight must pass before sight-driven combat or looting is enabled. Independent lighting blocker remains OPEN.
+- [x] Offline test suite updated and passing: 771 suite checks across 17 suites (+40 checks in `tools/test_light_snapshot.py`, +29 prior Batch B checks across `tools/test_commands.py`, `tools/test_console.py`, `tools/test_render.py`), 11 runner self-tests, 42 preflight self-tests.
+- [ ] Gate B: Codex review, isolated live acceptance (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry, one artificial lamp probe plan). Independent sight must pass before sight-driven combat or looting is enabled. Independent lighting blocker remains OPEN.
 
 ## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
 
@@ -202,15 +239,7 @@ mechanics pass acceptance and the user explicitly approves integration. Later mi
 are planning proposals, not authorization or promises. Finish the current gate
 before adding broader features. Multiplayer is outside the initial scope.
 
-| Milestone | Outcome | Status |
-|---|---|---|
-| M0: Compatibility and feasibility | Establish a working NPC on installed PZ 42.21.0 | Narrow feasibility PASS; full PZNS FAIL |
-| M0 hardening | Safe NPC lifecycle, recovery and repeatable test setup | Bounded evidence complete; broader acceptance OPEN |
-| M1: Manual console and action interface | Configurable in-game console with checked commands/observations | IN PROGRESS; slice A native passed, slice B smoke passed, slice C implemented offline, follow command implemented offline |
-| M2: Native survivor core | Own perception, equipment, defense, bounded looting, exchange and one build action | RESEARCH/PLAN; see SURVIVOR-CORE-PLAN.md |
-| M3: External AI vertical slice | One bounded model-to-action loop after native core | ON HOLD; explicit user approval required |
-| M4: Broader behavior and continuity | Personality and expanded behaviors | PROPOSED |
-| M5: Release candidate | Installation, regression checks and user documentation | PROPOSED |
+Historical overview superseded by the current milestone overview above.
 
 ## M0: completed evidence
 
@@ -285,7 +314,7 @@ Gate: commands demonstrably work and fail safely before a model can invoke them.
 Carry all M0 limitations and safeguards forward. The console contains no model
 integration; accepting the console plan does not establish native survivor acceptance or authorize external AI.
 
-## M2: small native survivor core (research and planning)
+## M2: small native survivor core (implementation and native acceptance pending)
 
 User direction updated 2026-10-05: meaningful native mechanics first; external
 AI is one of the last additions. See [SURVIVOR-CORE-PLAN.md](SURVIVOR-CORE-PLAN.md)
