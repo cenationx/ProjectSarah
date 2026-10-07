@@ -1,3 +1,30 @@
+## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
+
+Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes
+and reproduced721 checks/16 suites +11 runner +42 preflight PASS.
+Explicit look/perceive wiring is a diagnostic candidate only; no autonomous
+behavior. Exact-reference square snapshots capped at128 entries, lists over64
+rejected, unchanged cursor tokens retained and mutations receive new versions.
+Idle lifecycle invalidation and read-only diagnostic command guards implemented.
+No verified independent lighting: visual detection remains unknown/zero.
+Console time intentionally unavailable; native confirmed-memory admission/expiry
+is blocked until a verified monotonic seconds source is supplied. No claim that
+all possible engine clocks were exhaustively excluded. API exposure, line-clear
+enum behavior, loaded coverage and actual collector costs remain native gates.
+No deployment/launch/save/settings changes. Follow pace and rendering native
+acceptance also pending. Next Codex live batch must first recheck process state
+and freshly preserve disposable world/mod/profile with a verified restore plan.
+Batch C can do independent offline adapter inspection; do not enable ungated
+equipment, transfers or behavior. External/model AI remains ON HOLD.
+## Batch B: Sarah's observations, reuse existing perception and memory (2026-10-06)
+
+- [x] Slice 6: Offline candidate native enumeration and Sarah-relative facing (`IsoGameCharacter.getForwardDirectionX/Y`). Bounded exact-reference snapshot enumeration via `sq:getMovingObjects()`, cross-sample list identity with stable tokens for unchanged lists (cursor fairness) and nonreused tokens for changed/reordered lists, bounded lifecycle-cleared snapshots (FIFO 128), fail-closed rejection for oversized lists (>64), native read budget accounting, strict boolean liveness requirement, collision-safe short identity tokens (`so:e<epoch>:s<seq>:<kind>:<oid>`), exclusion of dead/self/non-characters, no permanent Java handles.
+- [x] Slice 7: Conservative loaded coverage (`Coverage.lua`) and exact obstruction normalization (`ObstructionNormalizer.lua`), preserving door/window distinctions. Unloaded intermediate squares and missing geometry fail closed to unknown.
+- [x] Slice 8: Independent lighting investigation (`INDEPENDENT-LIGHTING-AUDIT.md`). Refused JNI -1 mutation and player camera slots; lighting strictly preserved as `lighting = "unknown"` unconditionally. Unknown lighting never implies sight (visual confirmed = 0).
+- [x] Slice 9: Diagnostic commands `'look'` and `'perceive'` in `Commands.lua` and `Console.lua`. Read-only execution (strictly requires active observation state; never invokes checkLifecycle or disturbs follow/walk). Geometry and visual results reported separately; bounded memory snapshots with last-seen age in seconds (`math.max(0, now - rec.observedAt)`). Monotonic time provider enforced without silent fallbacks; memory invalidated on clock reversal; unverified PZ clocks left explicitly unavailable in Console. Full pipeline idle lifecycle checks wired: `checkLifecycle()` detects death, unload, and controller/NPC replacement while idle, invalidating Knowledge and adapter perception without initiating/cancelling movement.
+- [x] Offline test suite updated and passing: 721 suite checks (+19 new checks across Batch B) across 16 suites, 11 runner self-tests, 42 preflight self-tests.
+- [ ] Gate B: Codex review, isolated live acceptance (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry). Independent sight must pass before sight-driven combat or looting is enabled.
+
 ## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
 
 Gemini handed ownership back; Codex reviewed actual source and reproduced702

@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(root/'tools/dependencies/python'))
 from lupa import LuaRuntime
 lua=LuaRuntime(unpack_returned_tuples=True)
-for name in ('Commands','Observations'):
+for name in ('Commands','Observations','Knowledge'):
     lua.globals()[name]=lua.execute((root/f'foundation/SarahFoundation/42/media/lua/client/Sarah/{name}.lua').read_text())
 lua.execute(r'''
 local count=0
@@ -823,6 +823,433 @@ test('old completion callback after session reset with same controller and reuse
     assert(d.lastAction.id==1 and d.lastAction.state=='completed' and d.lastAction.reason:find('Reached target'))
     h=d:getHistory()
     assert(#h==1 and h[1].id==1 and h[1].state=='completed' and h[1].summary:find('Reached target'))
+end)
+test('look and perceive commands recognized and documented in help',function()
+    local d=Commands.new(function() return {state='active'} end)
+    local h=d:execute('help')
+    assert(h.state=='completed')
+    local foundHelp=false
+    for _,l in ipairs(h.lines) do
+        if l:find('look %-') then foundHelp=true end
+    end
+    assert(foundHelp,'help must document look command')
+    local r1=d:execute('look')
+    assert(r1.lines[1]~='Unknown command. Try help.','look must not be unknown')
+    local r2=d:execute('perceive')
+    assert(r2.lines[1]~='Unknown command. Try help.','perceive must not be unknown')
+end)
+test('look during active follow is strictly read-only and leaves follow unchanged',function()
+    local sharedNpc={x=10,y=20,z=0}
+    local ctrl={npc=sharedNpc}
+    local d=Commands.new(function()
+        return {state='active',npc={x=sharedNpc.x,y=sharedNpc.y,z=sharedNpc.z},player={x=12,y=20,z=0},playerLiveness='alive'}
+    end,nil,function()
+        return ctrl,ctrl.npc
+    end,function(target,onComplete,onFail,action)
+        return true
+    end,function(target) return true end,
+    function()
+        return {
+            status='sampled',
+            lighting='unknown',
+            results={},
+            counts={candidates=0,processed=0}
+        }
+    end,nil,function() return 100.0 end)
+    local fRes=d:execute('follow')
+    assert(fRes.state=='running')
+    assert(d.active and d.active.command=='follow')
+    local actId=d.active.id
+    local actToken=d.active.token
+    local actGen=d.active.stepGen
+    local curTarget=d.active.currentTarget
+
+    local lRes=d:execute('look')
+    assert(lRes.state=='completed')
+    assert(lRes.lines[1]:find('Perception: sampled'))
+
+    assert(d.active~=nil,'active follow must remain active')
+    assert(d.active.id==actId,'active action ID must not change')
+    assert(d.active.token==actToken,'action token must not change')
+    assert(d.active.stepGen==actGen,'step generation must not advance')
+    assert(d.active.command=='follow','command must remain follow')
+    assert(d.active.currentTarget==curTarget,'target must remain unchanged')
+    assert(#d.noticeQueue==0,'no notices consumed or generated')
+end)
+test('look when Sarah is dead or unloaded is rejected and resets knowledge memory',function()
+    local k=Knowledge.new()
+    k:update({
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },0)
+    assert(#k:snapshot(0)==1)
+
+    local stateObs='dead'
+    local d=Commands.new(function()
+        return {state=stateObs}
+    end,nil,nil,nil,nil,function() return {status='sampled',lighting='unknown',results={}} end,k)
+
+    local rDead=d:execute('look')
+    assert(rDead.state=='rejected')
+    assert(rDead.lines[1]=='Sarah is dead; cannot perceive.')
+    assert(#k:snapshot(0)==0,'Knowledge must be reset when Sarah is dead')
+
+    k:update({
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },0)
+    assert(#k:snapshot(0)==1)
+
+    stateObs='unloaded'
+    local rUnload=d:execute('look')
+    assert(rUnload.state=='rejected')
+    assert(rUnload.lines[1]=='Sarah is unloaded; cannot perceive.')
+    assert(#k:snapshot(0)==0,'Knowledge must be reset when Sarah is unloaded')
+end)
+test('look fails safely when sampler is missing or throws error',function()
+    local dNoSampler=Commands.new(function() return {state='active'} end)
+    local r1=dNoSampler:execute('look')
+    assert(r1.state=='failed')
+    assert(r1.lines[1]=='Perception sampler unavailable.')
+
+    local dErr=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        error('native sampler crash')
+    end)
+    local r2=dErr:execute('look')
+    assert(r2.state=='failed')
+    assert(r2.lines[1]:find('Perception sampling failed'))
+end)
+test('look reports reentrancy rejection and sampler abort cleanly',function()
+    local dReentrant=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return {status='reentrancy_rejected',reason='reentrant_call',lighting='unknown',results={}}
+    end)
+    local r1=dReentrant:execute('look')
+    assert(r1.state=='failed')
+    assert(r1.lines[1]=='Perception rejected: sampler is reentrant.')
+
+    local dAbort=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return {status='aborted',reason='capture_limit_reached',lighting='unknown',results={}}
+    end)
+    local r2=dAbort:execute('look')
+    assert(r2.state=='failed')
+    assert(r2.lines[1]=='Perception aborted: capture_limit_reached.')
+end)
+test('look reports geometry and visual status separately and unknown lighting never implies sight',function()
+    local sampleData={
+        status='sampled',
+        lighting='unknown',
+        results={
+            {id='z1',kind='zombie',geometric='visible',visual='unknown',reason='lighting_unknown'},
+            {id='z2',kind='zombie',geometric='blocked',visual='blocked',reason='opaque_wall'},
+            {id='p1',kind='player',geometric='unknown',visual='unknown',reason='coverage_unknown'},
+        },
+        counts={candidates=3,processed=3}
+    }
+    local d=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return sampleData
+    end,nil,function() return 100.0 end)
+    local res=d:execute('look')
+    assert(res.state=='completed')
+    assert(res.lines[1]=='Perception: sampled (candidates: 3, processed: 3)')
+    assert(res.lines[2]=='Geometry: 1 visible, 1 blocked, 1 unknown')
+    assert(res.lines[3]=='Visual: 0 confirmed (lighting: unknown; unknown lighting never implies sight)')
+    assert(res.lines[4]=='Memory: 0 confirmed records')
+end)
+test('look reports bounded memory snapshot with last-seen age in seconds',function()
+    local k=Knowledge.new()
+    k:update({
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=12,y=20,z=0}}
+        }
+    },100.0)
+
+    local currentTime=104.5
+    local d=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return {status='sampled',lighting='unknown',results={},counts={candidates=0,processed=0}}
+    end,k,function() return currentTime end)
+
+    local res=d:execute('look')
+    assert(res.state=='completed')
+    local foundMemory=false
+    for _,l in ipairs(res.lines) do
+        if l:find('%[p1%] player at %(12%.0, 20%.0, 0%), age 4%.5s') then
+            foundMemory=true
+        end
+    end
+    assert(foundMemory,'Memory snapshot line with age 4.5s must be present in output')
+end)
+test('lifecycle resets clear knowledge memory on reset and controller or NPC replacement',function()
+    local k=Knowledge.new()
+    k:update({
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },10.0)
+    assert(#k:snapshot(10.0)==1)
+
+    local ctrl={id='ctrl1'}
+    local npcObj={id='npc1'}
+    local d=Commands.new(function() return {state='active'} end,nil,function()
+        return ctrl,npcObj
+    end,nil,nil,function()
+        return {status='sampled',lighting='unknown',results={}}
+    end,k,function() return 10.0 end)
+
+    -- Commands:reset clears knowledge
+    d:reset()
+    assert(#k:snapshot(10.0)==0,'d:reset() must reset knowledge')
+
+    -- Re-seed knowledge
+    k:update({
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },10.0)
+    assert(#k:snapshot(10.0)==1)
+
+    -- Replacing controller identity triggers knowledge reset on next execute
+    ctrl={id='ctrl2'}
+    local res=d:execute('look')
+    assert(res.state=='completed')
+    assert(#k:snapshot(10.0)==0,'Controller replacement must reset knowledge')
+end)
+test('look rejects non-active states (blocked, busy, unavailable) without cancelling active movement',function()
+    local sharedState='blocked'
+    local d=Commands.new(function()
+        return {state=sharedState}
+    end,nil,nil,nil,nil,function()
+        return {status='sampled',lighting='unknown',results={}}
+    end,nil,function() return 100.0 end)
+
+    local rBlocked=d:execute('look')
+    assert(rBlocked.state=='rejected')
+    assert(rBlocked.lines[1]=='Sarah is blocked; cannot perceive.')
+
+    sharedState='busy'
+    local rBusy=d:execute('look')
+    assert(rBusy.state=='rejected')
+    assert(rBusy.lines[1]=='Sarah is busy; cannot perceive.')
+
+    sharedState='unavailable'
+    local rUnavail=d:execute('look')
+    assert(rUnavail.state=='rejected')
+    assert(rUnavail.lines[1]=='Sarah is unavailable; cannot perceive.')
+
+    -- Ensure checkLifecycle is NOT called by look even if active follow exists
+    local checkCalled=false
+    local sharedNpc={x=10,y=20,z=0}
+    local ctrl={npc=sharedNpc}
+    local dActive=Commands.new(function()
+        return {state='active',npc=sharedNpc,player={x=12,y=20,z=0},playerLiveness='alive'}
+    end,nil,function() return ctrl,ctrl.npc end,function() return true end,function() return true end,
+    function() return {status='sampled',lighting='unknown',results={}} end,nil,function() return 100.0 end)
+
+    local fRes=dActive:execute('follow')
+    assert(fRes.state=='running')
+    assert(dActive.active~=nil)
+
+    -- Override checkLifecycle to track if look invokes it
+    local origCheck=dActive.checkLifecycle
+    dActive.checkLifecycle=function(self)
+        checkCalled=true
+        return origCheck(self)
+    end
+
+    local lRes=dActive:execute('look')
+    assert(lRes.state=='completed')
+    assert(checkCalled==false,'look command must never invoke movement-cancelling checkLifecycle')
+    assert(dActive.active~=nil,'active follow must remain active after look')
+end)
+test('missing, throwing, or non-monotonic time fails look closed and never updates knowledge',function()
+    local k=Knowledge.new()
+    local sampleData={
+        status='sampled',
+        lighting='unknown',
+        results={
+            {id='p1',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    }
+
+    -- 1. Missing time provider
+    local dNoTime=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return sampleData
+    end,k,nil)
+
+    local r1=dNoTime:execute('look')
+    assert(r1.state=='failed')
+    assert(r1.lines[1]:find('time source unavailable %(missing time provider%)'))
+    assert(#k:snapshot(0)==0,'Knowledge must NOT be updated when time provider is missing')
+
+    -- 2. Throwing time provider
+    local dThrowTime=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return sampleData
+    end,k,function() error('clock hardware failure') end)
+
+    local r2=dThrowTime:execute('look')
+    assert(r2.state=='failed')
+    assert(r2.lines[1]:find('time source unavailable %(time provider error'))
+    assert(#k:snapshot(0)==0,'Knowledge must NOT be updated when time provider throws')
+
+    -- 3. Non-monotonic time provider
+    local clockVal=100.0
+    local dMono=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        return sampleData
+    end,k,function() return clockVal end)
+
+    local r3=dMono:execute('look')
+    assert(r3.state=='completed')
+    assert(#k:snapshot(100.0)==1,'Knowledge updated at t=100.0')
+
+    -- Clock goes backward from 100.0 to 95.0
+    clockVal=95.0
+    local r4=dMono:execute('look')
+    assert(r4.state=='failed')
+    assert(r4.lines[1]:find('time source unavailable %(non%-monotonic time'))
+    local snap=k:snapshot(100.0)
+    assert(#snap==0,'Knowledge must be invalidated on clock reversal rather than retaining old records indefinitely')
+end)
+test('idle lifecycle check: tick invalidates knowledge and perception on death, unload, and controller replacement without movement command',function()
+    local resetPerceptionCount=0
+    local mockAdapter={
+        resetPerception=function()
+            resetPerceptionCount=resetPerceptionCount+1
+        end
+    }
+    local ctrl1={adapter=mockAdapter,npc={id='npc1'}}
+    local currentCtrl=ctrl1
+    local currentNpc=ctrl1.npc
+    local obsState='active'
+    local k=Knowledge.new()
+    local stopped=false
+    local stopCallback=function() stopped=true; return true end
+
+    local d=Commands.new(
+        function() return {state=obsState,npc={x=10,y=20,z=0}} end,
+        stopCallback,
+        function() return currentCtrl,currentNpc end,
+        nil,nil,nil,k,function() return 100.0 end,
+        function() resetPerceptionCount=resetPerceptionCount+1 end
+    )
+
+    -- Initial tick while idle: initializes without invalidating
+    assert(d:tick()==true)
+    assert(resetPerceptionCount==0)
+    assert(d.active==nil)
+    assert(stopped==false)
+
+    -- Populate knowledge memory
+    k:update({status='sampled',lighting='unknown',results={{id='z1',kind='zombie',geometric='visible',visual='visible',position={x=12,y=20,z=0}}}},100.0)
+    assert(#k:snapshot(100.0)==1)
+
+    -- 1. Controller replacement while idle
+    local resetPerceptionCount2=0
+    local mockAdapter2={
+        resetPerception=function()
+            resetPerceptionCount2=resetPerceptionCount2+1
+        end
+    }
+    currentCtrl={adapter=mockAdapter2,npc={id='npc1'}}
+    assert(d:tick()==true,'tick returns true on controller replacement while idle')
+    assert(d.active==nil,'no movement command active')
+    assert(stopped==false,'no movement cancelled')
+    assert(#k:snapshot(100.0)==0,'knowledge invalidated on controller replacement while idle')
+    assert(resetPerceptionCount>0 or resetPerceptionCount2>0,'perception reset on controller replacement while idle')
+
+    -- Populate knowledge again
+    k:update({status='sampled',lighting='unknown',results={{id='z2',kind='zombie',geometric='visible',visual='visible',position={x=12,y=20,z=0}}}},101.0)
+    assert(#k:snapshot(101.0)==1)
+
+    -- 2. Sarah death while idle
+    obsState='dead'
+    local tickRes,tickReason=d:tick()
+    assert(tickRes==false and tickReason=='dead','tick returns false, dead on death')
+    assert(d.active==nil,'no movement command active')
+    assert(stopped==false,'no movement cancelled')
+    assert(#k:snapshot(101.0)==0,'knowledge invalidated on death while idle')
+
+    -- Populate knowledge again
+    obsState='active'
+    d:tick()
+    k:update({status='sampled',lighting='unknown',results={{id='z3',kind='zombie',geometric='visible',visual='visible',position={x=12,y=20,z=0}}}},102.0)
+    assert(#k:snapshot(102.0)==1)
+
+    -- 3. Sarah unload while idle
+    obsState='unloaded'
+    local tickResU,tickReasonU=d:tick()
+    assert(tickResU==false and tickReasonU=='unloaded','tick returns false, unloaded on unload')
+    assert(d.active==nil,'no movement command active')
+    assert(stopped==false,'no movement cancelled')
+    assert(#k:snapshot(102.0)==0,'knowledge invalidated on unload while idle')
+end)
+test('Console and Commands reset wiring resets adapter sampler, identity, and knowledge while idle',function()
+    local resetPerceptionCount=0
+    local mockAdapter={
+        resetPerception=function()
+            resetPerceptionCount=resetPerceptionCount+1
+        end
+    }
+    local ctrl={adapter=mockAdapter,npc={id='npc1'}}
+    local k=Knowledge.new()
+    k:update({
+        results={
+            {id='z1',kind='zombie',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },50.0)
+    assert(#k:snapshot(50.0)==1)
+
+    local d=Commands.new(function() return {state='active'} end,nil,function()
+        return ctrl,ctrl.npc
+    end,nil,nil,function()
+        return {status='sampled',lighting='unknown',results={}}
+    end,k,function() return 50.0 end,function()
+        mockAdapter.resetPerception()
+    end)
+
+    -- d:reset() while IDLE
+    assert(d.active==nil,'Sarah is idle')
+    d:reset()
+    assert(#k:snapshot(50.0)==0,'d:reset() must reset knowledge memory while idle')
+    assert(resetPerceptionCount>0,'d:reset() must invoke resetPerception on adapter while idle')
+
+    -- Re-seed knowledge
+    k:update({
+        results={
+            {id='z1',kind='zombie',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },50.0)
+    assert(#k:snapshot(50.0)==1)
+    resetPerceptionCount=0
+
+    -- Controller replacement while IDLE
+    ctrl={adapter=mockAdapter,npc={id='npc2'}}
+    local sRes=d:execute('status')
+    assert(sRes.state=='completed')
+    assert(#k:snapshot(50.0)==0,'Controller replacement must reset knowledge memory while idle')
+    assert(resetPerceptionCount>0,'Controller replacement must invoke resetPerception on adapter while idle')
+
+    -- Dead observation while IDLE
+    k:update({
+        results={
+            {id='z1',kind='zombie',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+        }
+    },50.0)
+    assert(#k:snapshot(50.0)==1)
+    resetPerceptionCount=0
+
+    local deadObs=false
+    local dDead=Commands.new(function()
+        return {state=deadObs and 'dead' or 'active'}
+    end,nil,function() return ctrl,ctrl.npc end,nil,nil,nil,k,function() return 50.0 end,function()
+        mockAdapter.resetPerception()
+    end)
+
+    deadObs=true
+    local sDead=dDead:execute('status')
+    assert(sDead.state=='completed')
+    assert(#k:snapshot(50.0)==0,'Dead state observation while idle must reset knowledge')
+    assert(resetPerceptionCount>0,'Dead state observation while idle must reset perception')
 end)
 print('RESULT '..count..' command checks passed')
 ''')

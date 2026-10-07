@@ -91,6 +91,30 @@ local function validateSarah(target)
     end
     return controller.adapter.validateTarget(controller.npc,target)
 end
+local function perceiveSarah()
+    if not SarahFoundation or not SarahFoundation.controller or not SarahFoundation.controller.npc then
+        return nil,'Sarah controller or NPC unavailable'
+    end
+    local controller=SarahFoundation.controller
+    if not controller.adapter or not controller.adapter.samplePerception then
+        return nil,'perception adapter unavailable'
+    end
+    return controller.adapter.samplePerception(controller.npc)
+end
+local function resetPerceptionSarah()
+    if SarahFoundation and SarahFoundation.controller then
+        local controller=SarahFoundation.controller
+        if controller.adapter and controller.adapter.resetPerception then
+            pcall(controller.adapter.resetPerception)
+        end
+    end
+end
+local function getTimeSeconds()
+    -- Native Project Zomboid Lua does not expose a verified monotonic clock
+    -- (getTimestampMs and getTimeInMillis wrap non-monotonic wall-clock System.currentTimeMillis).
+    -- Time is therefore left explicitly unavailable until a verified monotonic source is established.
+    return nil
+end
 local function getDispatch()
     if not state.dispatch then
         state.dispatch=Commands.new(function(inventory)
@@ -99,7 +123,7 @@ local function getDispatch()
             -- Private identity provider contract: returns (controller, npc) references directly.
             local ctrl=SarahFoundation and SarahFoundation.controller
             return ctrl,ctrl and ctrl.npc
-        end,walkSarah,validateSarah)
+        end,walkSarah,validateSarah,perceiveSarah,nil,getTimeSeconds,resetPerceptionSarah)
     end
     return state.dispatch
 end
@@ -363,6 +387,7 @@ end
 state.reset=function()
     state.close(); state.held=false; state.escapeHeld=false; state.swallow=false
     state.pos=nil
+    resetPerceptionSarah()
     if state.dispatch then state.dispatch:reset() end
 end
 state.resolution=function(oldw,oldh,neww,newh)

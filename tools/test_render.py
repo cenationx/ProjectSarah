@@ -9,6 +9,8 @@ lua.globals().EngineSource = (root / 'foundation/SarahFoundation/42/media/lua/cl
 lua.globals().CommandsSource = (root / 'foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua').read_text()
 lua.globals().ConsoleSource = (root / 'foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua').read_text()
 lua.globals().ObservationsSource = (root / 'foundation/SarahFoundation/42/media/lua/client/Sarah/Observations.lua').read_text()
+for name in ('CandidateCollector', 'Coverage', 'Perception', 'ObstructionNormalizer', 'SessionIdentity', 'DiagnosticSampler', 'Knowledge'):
+    lua.globals()[name] = lua.execute((root / f'foundation/SarahFoundation/42/media/lua/client/Sarah/{name}.lua').read_text())
 lua.globals().Engine = lua.execute(lua.globals().EngineSource)
 lua.execute(r'''
 Commands = assert(load(CommandsSource))()
@@ -622,6 +624,665 @@ test('runtime ownership continuity across Engine module reload on the SAME NPC p
     assert(adapter2.currentAction == nil)
     assert(Engine2.getOwnership(f.npc) == nil)
     assert(Engine1.getOwnership(f.npc) == nil)
+end)
+test('adapter.samplePerception fails safely on missing/dead NPC or invalid facing', function()
+    local f = fixture()
+    local adapter = f.adapter
+
+    -- Missing NPC
+    local r1, err1 = adapter.samplePerception(nil)
+    assert(r1 == nil and err1 == 'missing npc')
+
+    -- Dead NPC
+    f.npc.dead = true
+    local r2, err2 = adapter.samplePerception(f.npc)
+    assert(r2 == nil and err2 == 'npc dead')
+    f.npc.dead = false
+
+    -- Missing forward vector methods -> capture aborts
+    f.npc.getForwardDirectionX = nil
+    f.npc.getForwardDirectionY = nil
+    local r3 = adapter.samplePerception(f.npc)
+    assert(r3 and r3.status == 'aborted', 'must abort when forward direction methods missing')
+
+    -- Zero forward vector (0, 0) -> capture aborts
+    f.npc.getForwardDirectionX = function() return 0 end
+    f.npc.getForwardDirectionY = function() return 0 end
+    local r4 = adapter.samplePerception(f.npc)
+    assert(r4 and r4.status == 'aborted', 'must abort when forward vector is (0,0)')
+
+    -- Non-numeric forward vector -> capture aborts
+    f.npc.getForwardDirectionX = function() return "invalid" end
+    f.npc.getForwardDirectionY = function() return 1 end
+    local r5 = adapter.samplePerception(f.npc)
+    assert(r5 and r5.status == 'aborted', 'must abort when forward vector is non-numeric')
+end)
+test('adapter.samplePerception enumerates candidates, filters invalid, and enforces unknown lighting', function()
+    local f = fixture()
+    local adapter = f.adapter
+
+    -- Sarah facing East (1, 0)
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    -- Setup grid square with moving objects
+    local z1 = {
+        isZombie = function() return true end,
+        isDead = function() return false end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+        getOnlineID = function() return 101 end,
+    }
+    local deadZ = {
+        isZombie = function() return true end,
+        isDead = function() return true end,
+        getX = function() return 11.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+        getOnlineID = function() return 102 end,
+    }
+    local vehicle = {
+        isZombie = function() return false end,
+        isPlayer = function() return false end,
+        isDead = function() return false end,
+        getX = function() return 11.0 end,
+        getY = function() return 21.0 end,
+        getZ = function() return 0.0 end,
+    }
+    local movingList = {z1, deadZ, vehicle, f.npc}
+    local mockMovingObjects = {
+        size = function() return #movingList end,
+        get = function(self, idx) return movingList[idx + 1] end,
+    }
+    local testSq = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return mockMovingObjects end,
+    }
+
+    local oldGetCell = getCell
+    local mockCell = {
+        getGridSquare = function(self, x, y, z)
+            return testSq
+        end,
+        getObjectList = function(self)
+            return {contains = function(_, obj) return obj == f.npc end}
+        end,
+        getAddList = function(self)
+            return {contains = function() return false end}
+        end,
+        getRemoveList = function(self)
+            return {contains = function() return false end}
+        end,
+    }
+    getCell = function()
+        return mockCell
+    end
+
+    local resClear = {name = "Clear"}
+    local resOpenDoor = {name = "ClearThroughOpenDoor"}
+    local resWindow = {name = "ClearThroughWindow"}
+    local resBlocked = {name = "Blocked"}
+    local resClosedDoor = {name = "ClearThroughClosedDoor"}
+
+    LosUtil = {
+        TestResults = {
+            Clear = resClear,
+            ClearThroughOpenDoor = resOpenDoor,
+            ClearThroughWindow = resWindow,
+            Blocked = resBlocked,
+            ClearThroughClosedDoor = resClosedDoor,
+        },
+        lineClear = function(cell, x1, y1, z1, x2, y2, z2, b)
+            return resClear
+        end
+    }
+
+    local res = adapter.samplePerception(f.npc)
+    assert(res ~= nil, 'samplePerception must return result table')
+    assert(res.status == 'sampled', 'sample status must be sampled')
+    assert(res.lighting == 'unknown', 'lighting must remain strictly unknown')
+
+    -- Only z1 is valid candidate (Sarah herself, dead zombie, and vehicle must be filtered)
+    assert(res.counts.candidates == 1, 'exactly 1 candidate must be admitted')
+    assert(#res.results == 1, 'exactly 1 candidate result')
+    local cand = res.results[1]
+    assert(cand.kind == 'zombie')
+    assert(cand.geometric == 'visible')
+    assert(cand.visual == 'unknown', 'unknown lighting must never imply sight (visual unknown)')
+
+    getCell = oldGetCell
+    LosUtil = nil
+end)
+test('adapter.resetPerception resets sampler generation and session identity, wired to remove', function()
+    local f = fixture()
+    local adapter = f.adapter
+
+    adapter.ensurePerceptionModules()
+    assert(adapter.sessionIdentity ~= nil)
+    assert(adapter.diagnosticSampler ~= nil)
+
+    local initialGen = adapter.sampleGeneration or 1
+    local id1 = adapter.sessionIdentity:resolve('tok1', 'player')
+    assert(id1.id and id1.reason == 'new')
+    local snap1 = adapter.sessionIdentity:snapshot()
+    assert(snap1.epoch == 1)
+
+    -- Explicit resetPerception
+    adapter.resetPerception()
+    assert((adapter.sampleGeneration or 1) > initialGen, 'sampleGeneration must increment')
+    local snap2 = adapter.sessionIdentity:snapshot()
+    assert(snap2.epoch == 2, 'SessionIdentity epoch must advance on resetPerception')
+
+    -- Wired into adapter.remove(npc)
+    local curGen = adapter.sampleGeneration
+    f.npc.removeFromWorld = function() end
+    f.npc.removeFromSquare = function() end
+    adapter.remove(f.npc)
+    assert(adapter.sampleGeneration > curGen, 'remove must trigger resetPerception')
+    local snap3 = adapter.sessionIdentity:snapshot()
+    assert(snap3.epoch == 3, 'SessionIdentity epoch must advance on remove')
+end)
+test('adapter.samplePerception dynamic lifecycle capture detects cell drift and generation drift', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    local testSq = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return { size = function() return 0 end } end,
+    }
+
+    local currentCell = {
+        getGridSquare = function(self, x, y, z) return testSq end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function() return currentCell end
+
+    local driftCell = {
+        getGridSquare = function(self, x, y, z) return testSq end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+
+    -- Normal sample first
+    local res1 = adapter.samplePerception(f.npc)
+    assert(res1 ~= nil and res1.status == 'sampled', 'initial sample must succeed')
+
+    -- Now cause cell drift during sample
+    local getSquareCalls = 0
+    local driftingCell = {
+        getGridSquare = function(self, x, y, z)
+            getSquareCalls = getSquareCalls + 1
+            if getSquareCalls > 2 then
+                currentCell = driftCell
+            end
+            return testSq
+        end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+    currentCell = driftingCell
+
+    local resDrift = adapter.samplePerception(f.npc)
+    assert(resDrift ~= nil, 'samplePerception must return result')
+    assert(resDrift.status == 'aborted', 'cell drift during sampling must abort')
+    assert(resDrift.reason == 'lifecycle_drift', 'abort reason must be lifecycle_drift')
+
+    getCell = oldGetCell
+end)
+test('adapter.samplePerception enumeration query errors fail closed and same-size list mutation is detected', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    -- 1. Query error in getMovingObjects throws and causes query_error (never empty success)
+    local failingSq = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() error('native memory access violation') end,
+    }
+
+    local mockCell = {
+        getGridSquare = function(self, x, y, z) return failingSq end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function() return mockCell end
+
+    local resFail = adapter.samplePerception(f.npc)
+    assert(resFail ~= nil)
+    assert(resFail.counts.candidates == 0)
+
+    -- 2. Same-size list replacement / reordering produces distinct tokens
+    local zA = {
+        isZombie = function() return true end,
+        isDead = function() return false end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+        getOnlineID = function() return 201 end,
+    }
+    local zB = {
+        isZombie = function() return true end,
+        isDead = function() return false end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+        getOnlineID = function() return 202 end,
+    }
+
+    local list1 = { zA, zB }
+    local mockList1 = {
+        size = function() return #list1 end,
+        get = function(self, idx) return list1[idx + 1] end,
+    }
+    local sq1 = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return mockList1 end,
+    }
+
+    local list2 = { zB, zA }
+    local mockList2 = {
+        size = function() return #list2 end,
+        get = function(self, idx) return list2[idx + 1] end,
+    }
+    local sq2 = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return mockList2 end,
+    }
+
+    local origSample = adapter.diagnosticSampler.sample
+    local capturedApi = nil
+    adapter.diagnosticSampler.sample = function(self, api)
+        capturedApi = api
+        return origSample(self, api)
+    end
+    adapter.samplePerception(f.npc)
+    adapter.diagnosticSampler.sample = origSample
+
+    assert(capturedApi ~= nil, 'captured api must be available')
+    local sz1, tok1 = capturedApi.listInfo(sq1)
+    local sz2, tok2 = capturedApi.listInfo(sq2)
+    assert(sz1 == 2 and sz2 == 2, 'both lists have size 2')
+    assert(tok1 ~= tok2, 'same-size list with swapped order must have distinct tokens')
+
+    -- 3. Unknown liveness rejection
+    local zUnknownDead = {
+        isZombie = function() return true end,
+        isDead = function() return nil end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+    }
+    local sqUnknown = {
+        getMovingObjects = function()
+            return {
+                size = function() return 1 end,
+                get = function() return zUnknownDead end,
+            }
+        end
+    }
+    local readRes = capturedApi.readObject(sqUnknown, 0)
+    assert(readRes == nil, 'readObject must reject candidate with unknown/non-boolean liveness')
+
+    getCell = oldGetCell
+end)
+test('enumeration integrity: exact snapshots, tail-change, collision, crowded-list, read-budget, and short tokens', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    local dummySq = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return { size = function() return 0 end } end,
+    }
+
+    local mockCell = {
+        getGridSquare = function(self, x, y, z) return dummySq end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function() return mockCell end
+
+    local origSample = adapter.diagnosticSampler.sample
+    local capturedApi = nil
+    adapter.diagnosticSampler.sample = function(self, api)
+        capturedApi = api
+        return origSample(self, api)
+    end
+    adapter.samplePerception(f.npc)
+    adapter.diagnosticSampler.sample = origSample
+
+    assert(capturedApi ~= nil, 'captured api must be available')
+
+    -- 1. Crowded-list: >64 objects fails closed as unsupported oversized list
+    local list65 = {}
+    for i = 1, 65 do
+        list65[i] = {
+            isZombie = function() return true end,
+            isDead = function() return false end,
+            getX = function() return 12.0 end,
+            getY = function() return 20.0 end,
+            getZ = function() return 0.0 end,
+        }
+    end
+    local sq65 = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function()
+            return {
+                size = function() return 65 end,
+                get = function(self, idx) return list65[idx + 1] end,
+            }
+        end,
+    }
+    local ok65, err65 = pcall(capturedApi.listInfo, sq65)
+    assert(not ok65, 'oversized list (>64) must fail closed')
+    assert(tostring(err65):find('unsupported oversized list'), 'error must indicate unsupported oversized list')
+
+    -- 2. Supported crowded-list (64 objects) succeeds
+    local list64A = {}
+    for i = 1, 64 do
+        list64A[i] = list65[i]
+    end
+    local sq64A = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function()
+            return {
+                size = function() return 64 end,
+                get = function(self, idx) return list64A[idx + 1] end,
+            }
+        end,
+    }
+    local sz64A, tok64A = capturedApi.listInfo(sq64A)
+    assert(sz64A == 64 and type(tok64A) == 'string' and #tok64A <= 96, '64-object list succeeds with valid token')
+
+    -- 3. Tail-change: change only element 64 (index 63)
+    local list64B = {}
+    for i = 1, 63 do
+        list64B[i] = list64A[i]
+    end
+    list64B[64] = {
+        isZombie = function() return true end,
+        isDead = function() return false end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+    }
+    local sq64B = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function()
+            return {
+                size = function() return 64 end,
+                get = function(self, idx) return list64B[idx + 1] end,
+            }
+        end,
+    }
+    local sz64B, tok64B = capturedApi.listInfo(sq64B)
+    assert(sz64B == 64)
+    assert(tok64A ~= tok64B, 'tail element change at index 63 must produce distinct token')
+
+    -- 4. Collision safety: two distinct lists of objects are not conflated
+    local z1 = { isZombie = function() return true end, isDead = function() return false end, getX = function() return 14.0 end, getY = function() return 20.0 end, getZ = function() return 0.0 end }
+    local z2 = { isZombie = function() return true end, isDead = function() return false end, getX = function() return 14.0 end, getY = function() return 20.0 end, getZ = function() return 0.0 end }
+    local sqC1 = {
+        getX = function() return 14 end, getY = function() return 20 end, getZ = function() return 0 end,
+        getMovingObjects = function() return { size = function() return 1 end, get = function(self, idx) return z1 end } end,
+    }
+    local sqC2 = {
+        getX = function() return 14 end, getY = function() return 20 end, getZ = function() return 0 end,
+        getMovingObjects = function() return { size = function() return 1 end, get = function(self, idx) return z2 end } end,
+    }
+    local _, tokC1 = capturedApi.listInfo(sqC1)
+    local _, tokC2 = capturedApi.listInfo(sqC2)
+    assert(tokC1 ~= tokC2, 'different object references on same square must produce distinct tokens')
+
+    -- 5. Native read budget accounting and exhaustion
+    adapter.readBudget = 5
+    capturedApi.nativeReads = 0
+    local sqBudget = {
+        getX = function() return 15 end, getY = function() return 20 end, getZ = function() return 0 end,
+        getMovingObjects = function()
+            return {
+                size = function() return 3 end,
+                get = function(self, idx) return z1 end,
+            }
+        end,
+    }
+    -- First read takes 3 native reads (nativeReads = 3 <= 5)
+    local okB1, szB1 = pcall(capturedApi.listInfo, sqBudget)
+    assert(okB1 and szB1 == 3, 'first read within budget succeeds')
+    -- Second read would take 3 more (3 + 3 = 6 > 5) -> must fail closed
+    local okB2, errB2 = pcall(capturedApi.listInfo, sqBudget)
+    assert(not okB2, 'exceeding read budget must fail closed')
+    assert(tostring(errB2):find('native read budget exhausted'), 'error must indicate budget exhausted')
+    adapter.readBudget = nil -- reset
+
+    -- 6. Short namespace/epoch/sequence identity token format
+    local zToken = {
+        isZombie = function() return true end,
+        isDead = function() return false end,
+        getX = function() return 12.0 end,
+        getY = function() return 20.0 end,
+        getZ = function() return 0.0 end,
+        getOnlineID = function() return 999 end,
+    }
+    local sqToken = {
+        getMovingObjects = function()
+            return {
+                size = function() return 1 end,
+                get = function(self, idx) return zToken end,
+            }
+        end,
+    }
+    capturedApi.nativeReads = 0
+    local readObj = capturedApi.readObject(sqToken, 0)
+    assert(readObj ~= nil and readObj.id ~= nil, 'readObject must succeed')
+    assert(type(readObj.id) == 'string' and #readObj.id <= 96, 'id must be <= 96 chars')
+
+    getCell = oldGetCell
+end)
+test('repeated samplePerception cross-sample list identity: unchanged fairness, replacement, tail change, and reset', function()
+    local f = fixture()
+    local adapter = f.adapter
+    adapter.ensurePerceptionModules()
+
+    f.npc.getForwardDirectionX = function() return 1.0 end
+    f.npc.getForwardDirectionY = function() return 0.0 end
+    f.npc.getX = function() return 10.0 end
+    f.npc.getY = function() return 20.0 end
+    f.npc.getZ = function() return 0.0 end
+
+    -- Helper to create mock zombie character
+    local function makeZombie(id, ox, oy)
+        return {
+            isZombie = function() return true end,
+            isDead = function() return false end,
+            isAlive = function() return true end,
+            getX = function() return ox or 12.0 end,
+            getY = function() return oy or 20.0 end,
+            getZ = function() return 0.0 end,
+            getOnlineID = function() return id end,
+        }
+    end
+
+    -- Create 20 distinct zombie objects
+    local list1 = {}
+    for i = 1, 20 do
+        list1[i] = makeZombie(100 + i, 12.0, 20.0)
+    end
+
+    local currentList = list1
+    local mockMovingObjects = {
+        size = function() return #currentList end,
+        get = function(self, idx) return currentList[idx + 1] end,
+    }
+
+    local targetSq = {
+        getX = function() return 12 end,
+        getY = function() return 20 end,
+        getZ = function() return 0 end,
+        getMovingObjects = function() return mockMovingObjects end,
+    }
+
+    local mockCell = {
+        getGridSquare = function(self, x, y, z)
+            if x == 12 and y == 20 and z == 0 then
+                return targetSq
+            end
+            return nil
+        end,
+        getObjectList = function(self) return {contains = function(_, obj) return obj == f.npc end} end,
+        getAddList = function(self) return {contains = function() return false end} end,
+        getRemoveList = function(self) return {contains = function() return false end} end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function() return mockCell end
+
+    adapter.readBudget = 2048
+
+    local function sampleNextTargetPass()
+        for attempts = 1, 30 do
+            local res = adapter.samplePerception(f.npc)
+            if res and res.results and #res.results > 0 then
+                return res
+            end
+        end
+        error('timed out waiting for target square to be sampled')
+    end
+
+    -- 1. Pass 1: initial read of target square (reads first 16 of 20 objects)
+    local res1 = sampleNextTargetPass()
+    assert(#res1.results == 16, 'first pass must read 16 candidates')
+    local id_first_pass1 = res1.results[1].id
+    local tok1 = adapter.snapshots['12,20,0'].token
+    assert(type(tok1) == 'string' and #tok1 <= 96, 'valid snapshot token recorded')
+
+    -- 2. Pass 2 (Unchanged-list fairness): target square visited again with identical objects
+    local res2 = sampleNextTargetPass()
+    local tok2 = adapter.snapshots['12,20,0'].token
+    assert(tok2 == tok1, 'unchanged list retains stable token across sample calls')
+    assert(#res2.results == 16, 'second pass must read 16 candidates')
+    -- Cursor resumed at index 16 (fairness, no starvation of later candidates)
+    local id_first_pass2 = res2.results[1].id
+    assert(id_first_pass2 ~= id_first_pass1, 'cursor fairness must resume at index 16 without restarting')
+
+    -- 3. Pass 3 (Same-size replacement/reordering): replace 20 objects with 20 new objects
+    local list2 = {}
+    for i = 1, 20 do
+        list2[i] = makeZombie(300 + i, 12.0, 20.0)
+    end
+    currentList = list2
+    local res3 = sampleNextTargetPass()
+    local tok3 = adapter.snapshots['12,20,0'].token
+    assert(tok3 ~= tok1, 'same-size replacement must allocate new nonreused token')
+    assert(#res3.results == 16, 'third pass must read 16 candidates')
+    -- Cursor was reset to 0 because token changed
+    local id_first_pass3 = res3.results[1].id
+    assert(id_first_pass3 ~= id_first_pass2, 'replacement list starts from beginning')
+
+    -- 4. Pass 4 (Tail changes): keep items 1..19, change only element 20 (index 19)
+    local list3 = {}
+    for i = 1, 19 do list3[i] = list2[i] end
+    list3[20] = makeZombie(9999, 12.0, 20.0)
+    currentList = list3
+    local res4 = sampleNextTargetPass()
+    local tok4 = adapter.snapshots['12,20,0'].token
+    assert(tok4 ~= tok3 and tok4 ~= tok1, 'tail change must allocate new nonreused token')
+
+    -- 5. Pass 5 (Lifecycle reset): clears snapshot storage and resets cursors
+    adapter.resetPerception()
+    assert(next(adapter.snapshots) == nil, 'adapter.snapshots must be cleared on resetPerception')
+    assert(#adapter.snapshotFIFO == 0, 'adapter.snapshotFIFO must be cleared on resetPerception')
+
+    local res5 = sampleNextTargetPass()
+    local tok5 = adapter.snapshots['12,20,0'].token
+    assert(tok5 ~= tok4 and tok5 ~= tok3 and tok5 ~= tok1, 'post-reset token must be nonreused')
+    assert(#res5.results == 16, 'post-reset sample reads 16 candidates')
+
+    -- 6. Bounded snapshot storage verification
+    local capturedApi = nil
+    local origSample = adapter.diagnosticSampler.sample
+    adapter.diagnosticSampler.sample = function(self, api)
+        capturedApi = api
+        return origSample(self, api)
+    end
+    adapter.samplePerception(f.npc)
+    adapter.diagnosticSampler.sample = origSample
+
+    assert(capturedApi ~= nil, 'captured api must be available')
+    local dummyZombie = makeZombie(5555, 12.0, 20.0)
+    local dummyList = {
+        size = function() return 1 end,
+        get = function(self, idx) return dummyZombie end,
+    }
+    -- Fill up beyond 128 snapshots
+    for i = 1, 135 do
+        local sq = {
+            getX = function() return 200 + i end,
+            getY = function() return 300 end,
+            getZ = function() return 0 end,
+            getMovingObjects = function() return dummyList end,
+        }
+        capturedApi.nativeReads = 0
+        capturedApi.listInfo(sq)
+    end
+    assert(#adapter.snapshotFIFO <= 128, 'snapshotFIFO must be capped at 128')
+    assert(adapter.snapshots['201,300,0'] == nil, 'oldest snapshot must be evicted when bounded limit exceeded')
+    assert(adapter.snapshots['335,300,0'] ~= nil, 'newest snapshot must be retained')
+
+    getCell = oldGetCell
 end)
 print('RESULT '..count..' total engine adapter checks passed')
 ''')

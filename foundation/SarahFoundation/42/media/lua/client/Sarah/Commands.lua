@@ -1,6 +1,17 @@
 -- Command parser, validation, dispatch and action boundary.
 -- No mutable engine handles are exposed to callers.
 local Commands={}
+local function loadModule(name)
+    local mod = rawget(_G, name)
+    if not mod and type(require) == "function" then
+        local ok, m = pcall(require, "Sarah/" .. name)
+        if ok and m then return m end
+        local ok2, m2 = pcall(require, name)
+        if ok2 and m2 then return m2 end
+    end
+    return mod
+end
+local Knowledge = loadModule("Knowledge")
 local function isValidNumber(n)
     return type(n)=='number' and n==n and n~=math.huge and n~=-math.huge
 end
@@ -38,7 +49,19 @@ local function isPlayerAlive(data)
     end
     return false
 end
-function Commands.new(observe,stopCallback,identityProvider,walkCallback,validateCallback)
+function Commands.new(observe,stopCallback,identityProvider,walkCallback,validateCallback,perceiveCallback,knowledge,timeProvider,resetPerceptionCallback)
+    local function resolveKnowledge(k)
+        if k then return k end
+        local modK = Knowledge or loadModule("Knowledge")
+        if modK and type(modK.new) == "function" then
+            local ok, inst = pcall(modK.new)
+            if ok and inst then return inst end
+        end
+        return nil
+    end
+
+    local initialKnowledge = resolveKnowledge(knowledge)
+
     local self={
         sequence=0,
         session=1,
@@ -53,8 +76,58 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         stopCallback=stopCallback,
         identityProvider=identityProvider,
         walkCallback=walkCallback,
-        validateCallback=validateCallback
+        validateCallback=validateCallback,
+        perceiveCallback=perceiveCallback,
+        knowledge=initialKnowledge,
+        timeProvider=timeProvider,
+        resetPerceptionCallback=resetPerceptionCallback,
+        lastNow=nil,
+        lastOwner=nil,
+        lastNpc=nil
     }
+    function self:getKnowledge()
+        if not self.knowledge then
+            self.knowledge = resolveKnowledge(nil)
+        end
+        return self.knowledge
+    end
+    function self:getNow()
+        if type(self.timeProvider) ~= 'function' then
+            return nil, 'missing time provider'
+        end
+        local ok, t = pcall(self.timeProvider)
+        if not ok then
+            return nil, 'time provider error: ' .. tostring(t)
+        end
+        if t == nil then
+            return nil, 'time source unavailable'
+        end
+        if type(t) ~= 'number' or t ~= t or t < 0 or t == math.huge then
+            return nil, 'invalid time value'
+        end
+        if self.lastNow and t < self.lastNow then
+            self:resetKnowledge()
+            local prev = self.lastNow
+            self.lastNow = nil
+            return nil, 'non-monotonic time: ' .. tostring(t) .. ' < ' .. tostring(prev)
+        end
+        self.lastNow = t
+        return t
+    end
+    function self:resetKnowledge()
+        if self.knowledge and self.knowledge.reset then
+            pcall(self.knowledge.reset, self.knowledge)
+        end
+    end
+    function self:resetPerception()
+        if type(self.resetPerceptionCallback) == 'function' then
+            pcall(self.resetPerceptionCallback)
+        end
+        local ctrl, _ = self:getIdentity()
+        if ctrl and ctrl.adapter and type(ctrl.adapter.resetPerception) == 'function' then
+            pcall(ctrl.adapter.resetPerception)
+        end
+    end
     -- Unambiguous private identity contract:
     -- identityProvider function returns (controller, npc) references directly.
     -- Preserves exact controller and NPC identities without wrapper ambiguity
@@ -150,6 +223,13 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         self.lastAction={id=action.id,command=action.command,state='cancelled',reason=action.summary}
         self:updateHistory(action.id,'cancelled',action.summary)
 
+        if reason == 'session reset' or reason == 'controller replaced' or reason == 'npc replaced'
+           or reason == 'controller unavailable' or reason == 'npc unavailable'
+           or reason == 'dead' or reason == 'unloaded' or reason == 'absent' then
+            self:resetKnowledge()
+            self:resetPerception()
+        end
+
         local stopOk,stopErr
         if action.stopFailed then
             stopOk=false
@@ -196,46 +276,67 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         return true,{id=action.id,command=action.command,state=action.state,summary=action.summary},stopOk,stopErr
     end
     function self:checkLifecycle()
-        if not self.active then return true end
         local ok,data=pcall(self.observe,false)
         if not ok or type(data)~='table' then
             local errReason='observation error'
-            self:cancelActive(errReason)
+            if self.active then
+                self:cancelActive(errReason)
+            end
             return false,errReason
         end
         if data.state~='active' then
-            self:cancelActive(data.state)
+            if data.state == 'dead' or data.state == 'unloaded' or data.state == 'absent' then
+                self:resetKnowledge()
+                self:resetPerception()
+            end
+            if self.active then
+                self:cancelActive(data.state)
+            end
             return false,data.state
         end
         local currentOwner,currentNpc=self:getIdentity()
-        if self.active.owner and currentOwner and self.active.owner~=currentOwner then
-            self:cancelActive('controller replaced')
-            return false,'controller replaced'
-        end
-        if self.active.owner and currentOwner==nil then
-            self:cancelActive('controller unavailable')
-            return false,'controller unavailable'
-        end
-        if self.active.npc and currentNpc and self.active.npc~=currentNpc then
-            self:cancelActive('npc replaced')
-            return false,'npc replaced'
-        end
-        if self.active.npc and currentNpc==nil then
-            self:cancelActive('npc unavailable')
-            return false,'npc unavailable'
-        end
-        if self.active and self.active.command=='follow' then
-            if not data.player or not isValidCoord(data.player.x,data.player.y,data.player.z) then
-                self:cancelActive('player unavailable')
-                return false,'player unavailable'
+        if (self.lastOwner and currentOwner and self.lastOwner~=currentOwner) or
+           (self.lastNpc and currentNpc and self.lastNpc~=currentNpc) or
+           (self.lastOwner and currentOwner==nil) or
+           (self.lastNpc and currentNpc==nil) then
+            if self.lastOwner and self.lastOwner.adapter and type(self.lastOwner.adapter.resetPerception) == 'function' then
+                pcall(self.lastOwner.adapter.resetPerception)
             end
-            if isPlayerDead(data) then
-                self:cancelActive('player dead')
-                return false,'player dead'
+            self:resetKnowledge()
+            self:resetPerception()
+        end
+        self.lastOwner=currentOwner
+        self.lastNpc=currentNpc
+        if self.active then
+            if self.active.owner and currentOwner and self.active.owner~=currentOwner then
+                self:cancelActive('controller replaced')
+                return false,'controller replaced'
             end
-            if not isPlayerAlive(data) then
-                self:cancelActive('player liveness unknown')
-                return false,'player liveness unknown'
+            if self.active.owner and currentOwner==nil then
+                self:cancelActive('controller unavailable')
+                return false,'controller unavailable'
+            end
+            if self.active.npc and currentNpc and self.active.npc~=currentNpc then
+                self:cancelActive('npc replaced')
+                return false,'npc replaced'
+            end
+            if self.active.npc and currentNpc==nil then
+                self:cancelActive('npc unavailable')
+                return false,'npc unavailable'
+            end
+            if self.active.command=='follow' then
+                if not data.player or not isValidCoord(data.player.x,data.player.y,data.player.z) then
+                    self:cancelActive('player unavailable')
+                    return false,'player unavailable'
+                end
+                if isPlayerDead(data) then
+                    self:cancelActive('player dead')
+                    return false,'player dead'
+                end
+                if not isPlayerAlive(data) then
+                    self:cancelActive('player liveness unknown')
+                    return false,'player liveness unknown'
+                end
             end
         end
         return true,data
@@ -689,6 +790,8 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
     end
     function self:reset()
         if self.active then self:cancelActive('session reset',true) end
+        self:resetKnowledge()
+        self:resetPerception()
         self.active=nil
         self.lastAction=nil
         self.stopFailed=nil
@@ -696,6 +799,8 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         self.session=self.session+1
         self.history={}
         self.noticeQueue={}
+        self.lastNow=nil
+        self.lastOwner,self.lastNpc=self:getIdentity()
     end
     function self:requestWalk(target)
         return self:execute('walk here',target)
@@ -711,8 +816,16 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             addHistory({id=result.id,command=tostring(input):sub(1,32),state=result.state,summary=result.lines[1]})
             return result
         end
+        local curOwner,curNpc=self:getIdentity()
+        if (self.lastOwner and curOwner and self.lastOwner~=curOwner) or
+           (self.lastNpc and curNpc and self.lastNpc~=curNpc) then
+            self:resetKnowledge()
+            self:resetPerception()
+        end
+        self.lastOwner=curOwner
+        self.lastNpc=curNpc
         local command=input:match('^%s*(.-)%s*$'):lower():gsub('%s+',' ')
-        if command~='help' and command~='status' and command~='inventory' and command~='stop' and command~='history' and command~='walk here' and command~='follow' then
+        if command~='help' and command~='status' and command~='inventory' and command~='stop' and command~='history' and command~='walk here' and command~='follow' and command~='look' and command~='perceive' then
             result.lines={'Unknown command. Try help.'}
             addHistory({id=result.id,command=command,state=result.state,summary=result.lines[1]})
             return result
@@ -727,6 +840,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 'follow - follow player (max 8 tiles, same floor)',
                 'stop - cancel active action or request',
                 'history - list recent command outcomes',
+                'look - sample diagnostic perception around Sarah',
                 'Manual console slice C. Movement commands validated.'
             }
             addHistory({id=result.id,command=command,state=result.state,summary='Help displayed'})
@@ -1098,6 +1212,128 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             addHistory({id=result.id,command=command,state='completed',summary='Nothing active'})
             return result
         end
+        if command=='look' or command=='perceive' then
+            local ok,data=pcall(self.observe,false)
+            if not ok or type(data)~='table' then
+                result.state='failed'
+                result.lines={'Observation failed; no action taken.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Observation failed'})
+                return result
+            end
+            if data.state~='active' then
+                if data.state=='dead' or data.state=='unloaded' or data.state=='absent' then
+                    self:resetKnowledge()
+                    self:resetPerception()
+                end
+                result.state='rejected'
+                result.lines={'Sarah is '..tostring(data.state or 'unavailable')..'; cannot perceive.'}
+                addHistory({id=result.id,command=command,state='rejected',summary='Sarah '..tostring(data.state or 'unavailable')})
+                return result
+            end
+            if not self.perceiveCallback then
+                result.state='failed'
+                result.lines={'Perception sampler unavailable.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Sampler unavailable'})
+                return result
+            end
+
+            local sampOk,sampleRes,sampErr=pcall(self.perceiveCallback)
+            if not sampOk then
+                result.state='failed'
+                result.lines={'Perception sampling failed: '..tostring(sampleRes)..'.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Sampling error'})
+                return result
+            end
+            if not sampleRes then
+                result.state='failed'
+                result.lines={'Perception sampling failed: '..tostring(sampErr or 'sampler returned nil')..'.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Sampling failed'})
+                return result
+            end
+            if sampleRes.status=='reentrancy_rejected' then
+                result.state='failed'
+                result.lines={'Perception rejected: sampler is reentrant.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Reentrancy rejected'})
+                return result
+            end
+            if sampleRes.status=='aborted' then
+                result.state='failed'
+                local abReason=sampleRes.reason or 'aborted'
+                result.lines={'Perception aborted: '..tostring(abReason)..'.'}
+                addHistory({id=result.id,command=command,state='failed',summary='Aborted: '..tostring(abReason)})
+                return result
+            end
+
+            local now,timeErr=self:getNow()
+            if not now then
+                result.state='failed'
+                result.lines={'Perception failed: time source unavailable ('..tostring(timeErr or 'unspecified')..').'}
+                addHistory({id=result.id,command=command,state='failed',summary='Time unavailable: '..tostring(timeErr or 'unspecified')})
+                return result
+            end
+
+            local k=self:getKnowledge()
+            if k and k.update then
+                pcall(k.update,k,sampleRes,now)
+            end
+
+            local rawResults=sampleRes.results or {}
+            local geomVisible=0
+            local geomBlocked=0
+            local geomUnknown=0
+            local visConfirmed=0
+
+            for _,r in ipairs(rawResults) do
+                if r.geometric=='visible' then geomVisible=geomVisible+1
+                elseif r.geometric=='blocked' then geomBlocked=geomBlocked+1
+                else geomUnknown=geomUnknown+1 end
+
+                if r.visual=='visible' then visConfirmed=visConfirmed+1 end
+            end
+
+            local lines={}
+            local numCands=sampleRes.counts and sampleRes.counts.candidates or #rawResults
+            local numProc=sampleRes.counts and sampleRes.counts.processed or #rawResults
+            lines[#lines+1]=string.format('Perception: %s (candidates: %d, processed: %d)',
+                tostring(sampleRes.status or 'sampled'),numCands,numProc)
+            lines[#lines+1]=string.format('Geometry: %d visible, %d blocked, %d unknown',
+                geomVisible,geomBlocked,geomUnknown)
+            lines[#lines+1]=string.format('Visual: %d confirmed (lighting: %s; unknown lighting never implies sight)',
+                visConfirmed,tostring(sampleRes.lighting or 'unknown'))
+
+            if k and k.snapshot then
+                local snapOk,snap=pcall(k.snapshot,k,now)
+                if snapOk and type(snap)=='table' then
+                    if #snap==0 then
+                        lines[#lines+1]='Memory: 0 confirmed records'
+                    else
+                        lines[#lines+1]=string.format('Memory (%d records):',#snap)
+                        for i=1,math.min(#snap,10) do
+                            local rec=snap[i]
+                            local age=math.max(0,math.floor((now-(rec.observedAt or now))*10)/10)
+                            local px=rec.position and rec.position.x or 0
+                            local py=rec.position and rec.position.y or 0
+                            local pz=rec.position and rec.position.z or 0
+                            lines[#lines+1]=string.format('  [%s] %s at (%.1f, %.1f, %.0f), age %.1fs',
+                                tostring(rec.id),tostring(rec.kind),px,py,pz,age)
+                        end
+                        if #snap>10 then
+                            lines[#lines+1]=string.format('  ... and %d more records',#snap-10)
+                        end
+                    end
+                end
+            end
+
+            result.state='completed'
+            result.lines=lines
+            addHistory({
+                id=result.id,
+                command=command,
+                state='completed',
+                summary=string.format('Sampled %d candidates (%d geom visible, %d vis confirmed)',numCands,geomVisible,visConfirmed)
+            })
+            return result
+        end
         local ok,data=pcall(self.observe,command=='inventory')
         if not ok or type(data)~='table' then
             result.state='failed'; result.lines={'Observation failed; no action taken.'}
@@ -1106,6 +1342,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
         if self.active then
             self:checkLifecycle()
+        elseif data.state=='dead' or data.state=='unloaded' or data.state=='absent' then
+            self:resetKnowledge()
+            self:resetPerception()
         end
         result.state='completed'
         if command=='status' then

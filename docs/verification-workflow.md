@@ -1,6 +1,6 @@
 ## Current verification baseline and required evidence (2026-10-06)
 
-Default run: 702 checks across 16 suites (including 22 engine render/adapter and 71 follow companion checks). Runner self-tests 11; preflight self-tests 42.
+Default run: 721 checks across 16 suites (including 29 engine render/adapter and 66 commands checks). Runner self-tests 11; preflight self-tests 42.
 Earlier totals below are historical. Actual Lua55 policy fixtures remain distinct
 from native Kahlua/gameplay acceptance.
 

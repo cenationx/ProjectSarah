@@ -1,3 +1,41 @@
+## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
+
+Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes
+and reproduced721 checks/16 suites +11 runner +42 preflight PASS.
+Explicit look/perceive wiring is a diagnostic candidate only; no autonomous
+behavior. Exact-reference square snapshots capped at128 entries, lists over64
+rejected, unchanged cursor tokens retained and mutations receive new versions.
+Idle lifecycle invalidation and read-only diagnostic command guards implemented.
+No verified independent lighting: visual detection remains unknown/zero.
+Console time intentionally unavailable; native confirmed-memory admission/expiry
+is blocked until a verified monotonic seconds source is supplied. No claim that
+all possible engine clocks were exhaustively excluded. API exposure, line-clear
+enum behavior, loaded coverage and actual collector costs remain native gates.
+No deployment/launch/save/settings changes. Follow pace and rendering native
+acceptance also pending. Next Codex live batch must first recheck process state
+and freshly preserve disposable world/mod/profile with a verified restore plan.
+Batch C can do independent offline adapter inspection; do not enable ungated
+equipment, transfers or behavior. External/model AI remains ON HOLD.
+## Batch B: Cross-sample list identity and fairness correction completed offline (2026-10-07)
+
+Gemini completed offline coding and verification for Batch B cross-sample list identity and fairness corrections, resolving the cross-sample list token blocker:
+- Source changes completed offline:
+  * Engine.lua: Persistent bounded snapshot storage on `adapter` (`adapter.snapshots` and `adapter.snapshotFIFO` capped at 128) preserved across `samplePerception` passes and cleared on `resetPerception()`. Stable tokens for unchanged lists so `CandidateCollector`'s cursor fairness works without restarting or starving later candidates. Nonreused tokens allocated via monotonic `adapter.snapSeq` on any list change, reordering, or tail mutation, triggering clean cursor reset in CandidateCollector. Dynamic lifecycle capture in `adapter.samplePerception`: queries dynamic generation (`gen_` .. `sampleGeneration`), cell (`tostring(getCell())`), controller token (`ctrl_` .. `tostring(adapter)`), and NPC token (`npc_` .. `tostring(npc)`), eliminating constant string literals and detecting cell/generation/controller drift during sampling passes. Native enumeration error handling: throws on query error so CandidateCollector increments `query_error` (never empty success). Bounded exact-reference snapshot (`currentRefs` compared to `prev.refs`) detecting same-size list replacement, reordering, and tail-element changes with 100% certainty (replacing 32-bit hash). Unsupported oversized lists (`sz > 64`) fail closed immediately. Native work budget: accounts for snapshot element reads and object reads in `api.nativeReads` against `adapter.readBudget or 512`. Strict boolean living state required (rejects unknown liveness). Short identity tokens (`so:e<epoch>:s<seq>:<kind>:<oid>`) placing sequence and epoch at the front to ensure uniqueness cannot be truncated away. Added `Engine.isCurrentOwner(npc, adapter)`.
+  * Console.lua: Added `resetPerceptionSarah()` calling `controller.adapter.resetPerception()` and wired to `state.reset` and `Commands.new` 9th argument. Leaves `getTimeSeconds()` returning `nil` (time unavailable) because native PZ lacks a verified monotonic clock (`getTimestampMs`/`getTimeInMillis` wrap non-monotonic wall-clock `System.currentTimeMillis`).
+  * Commands.lua: Extended constructor with `resetPerceptionCallback` and helper `self:resetPerception()`. Idle lifecycle check: `checkLifecycle()` evaluates observations and controller/NPC identity even while no movement action is active (`self.active == nil`), detecting Sarah death, unload, absent state, and controller/NPC replacement during idle ticks, invalidating Knowledge and adapter perception without initiating/cancelling movement or emitting notices. Validates injected monotonic time in `self:getNow()`; on clock reversal (`t < self.lastNow`), immediately invalidates Knowledge memory (`self:resetKnowledge()`), resets `self.lastNow = nil`, and fails closed. Made `look` / `perceive` strictly require active observation state (rejects blocked, busy, unavailable, dead, unloaded, absent, deferred) without invoking movement-cancelling `checkLifecycle`.
+- Offline tests: 721 checks across 16 suites in `run_tests.py` PASS (+19 new checks across Batch B: +12 in `tools/test_commands.py` [66 checks total] and +7 in `tools/test_render.py` [29 checks total]); 11 runner self-tests PASS; 42 preflight self-tests PASS.
+- Verification & boundary status:
+  * Implemented code: `Engine.lua`, `Console.lua`, `Commands.lua`.
+  * Offline verification: 721 checks across 16 suites in `run_tests.py` PASS.
+  * Pending native acceptance: Gate B (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry) strictly pending Codex live verification in the isolated profile. No autonomous actions, combat, or looting enabled. Methods are offline candidates verified against static signatures and mocked tests, not native engine features.
+- Live checklist & safety requirements for Codex:
+  1. Verify Project Zomboid is CLOSED.
+  2. Take a separate fresh verified backup of the disposable world, deployed mod, and isolated profile BEFORE deploying or launching.
+  3. Deploy reviewed files from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`.
+  4. Launch isolated profile (`tools/launch-isolated.ps1`).
+  5. Test `look` / `perceive` via Sarah Console: verify geometry counts, visual confirmation = 0, unknown lighting message, and memory snapshots.
+- Checkout handoff: Released to Codex for review, deployment, and live testing. Working tree contains uncommitted Batch B changes for inspection.
+
 ## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
 
 Gemini handed ownership back; Codex reviewed actual source and reproduced702

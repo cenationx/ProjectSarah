@@ -1,3 +1,82 @@
+## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
+
+Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes
+and reproduced721 checks/16 suites +11 runner +42 preflight PASS.
+Explicit look/perceive wiring is a diagnostic candidate only; no autonomous
+behavior. Exact-reference square snapshots capped at128 entries, lists over64
+rejected, unchanged cursor tokens retained and mutations receive new versions.
+Idle lifecycle invalidation and read-only diagnostic command guards implemented.
+No verified independent lighting: visual detection remains unknown/zero.
+Console time intentionally unavailable; native confirmed-memory admission/expiry
+is blocked until a verified monotonic seconds source is supplied. No claim that
+all possible engine clocks were exhaustively excluded. API exposure, line-clear
+enum behavior, loaded coverage and actual collector costs remain native gates.
+No deployment/launch/save/settings changes. Follow pace and rendering native
+acceptance also pending. Next Codex live batch must first recheck process state
+and freshly preserve disposable world/mod/profile with a verified restore plan.
+Batch C can do independent offline adapter inspection; do not enable ungated
+equipment, transfers or behavior. External/model AI remains ON HOLD.
+## Batch B: Cross-sample list identity and fairness correction completed offline (2026-10-07)
+
+Gemini resolved the cross-sample list token blocker offline:
+1. Persistent bounded snapshot storage on adapter (`Engine.lua`):
+   - `adapter.snapshots` and `adapter.snapshotFIFO` are retained across `samplePerception` passes on the adapter instance instead of being wiped per pass.
+   - Snapshot storage remains bounded: `adapter.snapshotFIFO` enforces a strict FIFO cap of 128 squares (`MAX_SNAPSHOTS = 128`), evicting the oldest square's snapshot upon exceeding the bound.
+   - Clears on lifecycle resets: `adapter.resetPerception()` clears `adapter.snapshots = {}` and `adapter.snapshotFIFO = {}`, synchronized with `diagnosticSampler.reset()` (which resets collector cursors) and `sessionIdentity.reset()`.
+2. Cross-sample list token stability and nonreused changed-list tokens:
+   - Unchanged lists retain their previous snapshot token across passes, enabling `CandidateCollector`'s cursor fairness to resume pagination without restarting or starving later candidates.
+   - Changed, reordered, or tail-modified lists allocate a new monotonic `adapter.snapSeq` version (`v<seq>`), ensuring brand-new nonreused tokens across passes so CandidateCollector resets cursors to index 0 on mutation.
+   - Empty lists (`sz == 0`) cleanly return stable `sq:<coord>:0:empty` while remaining bounded.
+3. Regressions added in `tools/test_render.py` (29 checks total):
+   - Regression `repeated samplePerception cross-sample list identity: unchanged fairness, replacement, tail change, and reset`:
+     * Tested across repeated actual `adapter.samplePerception` calls through `DiagnosticSampler` and `CandidateCollector`.
+     * Verified unchanged-list fairness: candidates 16..19 are read on the subsequent pass with stable token, proving cursor fairness without candidate starvation.
+     * Verified same-size replacement/reordering: new nonreused token allocated, cursor reset to index 0.
+     * Verified tail change: change at element 20 allocated a distinct nonreused token.
+     * Verified lifecycle reset: `adapter.resetPerception()` clears snapshots, resets cursors, and issues nonreused token.
+     * Verified bounded storage: 135 squares tested, FIFO capped at 128, oldest snapshot evicted.
+4. Offline verification results:
+   - 721 checks across 16 suites in `run_tests.py` PASS (+1 check in `tools/test_render.py`).
+   - 11 runner self-tests in `tools/test_runner.py` PASS; 42 preflight self-tests in `tools/test_preflight.py` PASS.
+   - Game is CLOSED. No deployment or game launch performed. Working tree uncommitted and undeployed for Codex inspection.
+
+## Codex review: cross-sample list token blocker (2026-10-06)
+
+720 checks/16 suites PASS reproduced. Idle tick invalidation, exact bounded list
+comparison and unavailable clock correction are present. Batch B undeployed.
+Remaining issue: samplePerception initializes api.snapshots={} and snapSeq=0
+on every pass, but CandidateCollector retains cursors across passes. Changed
+same-size lists can reuse identical coordinate/version/size tokens, admitting
+stale cursors. Need stable unchanged-list tokens and nonreused changed-list
+tokens across passes, bounded lifecycle-cleared snapshots, plus real repeated
+samplePerception regressions for fairness/reorder/tail change and reset.
+Do not commit/deploy until corrected; Codex ownership handed back for review.
+## Batch B: Consolidated corrections completed offline (2026-10-06)
+
+Gemini completed offline corrections addressing all review items from Codex:
+1. Idle lifecycle check (`Commands.lua`):
+   - `checkLifecycle()` evaluates observations and controller/NPC identity even while no movement action is active (`self.active == nil`).
+   - Detects Sarah death, unload, absent state, and controller/NPC replacement during idle ticks.
+   - Resets Knowledge memory and adapter perception (sampler, session identity, entity tracker) without initiating or cancelling movement (no `cancelActive`, no notices, no stop callbacks).
+   - Verified tick-driven invalidation in `tools/test_commands.py` without issuing any movement command.
+2. Enumeration integrity, exact snapshots, and read budget accounting (`Engine.lua`):
+   - Bounded exact-reference snapshot: `api.listInfo` records exact Java references (`currentRefs`) and compares against previous snapshot on the same tile, detecting any reference changes, reordering, and tail-element changes beyond index 63 with 100% certainty without reliance on hash equality.
+   - Unsupported oversized lists (`sz > 64`) fail closed immediately (`error("unsupported oversized list: " .. sz)`).
+   - Native work budget: `api.nativeReads` accounts for all snapshot element reads (`+sz`) and `readObject` reads (`+1`) against `adapter.readBudget or 512`, failing closed with error when budget is exhausted.
+   - Short identity tokens: `readObject` formats tokens as `so:e<epoch>:s<seq>:<kind>:<oid>`, placing namespace, epoch, and unique sequence at the front so truncation at 96 characters cannot strip sequence uniqueness.
+   - Verified crowded-list, tail-change, collision, and read-budget regressions in `tools/test_render.py`.
+3. Monotonic clock and memory invalidation on clock reversal (`Console.lua` & `Commands.lua`):
+   - `Console.lua` leaves time explicitly unavailable (`getTimeSeconds` returns `nil`) because native PZ lacks a verified monotonic clock (`getTimestampMs`/`getTimeInMillis` wrap non-monotonic wall-clock `System.currentTimeMillis`).
+   - `Commands:getNow()` validates injected time; on clock reversal (`t < self.lastNow`), immediately invalidates Knowledge memory (`self:resetKnowledge()`) and resets `self.lastNow = nil`, preventing retention of stale records indefinitely.
+4. Boundaries and gate status:
+   - Methods (`IsoGameCharacter.getForwardDirectionX/Y`, `sq:getMovingObjects()`, `LosUtil.lineClear`) remain offline candidates verified against static signatures and mocked Lupa tests; they are NOT accepted native features.
+   - Lighting strictly preserved as `lighting = "unknown"` unconditionally; visual confirmed = 0; unknown lighting never implies sight.
+   - Gate B remains OPEN. Slices 6–9 are offline candidate implementations, not completed native features. Autonomous behavior, combat, and looting remain strictly disabled. External/model AI strictly ON HOLD.
+5. Offline test verification:
+   - 720 checks across 16 suites in `run_tests.py` PASS (+2 new checks: +1 in `tools/test_commands.py` [66 checks total], +1 in `tools/test_render.py` [28 checks total]).
+   - 11 runner self-tests in `tools/test_runner.py` PASS; 42 preflight self-tests in `tools/test_preflight.py` PASS.
+   - Game is CLOSED. No deployment or game launch performed. Working tree uncommitted and undeployed for Codex inspection.
+
 ## Codex-reviewed Follow pace candidate checkpoint (2026-10-06)
 
 Gemini handed ownership back; Codex reviewed actual source and reproduced702
