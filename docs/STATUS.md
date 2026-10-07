@@ -1,3 +1,50 @@
+## Codex-reviewed extended lighting audit (2026-10-07)
+
+Documentation-only investigation; no usable independent lighting route admitted.
+Installed archive hash matches the pinned SHA256. Selected source checks confirm
+CanSee is geometric, zombie vision uses player lighting/climate, and getSkyLightLevel
+reads player render settings and conditionally invalidates global lights.
+The broader candidate matrix is static evidence, not an exhaustive engine proof.
+Native C++ internals were not inspected. Explicit registration-list absence does
+not establish that an object or method is unreachable through Lua return values.
+Light-source lists and fire influence arrays lack verified total illumination
+provenance; exclusive producer and whole-engine absence claims are not established.
+For any future invariance test keep Sarah, player and target positions fixed;
+change only player facing and compare stable identities. Moving the player changes
+an observed target and may change loaded coverage. Matching counts alone prove
+neither independent lighting nor absence of camera-cache borrowing.
+Independent lighting remains OPEN; visual stays unknown. No code, deployment,
+launch or save/settings changes. Codex owns the checkout. Existing 731+11+42
+baseline remains unchanged; the sampler policy checks were rerun for this audit.
+Next useful work is isolated native diagnostic/Follow acceptance after fresh backup,
+or a separately bounded new lighting route; no sight-driven behavior is enabled.
+
+## Batch B: Bounded offline investigation of new lighting candidates (2026-10-07)
+
+Gemini completed bounded static inspection of new independent lighting candidates across Build 42.21 decompiled classes, confirmed bytecode offsets, and Lua exposure mappings (`INDEPENDENT-LIGHTING-AUDIT.md`):
+1. Candidate Evaluation & Findings:
+   - `IsoZombie` vision checks (`IsoZombie.java:1903-1905, 2208-2212, 4770-4773`): The inspected zombie paths do not establish independent sensory lighting; it either borrows the target human player's viewport slot (`character.getIndex()`) or falls back to global celestial ambient. Replicating this couples Sarah to player 0 and triggers room-seen side effects. REJECTED.
+   - `IsoGameCharacter.CanSee` (`IsoGameCharacter.java:4729-4735`): Pure geometric raycast (`LosUtil.lineClear != Blocked`) with zero illumination awareness. REJECTED.
+   - `IsoGridSquare.interpolateLight` (`IsoGridSquare.java:4236-4260`): Directly extracts `IsoCamera.frameState.playerIndex` at lines 4250-4254; bound to human player rendering camera and mutates passed `ColorInfo`. REJECTED.
+   - `IsoGridSquare.getDarkMulti / getVertLight` (`IsoGridSquare.java:8083-8095, 8328-8330`): Coupled to human player splitscreen slots `0..3`. REJECTED.
+   - `IsoGridSquare.resultLightCount / getResultLight` (`IsoGridSquare.java:10625-10631`): Dead legacy stubs returning constant `0` / `null` under `LightingJNI`. REJECTED.
+   - `IsoGridSquare.getLightInfluenceR/G/B` (`IsoGridSquare.java:7910-7932`): The inspected producer uses `IsoFireManager` for fire flicker effects; null on all normal non-burning tiles. REJECTED.
+   - `IsoLightSource` & `IsoCell.getLamppostPositions` (`IsoLightSource.java:34-263`, `IsoCell.java:2554-2565`): Registered lamp objects are passed to native C++ where `LightingJNI` computes lightmaps only for human viewports `0..3`. Discards sunlight, sky light, and ambient darkness. REJECTED.
+   - `RoomDef.lightsActive` (`RoomDef.java:57`): Blueprint electrical switch flag; fails daylight/window illumination, power-grid validation, and outdoor tiles. `IsoRoomLight` is internal and not exposed to Lua. REJECTED.
+   - `ServerLOS` (`ServerLOS.java:20-178`): Dedicated server multiplayer only; uninitialized in single-player sandbox and not exposed to Lua. REJECTED.
+   - `GameTime.getSkyLightLevel` (`GameTime.java:685-705`): Hardcoded to `IsoPlayer.getPlayerIndex()` and mutates engine global lighting state (`LightingJNI.doInvalidateGlobalLights`). REJECTED.
+   - `IsoChunk.lightCheck / lightingNeverDone` (`IsoChunk.java:384-385, 510-580`): Arrays hardcoded to size 4 (`new boolean[4]`) for human player splitscreen slots. REJECTED.
+2. Recommendation & Blocker Status:
+   - ALL CANDIDATES REJECTED. No inspected candidate established read-only, fresh, player-independent target tile illumination.
+   - Blocker remains strictly and honestly OPEN. No speculative scaffolding or mock lighting introduced.
+   - `lighting = "unknown"` preserved unconditionally across all perception passes; visual detection remains `visual = "unknown"` (confirmed = 0); unknown lighting never implies sight.
+   - External/model AI strictly ON HOLD.
+3. Automated Tests:
+   - 731 suite checks across 16 suites in `run_tests.py` PASS; 11 runner self-tests PASS; 42 preflight self-tests PASS.
+4. Smallest Proposed Native Verification for Gate B:
+   - In isolated profile, position Sarah in an unlit windowless room at midnight. Verify `look` / `perceive` report geometry counts while visual confirmation remains strictly `0` with `lighting: unknown`.
+   - Rotate human player away or step outside: verify Sarah's outputs remain identical, as an observation only, not proof of cache independence.
+
 ## Codex review: offline memory clock candidate (2026-10-07)
 
 Gemini returned checkout ownership to Codex. Independently verified 731 checks

@@ -153,3 +153,34 @@ live acceptance. Native independent light and Follow/rendering remain open.
    - Failure & Recovery: Recovery resumes clean accumulation without silently retaining records whose elapsed age was unknown.
    - Invalidation on clock reversal: Non-monotonic time (`t < lastNow`) triggers immediate memory invalidation.
    - Fully verified offline with production-source regressions in `tools/test_console.py` (45 checks) and `tools/test_commands.py` (67 checks); 731 suite checks across 16 suites pass. Diagnostic-only; native timing and acceptance remain pending Gate B live testing. Independent lighting blocker remains OPEN.
+
+## Extended independent lighting candidate investigation and open blocker (2026-10-07)
+
+Gemini completed bounded static inspection of new independent lighting candidates across Build 42.21 decompiled classes, confirmed bytecode offsets, and Lua exposure mappings (see `docs/INDEPENDENT-LIGHTING-AUDIT.md` for the full matrix):
+
+1. **New Inspected Candidates & Findings**:
+   - `IsoZombie` vision checks (`IsoZombie.java:1903-1905, 2208-2212, 4770-4773`): The inspected zombie paths use player lighting or climate values. It borrows the target human player's viewport slot (`character.getIndex()`) to read `lighting[playerIndex]` (triggering `checkRoomSeen`) or falls back to global celestial ambient. Replicating this couples Sarah to player 0 and mutates room-seen state. REJECTED.
+   - `IsoGameCharacter.CanSee` (`IsoGameCharacter.java:4729-4735`): Pure geometric raycast delegating to `LosUtil.lineClear != LosUtil.TestResults.Blocked`; zero illumination awareness. REJECTED.
+   - `IsoGridSquare.interpolateLight` (`IsoGridSquare.java:4236-4260`): Directly extracts `IsoCamera.frameState.playerIndex` at lines 4250-4254; bound to human player rendering camera and mutates passed `ColorInfo`. REJECTED.
+   - `IsoGridSquare.getDarkMulti / getVertLight` (`IsoGridSquare.java:8083-8095, 8328-8330`): Coupled to human player splitscreen slots `0..3`. REJECTED.
+   - `IsoGridSquare.resultLightCount / getResultLight` (`IsoGridSquare.java:10625-10631`): Dead legacy stubs returning constant `0` / `null` under `LightingJNI`. REJECTED.
+   - `IsoGridSquare.getLightInfluenceR/G/B` (`IsoGridSquare.java:7910-7932`): Populated only by `IsoFireManager` for fire flicker effects; null on all normal non-burning tiles. REJECTED.
+   - `IsoLightSource` & `IsoCell.getLamppostPositions` (`IsoLightSource.java:34-263`, `IsoCell.java:2554-2565`): Registered lamp objects are passed to native C++ where `LightingJNI` computes lightmaps only for human viewports `0..3`. Discards sunlight, sky light, and ambient darkness. REJECTED.
+   - `RoomDef.lightsActive` (`RoomDef.java:57`): Blueprint electrical switch flag; fails daylight/window illumination, power-grid validation, and outdoor tiles. `IsoRoomLight` is internal and not exposed to Lua. REJECTED.
+   - `ServerLOS` (`ServerLOS.java:20-178`): Dedicated server multiplayer only; uninitialized in single-player sandbox and not exposed to Lua. REJECTED.
+   - `GameTime.getSkyLightLevel` (`GameTime.java:685-705`): Queries player 0 render settings and mutates global engine lighting state (`LightingJNI.doInvalidateGlobalLights`). Lacks target-square spatial association. REJECTED.
+   - `IsoChunk.lightCheck / lightingNeverDone` (`IsoChunk.java:384-385, 510-580`): Fixed arrays of size 4 (`new boolean[4]`) indexed by human player splitscreen slots `0..3`. REJECTED.
+
+2. **Lua Exposure Constraints**:
+   - `LuaManager$Exposer.java` exposes `IsoGridSquare`, `IsoCell`, `IsoChunk`, `RoomDef`, `IsoLightSource`, and `ClimateManager`, but none expose a parameterless or player-independent method that returns fresh, read-only tile illumination.
+   - `LightingJNI`, `IsoRoomLight`, and `ServerLOS` were not found in the inspected explicit class registration list; actual Lua reachability remains unverified.
+
+3. **Blocker Status & Policy**:
+   - ALL CANDIDATES REJECTED. No inspected candidate established read-only, fresh, player-independent target tile illumination.
+   - Independent lighting blocker remains strictly and honestly OPEN. No speculative scaffolding or mock lighting is introduced.
+   - `lighting = "unknown"` preserved unconditionally across all perception passes; visual detection remains `visual = "unknown"` (confirmed = 0); unknown lighting never implies sight.
+   - External/model AI strictly ON HOLD.
+
+4. **Smallest Proposed Native Verification for Gate B**:
+   - In isolated profile, position Sarah in an unlit windowless room at midnight. Verify `look` / `perceive` report geometry counts while visual confirmation remains strictly `0` with `lighting: unknown`.
+   - Rotate human player away or step outside: verify Sarah's outputs remain identical, as an observation only, not proof of cache independence.

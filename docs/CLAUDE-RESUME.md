@@ -1,3 +1,24 @@
+## Codex-reviewed extended lighting audit (2026-10-07)
+
+Documentation-only investigation; no usable independent lighting route admitted.
+Installed archive hash matches the pinned SHA256. Selected source checks confirm
+CanSee is geometric, zombie vision uses player lighting/climate, and getSkyLightLevel
+reads player render settings and conditionally invalidates global lights.
+The broader candidate matrix is static evidence, not an exhaustive engine proof.
+Native C++ internals were not inspected. Explicit registration-list absence does
+not establish that an object or method is unreachable through Lua return values.
+Light-source lists and fire influence arrays lack verified total illumination
+provenance; exclusive producer and whole-engine absence claims are not established.
+For any future invariance test keep Sarah, player and target positions fixed;
+change only player facing and compare stable identities. Moving the player changes
+an observed target and may change loaded coverage. Matching counts alone prove
+neither independent lighting nor absence of camera-cache borrowing.
+Independent lighting remains OPEN; visual stays unknown. No code, deployment,
+launch or save/settings changes. Codex owns the checkout. Existing 731+11+42
+baseline remains unchanged; the sampler policy checks were rerun for this audit.
+Next useful work is isolated native diagnostic/Follow acceptance after fresh backup,
+or a separately bounded new lighting route; no sight-driven behavior is enabled.
+
 ## Codex review: offline memory clock candidate (2026-10-07)
 
 Gemini returned checkout ownership to Codex. Independently verified 731 checks

@@ -1,3 +1,24 @@
+## Codex-reviewed extended lighting audit (2026-10-07)
+
+Documentation-only investigation; no usable independent lighting route admitted.
+Installed archive hash matches the pinned SHA256. Selected source checks confirm
+CanSee is geometric, zombie vision uses player lighting/climate, and getSkyLightLevel
+reads player render settings and conditionally invalidates global lights.
+The broader candidate matrix is static evidence, not an exhaustive engine proof.
+Native C++ internals were not inspected. Explicit registration-list absence does
+not establish that an object or method is unreachable through Lua return values.
+Light-source lists and fire influence arrays lack verified total illumination
+provenance; exclusive producer and whole-engine absence claims are not established.
+For any future invariance test keep Sarah, player and target positions fixed;
+change only player facing and compare stable identities. Moving the player changes
+an observed target and may change loaded coverage. Matching counts alone prove
+neither independent lighting nor absence of camera-cache borrowing.
+Independent lighting remains OPEN; visual stays unknown. No code, deployment,
+launch or save/settings changes. Codex owns the checkout. Existing 731+11+42
+baseline remains unchanged; the sampler policy checks were rerun for this audit.
+Next useful work is isolated native diagnostic/Follow acceptance after fresh backup,
+or a separately bounded new lighting route; no sight-driven behavior is enabled.
+
 ## Codex review: offline memory clock candidate (2026-10-07)
 
 Gemini returned checkout ownership to Codex. Independently verified 731 checks
@@ -18,7 +39,7 @@ ownership handoff; no sight-driven behavior may bypass the open lighting gate.
 
 - [x] Slice 6: Offline candidate native enumeration and Sarah-relative facing (`IsoGameCharacter.getForwardDirectionX/Y`). Bounded exact-reference snapshot enumeration via `sq:getMovingObjects()`, cross-sample list identity with stable tokens for unchanged lists (cursor fairness) and nonreused tokens for changed/reordered lists, bounded lifecycle-cleared snapshots (FIFO 128), fail-closed rejection for oversized lists (>64), native read budget accounting, strict boolean liveness requirement, collision-safe short identity tokens (`so:e<epoch>:s<seq>:<kind>:<oid>`), exclusion of dead/self/non-characters, no permanent Java handles.
 - [x] Slice 7: Conservative loaded coverage (`Coverage.lua`) and exact obstruction normalization (`ObstructionNormalizer.lua`), preserving door/window distinctions. Unloaded intermediate squares and missing geometry fail closed to unknown.
-- [x] Slice 8: Independent lighting investigation (`INDEPENDENT-LIGHTING-AUDIT.md`). Refused JNI -1 mutation and player camera slots. Bounded analysis of inspected candidate classes (`IsoGridSquare`, `LightingJNI`, `ClimateManager`, `IsoGameCharacter.getLightInfo2()`) established no admissible route; lighting strictly preserved as `lighting = "unknown"` unconditionally and the independent lighting blocker remains OPEN. No claim that no suitable API exists anywhere in the engine. Unknown lighting never implies sight (visual confirmed = 0).
+- [x] Slice 8: Extended independent lighting investigation (`INDEPENDENT-LIGHTING-AUDIT.md`). Refused JNI -1 mutation and player camera slots. Inspected `IsoZombie` vision logic, `IsoGameCharacter.CanSee`, `interpolateLight`, `getDarkMulti`/`getVertLight`, `resultLightCount`, `lightInfluence`, `IsoLightSource`, `RoomDef.lightsActive`, `ServerLOS`, `getSkyLightLevel`, and `IsoChunk` player lighting arrays. All candidates rejected; lighting strictly preserved as `lighting = "unknown"` unconditionally and the independent lighting blocker remains OPEN. No claim that no suitable API exists anywhere in the engine. Unknown lighting never implies sight (visual confirmed = 0).
 - [x] Slice 9: Diagnostic commands `'look'` and `'perceive'` in `Commands.lua` and `Console.lua`. Read-only execution (strictly requires active observation state; never invokes checkLifecycle or disturbs follow/walk). Geometry and visual results reported separately; bounded memory snapshots with last-seen age in seconds (`math.max(0, now - rec.observedAt)`). Monotonic time provider injected via bounded engine delta accumulation (`getGameTime():getTimeDelta()`, fail-closed pause validation via boolean pause state or speed controls, speed-scaled, unclamped simulation delta to prevent discarding elapsed time or prolonging freshness, fail-closed without silent zero or wall-clock fallbacks); missing, throwing, or invalid delta invalidates observation memory immediately and recovery does not retain records of unknown elapsed age; memory invalidated on clock reversal; `state.reset()` clears accumulated time. Full pipeline idle lifecycle checks wired: `checkLifecycle()` detects death, unload, and controller/NPC replacement while idle, invalidating Knowledge and adapter perception without initiating/cancelling movement.
 - [x] Offline test suite updated and passing: 731 suite checks (+29 new checks across Batch B: +13 in `tools/test_commands.py`, +9 in `tools/test_console.py`, +7 in `tools/test_render.py`) across 16 suites, 11 runner self-tests, 42 preflight self-tests.
 - [ ] Gate B: Codex review, isolated live acceptance (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry). Independent sight must pass before sight-driven combat or looting is enabled. Independent lighting blocker remains OPEN.
@@ -293,4 +314,3 @@ No multiplayer or broad PZNS modernization commitment is implied.
 Native slice C update (2026-10-05): nearby arrival, already-at-target, sustained cancellation/resumption, mouse toolbar and context-menu success, same-process history reset verified. Distance refusal/red feedback and post-reload user movement remain pending. See evidence/slice-c-native-partial.txt; no full native acceptance claim.
 
 Follow responsiveness & stress pass: 222 offline suite checks (66 follow) plus 11 runner/19 preflight pass; advancing simulation and bounded progress protection verified offline; native regression pending. See latest STATUS/HANDOFF.
-
