@@ -1,3 +1,17 @@
+## Codex assessment of Gemini Pro review (2026-10-08)
+
+See REVIEW-ASSESSMENT-2026-10-08.md. Queue clearing is a documented single-owner
+compatibility limitation, not a demonstrated current high-severity defect.
+Unconditional retired base stop/perform is rejected: installed base methods can
+reset/cancel the newer character queue/path. Ordinary native queue clear already
+calls StopAllActionQueue; actual completion/cleanup remains a live gate.
+Pause API verification and keeping the lighting prototype inert are valid next
+steps already in the plan. Codex reran29 adapter +71 Follow +45 console checks,
+all PASS; code unchanged. Existing full baseline784+11+42 is unchanged.
+No deployment/launch/save/settings changes. Next isolated batch must verify queue/
+path/running cleanup, stale callbacks, pause/speed/reload and rendering after a
+fresh verified backup. Codex owns checkout; lighting OPEN, external AI ON HOLD.
+
 ## Codex accepted offline source snapshot and milestone checkpoint (2026-10-07)
 
 Gemini handed checkout ownership back. Codex reviewed the inert module and
