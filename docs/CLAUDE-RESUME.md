@@ -1,3 +1,17 @@
+## Codex lighting follow-up: source reconstruction route (2026-10-07)
+
+Codex owns checkout. Fresh offline inspection distinguishes globally registered
+light-source parameters from player-indexed render outputs. Read-only source
+getters offer a candidate for an authored Sarah-owned model, not an admitted
+native illumination query. Power freshness, loaded source coverage, light
+transmission and thresholds remain unresolved. Single-player torch registration
+enumerates IsoPlayer.players; Sarah carried-lamp rendering is separately unproven.
+See SARAH-LIGHTING-SOURCE-CANDIDATE.md for evidence and the smallest calibration
+boundary. No code/deployment/launch/save/settings changes. Lighting stays unknown;
+external/model AI remains ON HOLD. Existing 731+11+42 baseline is unchanged.
+Next: bounded source snapshot investigation, then isolated calibration only after
+fresh backup. No model may feed confirmed sight or memory before native acceptance.
+
 ## Codex-reviewed extended lighting audit (2026-10-07)
 
 Documentation-only investigation; no usable independent lighting route admitted.
