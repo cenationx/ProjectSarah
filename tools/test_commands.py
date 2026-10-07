@@ -1110,6 +1110,88 @@ test('missing, throwing, or non-monotonic time fails look closed and never updat
     local snap=k:snapshot(100.0)
     assert(#snap==0,'Knowledge must be invalidated on clock reversal rather than retaining old records indefinitely')
 end)
+test('clock discontinuity in Commands: missing, throwing, or invalid time invalidates knowledge, and recovery does not retain records of unknown elapsed age',function()
+    local k=Knowledge.new()
+    local clockMode='valid'
+    local clockVal=100.0
+    local function mockTime()
+        if clockMode=='valid' then return clockVal
+        elseif clockMode=='error' then error('hardware timer failure')
+        elseif clockMode=='nil' then return nil
+        elseif clockMode=='nan' then return 0/0
+        elseif clockMode=='neg' then return -10.0
+        elseif clockMode=='inf' then return 1/0
+        end
+        return nil
+    end
+
+    local sampleCount=0
+    local d=Commands.new(function() return {state='active'} end,nil,nil,nil,nil,function()
+        sampleCount=sampleCount+1
+        return {
+            status='sampled',
+            lighting='unknown',
+            results={
+                {id='p'..sampleCount,kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}
+            }
+        }
+    end,k,mockTime)
+
+    -- Step 1: Initial look at t=100.0 succeeds
+    local r1=d:execute('look')
+    assert(r1.state=='completed')
+    assert(#k:snapshot(100.0)==1,'Knowledge holds record p1 at t=100.0')
+
+    -- Step 2: Clock throws error during command execution
+    clockMode='error'
+    local r2=d:execute('look')
+    assert(r2.state=='failed')
+    assert(r2.lines[1]:find('time source unavailable %(time provider error'))
+    assert(#k:snapshot(100.0)==0,'Knowledge must be invalidated immediately when clock throws')
+
+    -- Step 3: Clock recovers with valid time (e.g. t=115.0)
+    clockMode='valid'
+    clockVal=115.0
+    local r3=d:execute('look')
+    assert(r3.state=='completed')
+    -- Verify old record p1 is NOT in memory; only newly sampled p3 is present
+    local snap3=k:snapshot(115.0)
+    assert(#snap3==1,'Only fresh observation present after recovery')
+    assert(snap3[1].id=='p3','Stale record p1 must NOT be retained after clock recovery')
+
+    -- Step 4: Clock returns nil during tick
+    clockMode='nil'
+    d:tick()
+    assert(#k:snapshot(115.0)==0,'Knowledge invalidated on nil clock during tick')
+
+    -- Step 5: Clock recovers after nil during tick
+    clockMode='valid'
+    clockVal=125.0
+    d:tick()
+    local snap5=k:snapshot(125.0)
+    assert(#snap5==0,'Knowledge remains clean upon tick recovery until new perception is sampled')
+
+    -- Step 6: Clock returns NaN (invalid number)
+    k:update({
+        status='sampled',
+        results={{id='p_temp',kind='player',geometric='visible',visual='visible',position={x=10,y=20,z=0}}}
+    },125.0)
+    assert(#k:snapshot(125.0)==1)
+
+    clockMode='nan'
+    local r6=d:execute('look')
+    assert(r6.state=='failed')
+    assert(r6.lines[1]:find('time source unavailable %(invalid time value%)'))
+    assert(#k:snapshot(125.0)==0,'Knowledge invalidated on NaN clock')
+
+    -- Step 7: Recovery after NaN
+    clockMode='valid'
+    clockVal=135.0
+    local r7=d:execute('look')
+    assert(r7.state=='completed')
+    local snap7=k:snapshot(135.0)
+    assert(#snap7==1 and snap7[1].id~='p_temp','Stale temp record not retained after NaN recovery')
+end)
 test('idle lifecycle check: tick invalidates knowledge and perception on death, unload, and controller replacement without movement command',function()
     local resetPerceptionCount=0
     local mockAdapter={

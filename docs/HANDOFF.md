@@ -1,3 +1,52 @@
+## Codex review: offline memory clock candidate (2026-10-07)
+
+Gemini returned checkout ownership to Codex. Independently verified 731 checks
+across 16 suites, 11 runner self-tests and 42 preflight self-tests, all PASS.
+Clock failure and recovery clear observation memory; unverified pause state
+fails closed. The clock accumulates engine simulation delta, with no additional
+clamp. Static timing inspection and mocked fixtures do not establish native
+Lua exposure, pause/speed behavior or actual memory expiry.
+Independent lighting remains OPEN; visual results remain unknown and native
+confirmed memory is not admitted. Prior unavailable-clock notes are historical.
+No game process detected during this review; no deployment, launch or
+save/settings changes. External/model AI remains ON HOLD.
+Next: isolated native acceptance only after a fresh verified world/mod/profile
+backup and process check. Gemini may continue bounded offline work with explicit
+ownership handoff; no sight-driven behavior may bypass the open lighting gate.
+
+## Batch B: Monotonic memory clock integrated offline; independent lighting remains open (2026-10-07)
+
+Gemini completed offline analysis of the two Batch B perception blockers. Checkout is prepared for Codex review:
+- Source changes completed offline:
+  * Console.lua:
+    - Added `getEngineDelta()`: queries `getGameTime():getTimeDelta()`, validates finite non-negative values, and enforces fail-closed pause verification via `gt.isGamePaused()` (validated boolean) or `UIManager.getSpeedControls().getCurrentGameSpeed()` (valid non-negative number returning 0.0 delta while paused). If pause state is missing, throwing, or malformed, it invalidates observation memory immediately (`curState.dispatch:resetKnowledge()`), flags discontinuity (`curState.clockDiscontinuous = true`), and fails closed (`nil, "pause state unavailable or unverified"`).
+    - Removed arbitrary 5.0s delta clamp based on engine bytecode analysis of `GameTime.java` multiplier chain (`speedMultiplier * realDeltaSeconds * perObjectMultiplier * slomo`). Noted that `GameTime.getMultiplier()` has an independent single-player sleeping characters branch (`200.0f * (30.0f / (float)PerformanceSettings.getLockFPS())`) bypassing the normal formula, that `FPSTracking.java` caps its multiplier at `5.0f` making `getTimeDelta()` engine simulation time rather than guaranteed wall-clock time, and that `IngameState.java:UpdateStuff()` runs before `Events.OnTick` (with `GameTime.update()` not immediately adjacent to `OnTick`). Unclamping prevents discarded simulation time and artificial prolonging of memory freshness.
+    - Added `getTimeSeconds()`: validates `allowed()` profile gate, requires `getEngineDelta()` success, and returns `curState.accumulatedTime`. On missing, throwing, or invalid delta, invalidates observation memory immediately (`curState.dispatch:resetKnowledge()`), flags discontinuity (`curState.clockDiscontinuous = true`), and fails closed (`nil, "engine clock unavailable: ..."`) without silent zero or wall-clock (`getTimestampMs`) fallback.
+    - Updated `state.tick()`: advances `curState.accumulatedTime` by `dt` before dispatch tick. In case of clock failure, invalidates observation memory immediately and flags discontinuity; upon recovery, clears discontinuity flag.
+    - Updated `state.reset()`: clears `accumulatedTime = nil` and `clockDiscontinuous = false`, ensuring new sessions restart cleanly from 0.0.
+    - Preserved `accumulatedTime` and `clockDiscontinuous` across module reload (`old and old.accumulatedTime`, `old and old.clockDiscontinuous`) via `curState = SarahConsole or state` to maintain monotonic continuity.
+    - Exposed `state.getEngineDelta` and `state.getTimeSeconds` for tests and diagnostics.
+  * Commands.lua:
+    - `self:getNow()`: on missing, throwing, or invalid time provider (`type ~= 'function'`, error, `nil`, or non-finite), immediately invalidates observation memory (`self:resetKnowledge()`), clears `self.lastNow = nil`, and fails closed. On non-monotonic time (`t < lastNow`), invalidates memory immediately.
+    - `self:tick()`: evaluates `self:getNow()` when `self.timeProvider` is provided, catching clock discontinuities during idle ticks.
+- Independent Lighting Investigation (`INDEPENDENT-LIGHTING-AUDIT.md`):
+  * Evaluated candidate engine classes (`IsoGridSquare`, `LightingJNI`, `ClimateManager`, `IsoGameCharacter.getLightInfo2()`, `LuaManager$Exposer`).
+  * No admissible independent lighting route established among inspected candidates; the independent lighting blocker remains open.
+  * No claim that no suitable API exists anywhere in the engine.
+  * Preserved `lighting = "unknown"` unconditionally across all perception passes. Visual detection remains `visual = "unknown"` (confirmed = 0); unknown lighting never implies sight.
+- Offline tests: 731 suite checks across 16 suites in `run_tests.py` PASS (+29 new checks across Batch B: +13 in `tools/test_commands.py` [67 checks total], +9 in `tools/test_console.py` [45 checks total], +7 in `tools/test_render.py` [29 checks total]); 11 runner self-tests in `tools/test_runner.py` PASS; 42 preflight self-tests in `tools/test_preflight.py` PASS.
+- Verification & boundary status:
+  * Implemented code: `foundation/SarahFoundation/42/media/lua/client/Sarah/Console.lua`, `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`.
+  * Offline verification: 731 checks across 16 suites in `run_tests.py` PASS.
+  * Pending native acceptance: Gate B (front/behind, player facing away, walls/doors/windows, darkness, missing squares, memory expiry) strictly pending Codex live verification in the isolated profile. Independent lighting blocker remains OPEN. No autonomous actions, combat, or looting enabled. Methods are offline candidates verified against static signatures and mocked tests, not native engine features.
+- Live checklist & safety requirements for Codex:
+  1. Verify Project Zomboid is CLOSED.
+  2. Take a separate fresh verified backup of the disposable world, deployed mod, and isolated profile BEFORE deploying or launching.
+  3. Deploy reviewed files from `foundation/SarahFoundation/` to `runtime/isolated/mods/SarahFoundation/`.
+  4. Launch isolated profile (`tools/launch-isolated.ps1`).
+  5. Test `look` / `perceive` via Sarah Console: verify geometry counts, visual confirmation = 0, unknown lighting message, and memory snapshots.
+- Checkout handoff: Released to Codex for review, deployment, and live testing. Working tree contains uncommitted Batch B changes for inspection.
+
 ## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
 
 Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes

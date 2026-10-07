@@ -1,3 +1,55 @@
+## Codex review: offline memory clock candidate (2026-10-07)
+
+Gemini returned checkout ownership to Codex. Independently verified 731 checks
+across 16 suites, 11 runner self-tests and 42 preflight self-tests, all PASS.
+Clock failure and recovery clear observation memory; unverified pause state
+fails closed. The clock accumulates engine simulation delta, with no additional
+clamp. Static timing inspection and mocked fixtures do not establish native
+Lua exposure, pause/speed behavior or actual memory expiry.
+Independent lighting remains OPEN; visual results remain unknown and native
+confirmed memory is not admitted. Prior unavailable-clock notes are historical.
+No game process detected during this review; no deployment, launch or
+save/settings changes. External/model AI remains ON HOLD.
+Next: isolated native acceptance only after a fresh verified world/mod/profile
+backup and process check. Gemini may continue bounded offline work with explicit
+ownership handoff; no sight-driven behavior may bypass the open lighting gate.
+
+## Batch B: Monotonic memory clock integrated offline; independent lighting remains open (2026-10-07)
+
+Gemini completed offline analysis of the two Batch B perception blockers:
+1. Independent Lighting:
+   - Evaluated candidate engine classes (`IsoGridSquare`, `LightingJNI`, `ClimateManager`, `IsoGameCharacter.getLightInfo2()`, `LuaManager$Exposer`).
+   - No admissible independent lighting route was established among these inspected candidates; the independent lighting blocker remains open.
+   - This analysis does not assert or claim that no suitable API exists anywhere in the engine, but confirms that evaluated candidates fail read-only, freshness, or player-independence criteria:
+     * Native JNI lighting in `LightingJNI` is strictly bound to human player camera viewports (`0..3`). No NPC sensory lighting slot exists on these inspected structures.
+     * Passing `-1` to `getLightLevel` / `getLightLevel2` bypasses native JNI refresh (offsets 91/128), unpacks stale shared buffer data, and mutates `square.lightLevel` (offset 315).
+     * Player indices `0..3` read human camera caches and mutate room-seen discovery state (`checkRoomSeen`).
+     * Passive getters (`GetRLightLevel`, `getLightInfo`) read unrefreshed render caches without freshness guarantees.
+     * Lamp totals return a constant `0.0f` in JNI mode.
+     * ClimateManager getters provide macro celestial parameters, check player cheat flags (`isAlwaysDayCheat()`), and lack spatial coordinates, wall/roof occlusion, or artificial light source calculations.
+     * Character `getLightInfo2()` computes model shader rendering info, not tile illumination.
+   - Verdict: `lighting = "unknown"` is strictly preserved unconditionally and the independent lighting blocker remains OPEN. Visual detection remains `visual = "unknown"` (confirmed = 0); unknown lighting never implies sight.
+2. Monotonic Memory Clock (`Console.lua` & `Commands.lua`):
+   - Evaluated `GameTime.getTimeDelta()` implementation, multiplier chain, sleeping branch, and `OnTick` ordering:
+     * Multiplier chain: Active-play `getTimeDelta()` evaluates to `multiplier / 0.8f / multiplierBias / 60.0f` where normal active-play `multiplier = speedMultiplier * fpsMultiplier * multiplierBias * perObjectMultiplier * slomo * 0.8f`.
+     * The `0.8f` factor and `multiplierBias` cancel out algebraically.
+     * Separate all-players-asleep branch: `GameTime.getMultiplier()` contains an explicit single-player sleeping characters branch (lines 941-944) returning `200.0f * (30.0f / (float)PerformanceSettings.getLockFPS())`; the normal multiplier formula does not cover this branch.
+     * FPSTracking cap and simulation time semantics: `FPSTracking.java` caps its multiplier at `5.0f` (`fpsMultiplier <= 5.0f`), so `getTimeDelta()` represents engine simulation time, not guaranteed wall-clock elapsed time.
+     * Units and speed semantics: Units are simulation elapsed seconds per frame. At 1x speed this matches stepped simulation frame delta; at fast-forward and accelerated sleep it scales with engine simulation speed.
+     * `OnTick` ordering: In `IngameState.java`, `UpdateStuff()` executes at line 1779; inside `UpdateStuff()`, `GameTime.getInstance().update(...)` runs at line 773. Subsequent subsystem updates (`ScriptManager`, `WorldSoundManager`, etc.) execute before line 1788 invokes `this.onTick()`. Thus `UpdateStuff` runs before `OnTick`, and `GameTime.update` is not immediately adjacent to `Events.OnTick`.
+     * Arbitrary 5.0s delta clamp removed: Clamping discards legitimate elapsed simulation time during fast-forward or sleep acceleration, artificially prolonging observation memory freshness.
+   - Fail-closed pause handling: `getEngineDelta()` strictly requires a successfully validated boolean pause state from `gt.isGamePaused()` or valid non-negative speed-control result from `UIManager.getSpeedControls().getCurrentGameSpeed()`. If both checks are missing, throwing, or malformed, it invalidates observation memory immediately (`resetKnowledge()`), flags discontinuity (`clockDiscontinuous = true`), and fails closed (`nil, "pause state unavailable or unverified"`).
+   - Clock discontinuities: Missing, throwing, or invalid deltas (`nil`, error, negative, NaN, infinite) invalidate observation memory immediately (`resetKnowledge()`), flag discontinuity (`clockDiscontinuous = true`), and fail closed without silent zero or wall-clock fallbacks.
+   - Failure & Recovery: Recovery resumes clean accumulation; observation memory remains clean upon recovery so no records of unknown elapsed age are silently retained.
+   - Invalidation on clock reversal: Non-monotonic time (`t < lastNow`) triggers immediate memory invalidation.
+3. Automated test suite updated and passing:
+   - 731 suite checks (+29 new checks across Batch B: +13 in `tools/test_commands.py` [67 checks total], +9 in `tools/test_console.py` [45 checks total], +7 in `tools/test_render.py` [29 checks total]) across 16 suites in `run_tests.py` PASS.
+   - 11 runner self-tests in `tools/test_runner.py` PASS; 42 preflight self-tests in `tools/test_preflight.py` PASS.
+4. Gate B status:
+   - Methods remain offline candidates verified against static signatures and mocked tests.
+   - All behavior diagnostic-only. No autonomous behavior, combat, or looting enabled. Independent lighting blocker remains OPEN.
+   - Game is CLOSED. No deployment, game launch, or save/settings changes performed. Checkout editing ownership ready to return to Codex.
+
 ## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
 
 Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes

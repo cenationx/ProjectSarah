@@ -35,6 +35,8 @@ local state=SarahConsole
 state.menuOriginal=menuOriginal
 state.dispatch=old and old.dispatch or nil
 state.pos=old and old.pos or nil
+state.accumulatedTime=old and old.accumulatedTime or nil
+state.clockDiscontinuous=old and old.clockDiscontinuous or false
 local function stopSarah(reason,action)
     if SarahFoundation and SarahFoundation.controller and SarahFoundation.controller.npc then
         local controller=SarahFoundation.controller
@@ -109,12 +111,120 @@ local function resetPerceptionSarah()
         end
     end
 end
-local function getTimeSeconds()
-    -- Native Project Zomboid Lua does not expose a verified monotonic clock
-    -- (getTimestampMs and getTimeInMillis wrap non-monotonic wall-clock System.currentTimeMillis).
-    -- Time is therefore left explicitly unavailable until a verified monotonic source is established.
-    return nil
+local function allowed()
+    local root=Core.getMyDocumentFolder():gsub('\\','/'):gsub('/$','')
+    return root=='G:/Codex/Project Sarah/runtime/isolated' and not isClient() and not isServer() and getSpecificPlayer(0)~=nil
 end
+local function getEngineDelta()
+    if not getGameTime or type(getGameTime) ~= 'function' then
+        return nil, 'getGameTime unavailable'
+    end
+    local ok, gt = pcall(getGameTime)
+    if not ok or not gt then
+        return nil, 'getGameTime failed'
+    end
+    if not gt.getTimeDelta or type(gt.getTimeDelta) ~= 'function' then
+        return nil, 'getTimeDelta unavailable'
+    end
+    local pauseVerified = false
+    local isPaused = false
+    if gt.isGamePaused and type(gt.isGamePaused) == 'function' then
+        local pOk, paused = pcall(gt.isGamePaused, gt)
+        if not pOk then
+            pOk, paused = pcall(gt.isGamePaused)
+        end
+        if pOk and type(paused) == 'boolean' then
+            pauseVerified = true
+            if paused then
+                isPaused = true
+            end
+        end
+    end
+    if not isPaused and UIManager and UIManager.getSpeedControls and type(UIManager.getSpeedControls) == 'function' then
+        local scOk, sc = pcall(UIManager.getSpeedControls)
+        if scOk and sc and sc.getCurrentGameSpeed and type(sc.getCurrentGameSpeed) == 'function' then
+            local sOk, spd = pcall(sc.getCurrentGameSpeed, sc)
+            if not sOk then
+                sOk, spd = pcall(sc.getCurrentGameSpeed)
+            end
+            if sOk and type(spd) == 'number' and spd == spd and spd >= 0 then
+                pauseVerified = true
+                if spd == 0 then
+                    isPaused = true
+                end
+            end
+        end
+    end
+    if not pauseVerified then
+        local curState = SarahConsole or state
+        if curState and curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        if curState then
+            curState.clockDiscontinuous = true
+        end
+        return nil, 'pause state unavailable or unverified'
+    end
+    if isPaused then
+        return 0.0, 'paused'
+    end
+    local dOk, dt = pcall(gt.getTimeDelta, gt)
+    if not dOk then
+        local curState = SarahConsole or state
+        if curState and curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        if curState then
+            curState.clockDiscontinuous = true
+        end
+        return nil, 'getTimeDelta error: ' .. tostring(dt)
+    end
+    if type(dt) ~= 'number' or dt ~= dt or dt < 0 or dt == math.huge then
+        local curState = SarahConsole or state
+        if curState and curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        if curState then
+            curState.clockDiscontinuous = true
+        end
+        return nil, 'invalid getTimeDelta value'
+    end
+    -- GameTime.getTimeDelta() returns simulation elapsed seconds per frame.
+    -- Clamping delta discards elapsed simulation time and artificially prolongs memory freshness.
+    return dt
+end
+local function getTimeSeconds()
+    if not allowed() then
+        return nil, 'not allowed'
+    end
+    local dt, err = getEngineDelta()
+    local curState = SarahConsole or state
+    if dt == nil then
+        if curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        curState.clockDiscontinuous = true
+        return nil, 'engine clock unavailable: ' .. tostring(err)
+    end
+    if curState.clockDiscontinuous then
+        if curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        curState.clockDiscontinuous = false
+    end
+    if curState.accumulatedTime == nil then
+        curState.accumulatedTime = 0.0
+    end
+    if type(curState.accumulatedTime) ~= 'number' or curState.accumulatedTime ~= curState.accumulatedTime or curState.accumulatedTime < 0 or curState.accumulatedTime == math.huge then
+        if curState.dispatch and curState.dispatch.resetKnowledge then
+            curState.dispatch:resetKnowledge()
+        end
+        return nil, 'accumulated time invalid'
+    end
+    return curState.accumulatedTime
+end
+state.getEngineDelta = getEngineDelta
+state.getTimeSeconds = getTimeSeconds
 local function getDispatch()
     if not state.dispatch then
         state.dispatch=Commands.new(function(inventory)
@@ -129,10 +239,6 @@ local function getDispatch()
 end
 state.getDispatch=getDispatch
 local Panel=ISPanel:derive('SarahConsolePanel')
-local function allowed()
-    local root=Core.getMyDocumentFolder():gsub('\\','/'):gsub('/$','')
-    return root=='G:/Codex/Project Sarah/runtime/isolated' and not isClient() and not isServer() and getSpecificPlayer(0)~=nil
-end
 function state.conflict(key)
     if not key or key==0 then return 'Console key is unbound; use the context menu or key settings.' end
     if key==Keyboard.KEY_F8 then return 'F8 is used by the map editor; choose another key.' end
@@ -335,6 +441,25 @@ end
 -- Eat the release to avoid opening the pause menu after closing with Escape.
 state.tick=function()
     if not allowed() then state.close(); return end
+    local curState = SarahConsole or state
+    local dt, err = getEngineDelta()
+    if dt ~= nil then
+        if curState.clockDiscontinuous then
+            if state.dispatch and state.dispatch.resetKnowledge then
+                state.dispatch:resetKnowledge()
+            end
+            curState.clockDiscontinuous = false
+        end
+        if curState.accumulatedTime == nil then
+            curState.accumulatedTime = 0.0
+        end
+        curState.accumulatedTime = curState.accumulatedTime + dt
+    else
+        if state.dispatch and state.dispatch.resetKnowledge then
+            state.dispatch:resetKnowledge()
+        end
+        curState.clockDiscontinuous = true
+    end
     if state.dispatch then
         state.dispatch:tick()
         if state.dispatch.consumeNotices then
@@ -387,6 +512,8 @@ end
 state.reset=function()
     state.close(); state.held=false; state.escapeHeld=false; state.swallow=false
     state.pos=nil
+    state.accumulatedTime=nil
+    state.clockDiscontinuous=false
     resetPerceptionSarah()
     if state.dispatch then state.dispatch:reset() end
 end

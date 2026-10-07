@@ -87,7 +87,18 @@ The packed RGB getters (`GetRLightLevel`, `GetGLightLevel`, `GetBLightLevel` at 
 
 ## 5. Conclusion
 
-No candidate within this bounded supplied-source inspection establishes trustworthy read-only, player-independent target illumination. `DiagnosticSampler` must continue enforcing `lighting = "unknown"`.
+Conclusions are strictly bounded to the candidate classes and methods inspected in this audit (`IsoGridSquare` lighting getters, `LightingJNI`, `ClimateManager`, `IsoGameCharacter.getLightInfo2()`, and `LuaManager$Exposer`). No admissible independent lighting route was established among these candidates; lighting remains `lighting = "unknown"` and the independent lighting blocker remains open.
+
+This audit does not assert or claim that no suitable API exists anywhere in the engine. It proves that the evaluated candidates fail safety and independence criteria:
+1. Native JNI lighting in `LightingJNI` is strictly bound to human player camera viewports (`0..3`). No NPC sensory lighting slot exists on these inspected structures.
+2. The `-1` path (`getLightLevel(-1)` / `getLightLevel2()`) skips native JNI refresh (offsets 91/128), unpacks stale shared buffer data, and mutates `square.lightLevel` at bytecode offset 315.
+3. Player-indexed getters (`0..3`) read human camera caches and mutate room-seen discovery state (`checkRoomSeen`).
+4. Passive getters (`GetRLightLevel`, `getLightInfo`) read unrefreshed render caches without freshness guarantees.
+5. Lamp totals return a constant `0.0f` in JNI mode.
+6. Climate celestial getters provide macro atmospheric values without spatial `(x, y, z)` attenuation or room occlusion, and check human player cheat flags.
+7. Character `getLightInfo2()` computes character model shader rendering info, not target tile illumination.
+
+Therefore, because no candidate evaluated in this audit provides safe, read-only, player-independent target illumination, `DiagnosticSampler` must continue enforcing `lighting = "unknown"`. Visual detection remains `visual = "unknown"` (confirmed = 0), and unknown lighting never implies sight. The independent lighting blocker remains open pending future investigation.
 
 ## Codex verification and next offline boundary
 

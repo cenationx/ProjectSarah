@@ -1,3 +1,19 @@
+## Codex review: offline memory clock candidate (2026-10-07)
+
+Gemini returned checkout ownership to Codex. Independently verified 731 checks
+across 16 suites, 11 runner self-tests and 42 preflight self-tests, all PASS.
+Clock failure and recovery clear observation memory; unverified pause state
+fails closed. The clock accumulates engine simulation delta, with no additional
+clamp. Static timing inspection and mocked fixtures do not establish native
+Lua exposure, pause/speed behavior or actual memory expiry.
+Independent lighting remains OPEN; visual results remain unknown and native
+confirmed memory is not admitted. Prior unavailable-clock notes are historical.
+No game process detected during this review; no deployment, launch or
+save/settings changes. External/model AI remains ON HOLD.
+Next: isolated native acceptance only after a fresh verified world/mod/profile
+backup and process check. Gemini may continue bounded offline work with explicit
+ownership handoff; no sight-driven behavior may bypass the open lighting gate.
+
 ## Codex-reviewed Batch B diagnostic candidate (2026-10-07)
 
 Gemini handed ownership back. Codex reviewed cross-pass snapshot/version changes

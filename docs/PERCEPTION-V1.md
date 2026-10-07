@@ -128,3 +128,28 @@ cross-call square cache; see COVERAGE-OFFLINE.md. All 332 suite checks (includin
 confirmed the -1 light branch bypasses refresh and writes square.lightLevel;
 keep lighting unknown. No new callbacks, sight/memory wiring, deployment or
 live acceptance. Native independent light and Follow/rendering remain open.
+
+## Monotonic memory clock offline candidate and open lighting blocker (2026-10-07)
+
+1. **Independent Lighting**: Evaluated candidate engine classes (`IsoGridSquare`, `LightingJNI`, `ClimateManager`, `IsoGameCharacter.getLightInfo2()`, `LuaManager$Exposer`). No admissible independent lighting route was established among these candidates; the independent lighting blocker remains OPEN. This analysis does not assert that no suitable API exists anywhere in the engine, but confirms that evaluated candidates fail read-only, freshness, or player-independence requirements:
+   - Native JNI lighting in `LightingJNI` is strictly bound to human player camera viewports (`0..3`). No NPC sensory lighting slot exists on these inspected structures.
+   - The `-1` index bypasses native JNI refresh (offsets 91/128), unpacks stale buffers, and writes to `square.lightLevel` (bytecode offset 315).
+   - Calling player indices (`0..3`) mutates room-seen discovery state (`checkRoomSeen`).
+   - Passive getters (`GetRLightLevel`, `getLightInfo`) read unrefreshed render caches without freshness guarantees.
+   - Climate getters are non-spatial macro celestial parameters subject to human player cheat flags.
+   - Character `getLightInfo2()` computes model shader rendering info, not target tile illumination.
+   - Therefore, `lighting = "unknown"` is strictly preserved across all perception passes. Visual detection remains `visual = "unknown"` (confirmed = 0); unknown lighting never implies sight. The independent lighting blocker remains OPEN.
+2. **Monotonic Memory Clock**: Injected into `Console.lua` via bounded accumulation of engine simulation delta:
+   - Evaluated `GameTime.getTimeDelta()` implementation, multiplier chain, sleeping branch, and `OnTick` ordering:
+     * Multiplier chain: Active-play `getTimeDelta()` computes `multiplier / 0.8f / multiplierBias / 60.0f` where normal active-play `multiplier = speedMultiplier * fpsMultiplier * multiplierBias * perObjectMultiplier * slomo * 0.8f`.
+     * The `0.8f` factor and `multiplierBias` cancel out algebraically.
+     * Separate all-players-asleep branch: `GameTime.getMultiplier()` has an explicit branch for sleeping characters (lines 941-944) returning `200.0f * (30.0f / (float)PerformanceSettings.getLockFPS())`; the normal multiplier formula does not cover this branch.
+     * FPSTracking cap and simulation time semantics: `FPSTracking.java` caps its multiplier at `5.0f` (`fpsMultiplier <= 5.0f`), so `getTimeDelta()` represents engine simulation time, not guaranteed wall-clock real time.
+     * Units and speed semantics: Units are simulation elapsed seconds per frame. At 1x speed this matches stepped simulation frame delta; at fast-forward and accelerated sleep it scales with engine simulation speed.
+     * `OnTick` ordering: In `IngameState.java`, `UpdateStuff()` executes at line 1779; inside `UpdateStuff()`, `GameTime.getInstance().update(...)` runs at line 773. Subsequent subsystem updates (`ScriptManager`, `WorldSoundManager`, etc.) execute before line 1788 invokes `this.onTick()`. Thus `UpdateStuff` runs before `OnTick`, and `GameTime.update` is not immediately adjacent to `Events.OnTick`.
+     * Arbitrary 5.0s delta clamp removed: Clamping discards legitimate elapsed simulation time during fast-forward or sleep acceleration, artificially prolonging observation memory freshness.
+   - Fail-closed pause handling: `getEngineDelta()` strictly requires a successfully validated boolean pause state from `gt.isGamePaused()` or valid non-negative speed-control result from `UIManager.getSpeedControls().getCurrentGameSpeed()`. If both checks are missing, throwing, or malformed, it invalidates observation memory immediately (`resetKnowledge()`), flags discontinuity (`clockDiscontinuous = true`), and fails closed (`nil, "pause state unavailable or unverified"`).
+   - Clock discontinuities: Missing, throwing, or invalid deltas (`nil`, error, negative, NaN, infinite) invalidate observation memory immediately (`resetKnowledge()`), flag discontinuity, and fail closed without silent zero or wall-clock fallbacks.
+   - Failure & Recovery: Recovery resumes clean accumulation without silently retaining records whose elapsed age was unknown.
+   - Invalidation on clock reversal: Non-monotonic time (`t < lastNow`) triggers immediate memory invalidation.
+   - Fully verified offline with production-source regressions in `tools/test_console.py` (45 checks) and `tools/test_commands.py` (67 checks); 731 suite checks across 16 suites pass. Diagnostic-only; native timing and acceptance remain pending Gate B live testing. Independent lighting blocker remains OPEN.

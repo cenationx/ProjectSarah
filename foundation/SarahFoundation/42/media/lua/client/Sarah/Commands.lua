@@ -93,16 +93,24 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
     end
     function self:getNow()
         if type(self.timeProvider) ~= 'function' then
+            self:resetKnowledge()
+            self.lastNow = nil
             return nil, 'missing time provider'
         end
         local ok, t = pcall(self.timeProvider)
         if not ok then
+            self:resetKnowledge()
+            self.lastNow = nil
             return nil, 'time provider error: ' .. tostring(t)
         end
         if t == nil then
+            self:resetKnowledge()
+            self.lastNow = nil
             return nil, 'time source unavailable'
         end
         if type(t) ~= 'number' or t ~= t or t < 0 or t == math.huge then
+            self:resetKnowledge()
+            self.lastNow = nil
             return nil, 'invalid time value'
         end
         if self.lastNow and t < self.lastNow then
@@ -684,6 +692,9 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
     function self:tick()
         local valid,reason=self:checkLifecycle()
         if not valid then return false,reason end
+        if self.timeProvider then
+            self:getNow()
+        end
         if self.active and self.active.command=='walk here' then
             local act=self.active
             act.ticks=(act.ticks or 0)+1

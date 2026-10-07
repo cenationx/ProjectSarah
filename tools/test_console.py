@@ -8,6 +8,7 @@ lua=LuaRuntime(unpack_returned_tuples=True)
 source=root/'foundation/SarahFoundation/42/media/lua/client/Sarah'
 lua.globals().ConsoleSource=(source/'Console.lua').read_text()
 lua.globals().Commands=lua.execute((source/'Commands.lua').read_text())
+lua.globals().Knowledge=lua.execute((source/'Knowledge.lua').read_text())
 lua.execute(r'''
 local count=0
 local function test(name,fn) fn(); count=count+1; print('PASS '..name) end
@@ -1075,6 +1076,583 @@ test('session reset clears notice queue and prevents replay across world session
     assert(not hasNotice)
 
     s.close()
+    s.reset()
+end)
+test('engine clock: getTimeSeconds fails closed when getGameTime is unavailable (no silent zero or wall-clock fallback)',function()
+    s.reset()
+    getGameTime = nil
+    local val, err = s.getTimeSeconds()
+    assert(val == nil, 'getTimeSeconds must return nil when getGameTime is nil')
+    assert(err:find('engine clock unavailable'), 'error must indicate engine clock unavailable')
+    assert(s.accumulatedTime == nil, 'accumulatedTime must remain nil')
+
+    -- Throwing getGameTime
+    getGameTime = function() error('native jni error') end
+    local val2, err2 = s.getTimeSeconds()
+    assert(val2 == nil, 'getTimeSeconds must return nil when getGameTime throws')
+    assert(err2:find('engine clock unavailable'), 'error must indicate engine clock unavailable')
+
+    -- Missing getTimeDelta
+    getGameTime = function() return {} end
+    local val3, err3 = s.getTimeSeconds()
+    assert(val3 == nil, 'getTimeSeconds must return nil when getTimeDelta missing')
+    assert(err3:find('engine clock unavailable'), 'error must indicate engine clock unavailable')
+
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: state.tick accumulates bounded monotonic engine delta when getGameTime is available',function()
+    s.reset()
+    local mockDelta = 0.016
+    local mockPaused = false
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return mockDelta end,
+            isGamePaused = function() return mockPaused end,
+        }
+    end
+
+    -- Before first tick, calling getTimeSeconds initializes to 0.0
+    local t0, err0 = s.getTimeSeconds()
+    assert(t0 == 0.0, 'getTimeSeconds initializes cleanly to 0.0 when clock available')
+    assert(err0 == nil)
+
+    -- Tick 1
+    s.tick()
+    local t1 = s.getTimeSeconds()
+    assert(math.abs(t1 - 0.016) < 1e-6, 'first tick accumulates delta')
+
+    -- Tick 2
+    s.tick()
+    local t2 = s.getTimeSeconds()
+    assert(math.abs(t2 - 0.032) < 1e-6, 'second tick accumulates delta monotonically')
+    assert(t2 > t1, 'must be strictly monotonic')
+
+    -- Tick 3
+    s.tick()
+    local t3 = s.getTimeSeconds()
+    assert(math.abs(t3 - 0.048) < 1e-6, 'third tick accumulates delta monotonically')
+    assert(t3 > t2, 'must be strictly monotonic')
+
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: pause stops accumulation and maintains monotonic clock without drift',function()
+    s.reset()
+    local mockDelta = 0.02
+    local mockPaused = false
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return mockDelta end,
+            isGamePaused = function() return mockPaused end,
+        }
+    end
+
+    s.tick()
+    local t1 = s.getTimeSeconds()
+    assert(math.abs(t1 - 0.02) < 1e-6)
+
+    -- Pause the game via isGamePaused
+    mockPaused = true
+    local pDelta, pReason = s.getEngineDelta()
+    assert(pDelta == 0.0 and pReason == 'paused')
+
+    s.tick()
+    s.tick()
+    s.tick()
+    local tPaused = s.getTimeSeconds()
+    assert(math.abs(tPaused - t1) < 1e-6, 'accumulated time must NOT advance while paused')
+
+    -- Also verify SpeedControls pause detection
+    mockPaused = false
+    local currentSpeed = 0
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() return currentSpeed end
+            }
+        end
+    }
+    s.tick()
+    assert(math.abs(s.getTimeSeconds() - t1) < 1e-6, 'accumulated time must NOT advance when speed is 0')
+
+    -- Unpause
+    currentSpeed = 1
+    s.tick()
+    local tResumed = s.getTimeSeconds()
+    assert(math.abs(tResumed - (t1 + 0.02)) < 1e-6, 'accumulated time advances cleanly upon resuming')
+    assert(tResumed > t1, 'must remain monotonic')
+
+    UIManager = nil
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: pause detection fails closed on missing, throwing, or malformed APIs and recovers cleanly',function()
+    s.reset()
+    local mockDelta = 0.02
+    local gt = {
+        getTimeDelta = function() return mockDelta end
+    }
+    getGameTime = function() return gt end
+    UIManager = nil
+
+    -- 1. Missing pause APIs (both gt.isGamePaused and UIManager are nil)
+    local dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'missing pause APIs must fail closed')
+    local tSec, tErr = s.getTimeSeconds()
+    assert(tSec == nil and tErr:find('pause state unavailable or unverified'), 'getTimeSeconds fails closed on missing pause API')
+
+    -- 2. Throwing gt.isGamePaused with no UIManager
+    gt.isGamePaused = function() error('native isGamePaused crash') end
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'throwing isGamePaused must fail closed')
+
+    -- 3. Malformed gt.isGamePaused return values (non-boolean)
+    gt.isGamePaused = function() return 'true' end -- string, not boolean
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'string return from isGamePaused must fail closed')
+
+    gt.isGamePaused = function() return 1 end -- number, not boolean
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'number return from isGamePaused must fail closed')
+
+    gt.isGamePaused = function() return {} end -- table, not boolean
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'table return from isGamePaused must fail closed')
+
+    gt.isGamePaused = function() return nil end -- nil return
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'nil return from isGamePaused must fail closed')
+
+    -- 4. Valid fallback to UIManager when gt.isGamePaused is throwing/malformed
+    local curSpeed = 0
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() return curSpeed end
+            }
+        end
+    }
+    -- With curSpeed = 0, speed controls verifies pause -> returns 0.0, 'paused'
+    dt, err = s.getEngineDelta()
+    assert(dt == 0.0 and err == 'paused', 'UIManager speed=0 successfully verifies paused state')
+
+    -- With curSpeed = 1, speed controls verifies unpaused -> returns mockDelta
+    curSpeed = 1
+    dt, err = s.getEngineDelta()
+    assert(dt == mockDelta and err == nil, 'UIManager speed=1 successfully verifies unpaused state')
+
+    -- 5. Throwing and malformed UIManager fallback when gt.isGamePaused is unavailable
+    gt.isGamePaused = function() error('crash') end
+    UIManager = {
+        getSpeedControls = function() error('UIManager native crash') end
+    }
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'throwing UIManager must fail closed')
+
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() error('getCurrentGameSpeed crash') end
+            }
+        end
+    }
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'throwing getCurrentGameSpeed must fail closed')
+
+    -- Malformed getCurrentGameSpeed values (string, negative, NaN)
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() return '0' end
+            }
+        end
+    }
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'string speed must fail closed')
+
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() return -1 end
+            }
+        end
+    }
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'negative speed must fail closed')
+
+    UIManager = {
+        getSpeedControls = function()
+            return {
+                getCurrentGameSpeed = function() return 0/0 end
+            }
+        end
+    }
+    dt, err = s.getEngineDelta()
+    assert(dt == nil and err:find('pause state unavailable or unverified'), 'NaN speed must fail closed')
+
+    -- 6. Knowledge memory invalidation and recovery under pause failure
+    UIManager = nil
+    gt.isGamePaused = function() return false end
+    s.tick()
+    s.tick()
+    local tBefore = s.getTimeSeconds()
+    assert(tBefore > 0)
+
+    local disp = s.getDispatch()
+    disp:reset()
+    local k = disp:getKnowledge()
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 'p_rec', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 5, y = 5, z = 0}}
+        }
+    }, tBefore)
+    assert(#k:snapshot(tBefore) == 1, 'Knowledge holds observation at valid time')
+
+    -- Cause pause check to throw during tick
+    gt.isGamePaused = function() error('sudden pause check failure') end
+    s.tick()
+    assert(s.clockDiscontinuous == true, 'clockDiscontinuous flag set when pause check throws')
+    assert(#k:snapshot(0) == 0, 'Knowledge memory immediately invalidated on pause check failure')
+
+    -- Look command fails closed while pause check is failing
+    local resFail = disp:execute('look')
+    assert(resFail.state == 'failed', 'look command fails closed when pause check fails')
+
+    -- Recovery: pause check becomes valid again
+    gt.isGamePaused = function() return false end
+    s.tick()
+    assert(s.clockDiscontinuous == false, 'clockDiscontinuous flag cleared on clean recovery')
+    local tAfter = s.getTimeSeconds()
+    assert(tAfter > tBefore, 'accumulated time advances monotonically after recovery')
+    assert(#k:snapshot(tAfter) == 0, 'Recovery must NOT restore stale records of unknown elapsed age')
+
+    -- New observation can be recorded after recovery
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 'p_rec2', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 6, y = 6, z = 0}}
+        }
+    }, tAfter)
+    assert(#k:snapshot(tAfter) == 1, 'Knowledge cleanly accepts new observation after recovery')
+
+    UIManager = nil
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: speed scaling, simulation delta preservation without arbitrary clamp, and invalid delta rejection',function()
+    s.reset()
+    local mockDelta = 0.1 -- 5x speed simulation (0.02 * 5)
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return mockDelta end,
+            isGamePaused = function() return false end,
+        }
+    end
+
+    s.tick()
+    local t1 = s.getTimeSeconds()
+    assert(math.abs(t1 - 0.1) < 1e-6, 'accumulates fast-forward delta')
+
+    -- Simulation delta at high speed (e.g. 40x speed or sleep acceleration): delta = 15.0s
+    -- Must be preserved without arbitrary clamp to prevent discarding elapsed time or prolonging freshness
+    mockDelta = 15.0
+    local bDelta, _ = s.getEngineDelta()
+    assert(bDelta == 15.0, 'single-tick simulation delta must NOT be arbitrarily clamped')
+    s.tick()
+    local t2 = s.getTimeSeconds()
+    assert(math.abs(t2 - 15.1) < 1e-6, 'accumulated time increased by full simulation delta (15.0s)')
+
+    -- Invalid delta: negative, NaN, infinity
+    mockDelta = -1.0
+    local negDelta, negErr = s.getEngineDelta()
+    assert(negDelta == nil and negErr:find('invalid'), 'negative delta must be rejected')
+
+    mockDelta = 0/0
+    local nanDelta, nanErr = s.getEngineDelta()
+    assert(nanDelta == nil and nanErr:find('invalid'), 'NaN delta must be rejected')
+
+    mockDelta = 1/0
+    local infDelta, infErr = s.getEngineDelta()
+    assert(infDelta == nil and infErr:find('invalid'), 'infinite delta must be rejected')
+
+    -- Tick with invalid delta fails closed and flags discontinuity
+    s.tick()
+    assert(math.abs(s.accumulatedTime - 15.1) < 1e-6, 'invalid delta must NOT alter accumulated time')
+    local tInvalid, errInvalid = s.getTimeSeconds()
+    assert(tInvalid == nil and errInvalid:find('invalid'), 'getTimeSeconds fails closed when clock is invalid')
+
+    -- Restore valid delta: getTimeSeconds clears discontinuity flag
+    mockDelta = 0.0
+    assert(math.abs(s.getTimeSeconds() - 15.1) < 1e-6, 'accumulated time resumes at 15.1')
+
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: clock discontinuities invalidate observation memory, and recovery does not retain records of unknown age',function()
+    s.reset()
+    local simDelta = 0.02
+    local gtTable = {
+        getTimeDelta = function() return simDelta end,
+        isGamePaused = function() return false end,
+    }
+    getGameTime = function() return gtTable end
+
+    local testAdapter = {
+        samplePerception = function(npc)
+            return {
+                status = 'sampled',
+                lighting = 'unknown',
+                results = {
+                    {id = 'p1', kind = 'player', geometric = 'visible', visual = 'unknown'}
+                },
+                counts = {candidates = 1, processed = 1}
+            }
+        end,
+        resetPerception = function() end
+    }
+    SarahFoundation = {
+        controller = {
+            npc = {id = 'sarah'},
+            adapter = testAdapter
+        }
+    }
+    obsState = 'active'
+    obsNpc = {x = 10, y = 20, z = 0}
+    obsPlayer = {x = 12, y = 20, z = 0, dead = false, alive = true}
+
+    local disp = s.getDispatch()
+    disp:reset()
+    s.accumulatedTime = 100.0
+
+    local k = disp:getKnowledge()
+    -- Record a confirmed visual observation at t=100.0
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 't1', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 10, y = 20, z = 0}}
+        }
+    }, 100.0)
+    assert(#k:snapshot(100.0) == 1, 'Knowledge holds observation at t=100.0')
+
+    -- Case 1: getGameTime throws error during tick (discontinuity)
+    getGameTime = function() error('GameTime native crash') end
+    s.tick()
+    assert(s.clockDiscontinuous == true, 'clockDiscontinuous flag must be set on tick error')
+    assert(#k:snapshot(100.0) == 0, 'Knowledge must be invalidated immediately on clock error during tick')
+
+    -- Recovery from error: valid clock restored
+    getGameTime = function() return gtTable end
+    s.tick()
+    assert(s.clockDiscontinuous == false, 'clockDiscontinuous flag cleared on recovery tick')
+    assert(#k:snapshot(s.getTimeSeconds()) == 0, 'Recovery must NOT retain records whose elapsed age was unknown')
+
+    -- Case 2: getTimeDelta returns invalid delta (negative) during tick
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 't2', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 10, y = 20, z = 0}}
+        }
+    }, s.getTimeSeconds())
+    assert(#k:snapshot(s.getTimeSeconds()) == 1, 'Knowledge holds observation at current time')
+
+    simDelta = -0.5
+    s.tick()
+    assert(s.clockDiscontinuous == true, 'clockDiscontinuous flag set on invalid delta')
+    assert(#k:snapshot(s.getTimeSeconds() or 0) == 0, 'Knowledge must be invalidated immediately on invalid delta')
+
+    -- Recovery from invalid delta
+    simDelta = 0.05
+    s.tick()
+    assert(s.clockDiscontinuous == false)
+    assert(#k:snapshot(s.getTimeSeconds()) == 0, 'Recovery from invalid delta must NOT retain records of unknown age')
+
+    -- Case 3: look command executed while engine clock is unavailable fails and invalidates memory
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 't3', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 10, y = 20, z = 0}}
+        }
+    }, s.getTimeSeconds())
+    assert(#k:snapshot(s.getTimeSeconds()) == 1)
+
+    getGameTime = nil -- engine clock completely unavailable
+    local resFail = disp:execute('look')
+    assert(resFail.state == 'failed', 'look must fail closed when engine clock is unavailable')
+    assert(#k:snapshot(100.0) == 0, 'Knowledge must be invalidated when look executes with unavailable clock')
+
+    -- Recovery: restore clock and execute look
+    getGameTime = function() return gtTable end
+    simDelta = 0.02
+    local resOk = disp:execute('look')
+    assert(resOk.state == 'completed', 'look succeeds upon clock recovery')
+    -- Snapshots from before recovery are empty (no stale records retained)
+    local foundT3 = false
+    for _, line in ipairs(resOk.lines) do
+        if line:find('t3') then foundT3 = true end
+    end
+    assert(not foundT3, 'Old record t3 must NOT be retained upon clock recovery')
+
+    SarahFoundation = nil
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: module reload continuity on the SAME session preserves monotonicity',function()
+    s.reset()
+    local mockDelta = 0.025
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return mockDelta end,
+            isGamePaused = function() return false end,
+        }
+    end
+
+    s.tick()
+    s.tick()
+    local tBefore = s.getTimeSeconds()
+    assert(math.abs(tBefore - 0.05) < 1e-6)
+
+    -- Module reload: old state passed into new module instance
+    local s2 = reload()
+    assert(s2.accumulatedTime == s.accumulatedTime, 'accumulatedTime preserved across module reload')
+
+    local tReload = s2.getTimeSeconds()
+    assert(math.abs(tReload - 0.05) < 1e-6, 'getTimeSeconds on reloaded module returns preserved time')
+
+    -- Tick on reloaded module continues monotonically
+    s2.tick()
+    local tAfter = s2.getTimeSeconds()
+    assert(math.abs(tAfter - 0.075) < 1e-6, 'reloaded module advances monotonically')
+    assert(tAfter > tBefore, 'must be strictly monotonic across module reload')
+
+    s = s2
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: session reset clears accumulated time and next session restarts cleanly from zero',function()
+    s.reset()
+    local mockDelta = 0.05
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return mockDelta end,
+            isGamePaused = function() return false end,
+        }
+    end
+
+    s.tick()
+    assert(s.getTimeSeconds() > 0)
+
+    -- Session reset (e.g. exit to main menu)
+    s.reset()
+    assert(s.accumulatedTime == nil, 'accumulatedTime must be nil upon session reset')
+
+    -- Next session begins: calling getTimeSeconds initializes cleanly to 0.0
+    local tNew = s.getTimeSeconds()
+    assert(tNew == 0.0, 'new session starts cleanly from 0.0')
+
+    s.tick()
+    assert(math.abs(s.getTimeSeconds() - 0.05) < 1e-6, 'new session advances from zero')
+
+    getGameTime = nil
+    s.reset()
+end)
+test('engine clock: look command integration updates knowledge with monotonic time and prunes expired records',function()
+    s.reset()
+    local simTime = 100.0
+    getGameTime = function()
+        return {
+            getTimeDelta = function() return 0.0 end,
+            isGamePaused = function() return false end,
+        }
+    end
+    s.accumulatedTime = simTime
+
+    local testAdapter = {
+        samplePerception = function(npc)
+            return {
+                status = 'sampled',
+                lighting = 'unknown',
+                results = {
+                    {id = 'p1', kind = 'player', geometric = 'visible', visual = 'unknown'}
+                },
+                counts = {candidates = 1, processed = 1}
+            }
+        end,
+        resetPerception = function() end
+    }
+    SarahFoundation = {
+        controller = {
+            npc = {id = 'sarah'},
+            adapter = testAdapter
+        }
+    }
+    obsState = 'active'
+    obsNpc = {x = 10, y = 20, z = 0}
+    obsPlayer = {x = 12, y = 20, z = 0, dead = false, alive = true}
+
+    local disp = s.getDispatch()
+    disp:reset()
+    s.accumulatedTime = simTime
+
+    -- Execute look: since lighting is unknown, visual is unknown, so confirmed = 0
+    local res = disp:execute('look')
+    assert(res.state == 'completed', 'look must succeed when monotonic time is available')
+    local foundGeo = false
+    local foundVis = false
+    local foundMem = false
+    for _,line in ipairs(res.lines) do
+        if line:find('Geometry: 1 visible') then foundGeo = true end
+        if line:find('Visual: 0 confirmed %(lighting: unknown') then foundVis = true end
+        if line:find('Memory: 0 confirmed records') then foundMem = true end
+    end
+    assert(foundGeo and foundVis and foundMem, 'look output must format geometry, visual, and memory lines')
+
+    -- Now simulate an explicit confirmed visual record directly in Knowledge to test time progression & expiry
+    local k = disp:getKnowledge()
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 't1', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 10, y = 20, z = 0}}
+        }
+    }, simTime)
+    assert(#k:snapshot(simTime) == 1, 'Knowledge must hold the confirmed record at simTime')
+
+    -- Advance clock by 5 seconds: record is still fresh (< 10s age)
+    simTime = 105.0
+    s.accumulatedTime = simTime
+    local res2 = disp:execute('look')
+    local snap2 = k:snapshot(simTime)
+    assert(res2.state == 'completed')
+    assert(#snap2 == 1, 'record must still exist at age 5.0s')
+
+    -- Advance clock past 10 seconds (e.g. +11s, simTime = 116.0): record expires!
+    simTime = 116.0
+    s.accumulatedTime = simTime
+    local res3 = disp:execute('look')
+    assert(res3.state == 'completed')
+    local snap3 = k:snapshot(simTime)
+    assert(#snap3 == 0, 'record must expire after >= 10s age')
+
+    -- Clock reversal: simTime goes backward from 116.0 to 110.0
+    -- Add a record, then trigger reversal
+    k:update({
+        status = 'sampled',
+        results = {
+            {id = 't2', kind = 'player', geometric = 'visible', visual = 'visible', position = {x = 10, y = 20, z = 0}}
+        }
+    }, 116.0)
+    assert(#k:snapshot(116.0) == 1)
+
+    simTime = 110.0
+    s.accumulatedTime = simTime
+    local resRev = disp:execute('look')
+    assert(resRev.state == 'failed', 'look must fail closed on clock reversal')
+    assert(resRev.lines[1]:find('non%-monotonic time'), 'error must indicate non-monotonic time')
+    assert(#k:snapshot(116.0) == 0, 'Knowledge must be invalidated immediately on clock reversal')
+
+    SarahFoundation = nil
+    getGameTime = nil
     s.reset()
 end)
 print('RESULT '..count..' simulated console checks passed')
