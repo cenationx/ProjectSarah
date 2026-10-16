@@ -1,3 +1,31 @@
+## Codex-reviewed Argon corrections (2026-10-16)
+
+Argon returned sole checkout ownership. Codex reviewed the production/tool diffs
+and independently verified792 checks across17 suites +11 runner +44 preflight
+self-tests PASS. Preflight checks the manifest plus all discovered source files;
+independent regressions block readiness for absent or modified perception modules.
+Checkpoint verifier cleanup uses private removeCharacter; successful/failed saves
+preserve live identities, snapshots and collector cursors. Actual Sarah removal
+still resets perception. Fresh-token readback, player restoration and pinned
+verifier cleanup failures remain covered. Building snapshots use IsoBuilding.getID
+without substituting BuildingDef identity; switched-lamp power remains unknown.
+No deployment, game launch or save/settings changes. Passing preflight self-tests
+is not a current READY result and does not establish a fresh verified backup.
+Do not assume the isolated profile/world name in the external report is current:
+re-read launch-isolated.ps1 and actual profile/latest-save state before live work.
+The light-source module remains inert; independent lighting OPEN and AI ON HOLD.
+Next: fresh verified isolated world/mod/profile backup, reviewed deployment of all
+production files, current Follow/Stop/render and clock acceptance, then separately
+reviewed source-access probing/calibration. Codex owns checkout.
+
+## Bounded correction: preflight completeness, verifier cleanup & building getter (2026-10-16)
+
+Resolved three Codex-confirmed findings from the Argon repository review:
+1. Preflight deployment completeness: `tools/preflight.py` now lists all 17 production files in `REQUIRED_PRODUCTION_FILES` (including the 8 perception/snapshot Lua modules) and unions with discovered files under `foundation/SarahFoundation`. `tools/test_preflight.py` (44 tests PASS, +2 new) builds mock environments from the real source tree and verifies missing or modified perception modules block `READY` even when the original 9 files match.
+2. Checkpoint verifier cleanup: `Engine.lua` separates `removeCharacter(npc)` from `adapter.remove(npc)` so temporary `checkpointVerifier` cleanup in `adapter.save` does not call `adapter.resetPerception()`. All readback, local-player restoration, and pinned-verifier failure guarantees remain intact. `tools/test_checkpoint.py` (11 checks PASS, +3 new) verifies live perception state is preserved across successful and failed checkpoint saves and reset on actual `adapter.remove(npc)`.
+3. Native building getter & lamp-calibration docs: `LightSourceSnapshot.lua` probes evidenced `IsoBuilding:getID()` (`IsoBuilding.java:93`, matching `LightingJNI.addLight`) without `BuildingDef` (`getDef()`) fallback, keeping missing/throwing/malformed metadata `"unknown"` and preserving read budgets. `tools/test_light_snapshot.py` (55 checks PASS, +2 new) and `docs/SARAH-LIGHTING-SOURCE-CANDIDATE.md` updated to match `IsoBuilding:getID()` and conservative switched-lamp `powerStatus`/`freshness` (`"unknown"` when `switchCount > 0`).
+4. Scope & handoff: No read budget increases; retired-action guards and Stop guarantees preserved; `LightSourceSnapshot` remains inert; lighting OPEN; external AI ON HOLD. Full suite: 792 checks across 17 suites, 11 runner, 44 preflight self-tests PASS. No deployment, game launch, save/settings changes, commit, or push. Sole editing ownership returned to Codex.
+
 ## Codex-reviewed Astra corrections (2026-10-08)
 
 Gemini returned sole editing ownership. Codex reviewed Engine/Commands diffs and

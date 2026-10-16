@@ -79,13 +79,13 @@ Implemented offline in `foundation/SarahFoundation/42/media/lua/client/Sarah/Lig
   * `radius`: validated positive integer in `[1, 64]`.
   * `active`: validated boolean.
   * `hydroPowered`: validated boolean.
-  * `buildingRestriction`: `"unrestricted"` (outdoors or legitimate nil building reference), `"restricted"` (valid building ID), or `"unknown"` (throwing or unresolvable building reference).
-  * `buildingId`: integer building ID if restricted to building (`localToBuilding`), or `nil`. Never retains Java building reference.
+  * `buildingRestriction`: `"unrestricted"` (outdoors or legitimate nil building reference), `"restricted"` (valid `IsoBuilding:getID()` integer ID), or `"unknown"` (throwing, missing, or unresolvable building reference).
+  * `buildingId`: integer `IsoBuilding` ID extracted via `IsoBuilding:getID()` (or raw `id` only if `getID` is unavailable) if restricted to building (`localToBuilding`), or `nil`. Never substitutes `BuildingDef` (`getDef()`) IDs, which belong to a separate identity namespace, and never retains Java building references.
   * `squareLoaded`: boolean (true if source square is loaded, false if unloaded/missing).
-  * `powerStatus`: `"not_required"`, `"powered"`, `"unpowered"`, `"unloaded"`, or `"unknown"`. Switch presence (`switchCount > 0`) keeps power status `"unknown"`.
+  * `powerStatus`: `"not_required"`, `"powered"`, `"unpowered"`, `"unloaded"`, or `"unknown"`. Switch presence (`switchCount > 0`) or unknown switch metadata (`switchCount == nil`) keeps `powerStatus = "unknown"` even when `generatorPower` and `gridPower` are both `false` or both `true`, because complete switch/battery/supply semantics are not established from `switchCount` alone.
   * `generatorPower`: boolean or nil (reports `sq:haveElectricity()`).
   * `gridPower`: boolean or nil (reports `sq:hasGridPower()`).
-  * `freshness`: `"stale"` (positive discrepancy: square unpowered while active flag remains true) or `"unknown"`. Never promoted to `"verified"` from mere state agreement or `hydroPowered=false`.
+  * `freshness`: `"stale"` (positive discrepancy on an unswitched hydro source: `powerStatus == "unpowered"` while `active == true`) or `"unknown"`. When `powerStatus == "unknown"` (including any switched lamp with `switchCount > 0`), `freshness` remains `"unknown"`. Never promoted to `"verified"` from mere state agreement or `hydroPowered=false`.
 - Strict collection, read, square, capture, and output budgets:
   * Oversized collections (`coll_size > maxCollectionSize`, default 128) fail closed with `status = "collection_oversized"`, `reason = "collection_exceeds_budget"`, `incomplete = true`, empty sources (never silently truncated).
   * Collection integrity and mutation detection: takes a bounded exact reference snapshot of items at start, checks size and item identity mid-traversal, and performs a full re-verification pass across all references after all source and getter reads (including after the final getter). Fails closed on any mutation, size change, or same-size reordering/replacement with `status = "collection_mutated"`, `reason = "size_changed_during_iteration"` or `"collection_changed_during_iteration"`, empty sources.
@@ -109,6 +109,7 @@ Implemented offline in `foundation/SarahFoundation/42/media/lua/client/Sarah/Lig
 
 1. **Static API Evidence**:
    - `IsoLightSource.java:34-263`: Class annotated `@UsedFromLua`. Public getters `getX()`, `getY()`, `getZ()`, `getR()`, `getG()`, `getB()`, `getRadius()`, `isActive()`, `wasActive()`, `isHydroPowered()`, `getLocalToBuilding()`, `getSwitches()`. Forbidden methods: `update()` (deprecated, mutates light totals and life, checks player index), `clearInfluence()` (mutates square light totals), setters (`setX`, `setR`, etc.).
+   - `IsoBuilding.java:35,93` and `LightingJNI.java:340`: `IsoBuilding` exposes `getID()` returning `IsoBuilding.id`, which is the exact integer building identifier passed by `LightingJNI.checkLights()` to `LightingJNI.addLight(...)`. `BuildingDef.getID()` (`IsoBuilding.getDef()`) is a distinct definition namespace and must not be conflated with `IsoBuilding.getID()`.
    - `IsoCell.java:2554-2565`: `getLamppostPositions()` returns live `Stack<IsoLightSource>` (a `Vector`). Exposes `size()` and `get(i)`. `getLightSourceAt(x, y, z)` performs linear scan.
    - `IsoGridSquare.java:8426, 10353`: `haveElectricity()` verifies exterior generator and chunk generator power; `hasGridPower()` checks world hydro power grid or generator. A false generator result does not prevent checking grid power. Both are queried and reported independently.
    - `LightingJNI.java:280-352`: `checkLights()` reconciles `lightSource.active` against `haveElectricity()` and `switches` periodically.
@@ -119,7 +120,7 @@ Implemented offline in `foundation/SarahFoundation/42/media/lua/client/Sarah/Lig
 3. **Freshness Limits**:
    - `lightSource.active` reflects internal engine field state, but is only reconciled when `LightingJNI.checkLights()` executes.
    - Neither state agreement nor `hydroPowered = false` proves source freshness this frame; freshness must remain `"unknown"`.
-   - If grid power cuts out, an `IsoLightSource` may have `active = true` until the next engine check; `LightSourceSnapshot` detects this positive discrepancy as `powerStatus = "unpowered"` and flags `freshness = "stale"`.
+   - For an unswitched hydro-powered `IsoLightSource` (`switchCount == 0`), if grid/generator power cuts out while `active = true` before the next engine check, `LightSourceSnapshot` detects the positive discrepancy as `powerStatus = "unpowered"` and flags `freshness = "stale"`. For a switched hydro-powered source (`switchCount > 0`), `generatorPower` and `gridPower` are still reported from the square, but `powerStatus` and `freshness` remain `"unknown"` until switch/battery supply semantics are independently verified.
 
 ### Short manual native probe plan for one artificial lamp (Codex isolated Gate B)
 
@@ -130,13 +131,16 @@ Prerequisites: isolated sandbox profile, game closed. The operator must take a f
    - Position Sarah within 5 tiles of the lamp.
 2. **Case 1: Lamp ON / OFF**:
    - With generator/grid power active, turn the lamp switch ON. Verify snapshot reports:
-     `active = true`, `squareLoaded = true`, `powerStatus = "unknown"` (if switch present) or `"powered"`, `freshness = "unknown"`.
+     `active = true`, `squareLoaded = true`, `powerStatus = "unknown"` (when `switchCount > 0`) or `"powered"` (only when `switchCount == 0`), `freshness = "unknown"`.
    - Turn the lamp switch OFF. Verify snapshot reports:
      `active = false`, `squareLoaded = true`, `freshness = "unknown"`.
-3. **Case 2: Power Loss (Freshness reconciliation)**:
-   - Turn lamp switch ON. Turn off the generator / cut power to the square.
-   - Immediately query snapshot: verify whether `sq:haveElectricity()` and `sq:hasGridPower()` return false while `source:isActive()` is still true -> snapshot must report `powerStatus = "unpowered"`, `freshness = "stale"`.
-   - After engine tick/delay, verify if engine reconciles `active = false` -> snapshot reports `freshness = "unknown"`.
+3. **Case 2: Power Loss (Square power vs conservative switch/freshness handling)**:
+   - Turn lamp ON. Turn off the generator / cut power to the square.
+   - Immediately query snapshot:
+     * Verify `generatorPower = false` and `gridPower = false` are reported from `sq:haveElectricity()` and `sq:hasGridPower()`.
+     * If the source is unswitched (`switchCount == 0`) and `source:isActive()` is still `true`, snapshot reports `powerStatus = "unpowered"`, `freshness = "stale"`.
+     * If the lamp has switches (`switchCount > 0`), snapshot conservatively keeps `powerStatus = "unknown"` and `freshness = "unknown"` (`incomplete = true`, `counts.unverified_power >= 1`) rather than promoting switched-lamp power status without verified switch/battery supply semantics.
+   - After engine tick/delay, verify if engine reconciles `active = false` -> snapshot reports `active = false`, `freshness = "unknown"`.
 4. **Case 3: Chunk Unload**:
    - Move player away until the lamp chunk unloads.
    - Query snapshot: if source is still in `lamppostPositions`, `sq = getSquare(x,y,z)` returns nil -> snapshot reports `squareLoaded = false`, `powerStatus = "unloaded"`, `freshness = "unknown"`.
@@ -146,6 +150,6 @@ Prerequisites: isolated sandbox profile, game closed. The operator must take a f
    - Query snapshot: verify that coordinates, RGB, radius, active, and power status outputs remain identical under fixed conditions. Note: this is an observation test only under fixed positions; matching outputs show that this query path did not change with camera angle, but do NOT prove complete independence from underlying engine lighting caches or off-screen cullers.
 
 ### Status & Guardrails
-- 53 actual-Lua unit test checks pass in `tools/test_light_snapshot.py`; 784 checks across 17 suites pass in `tools/run_tests.py`.
-- Strict pre-operation budget enforcement (total_reads never exceeds maxReads on any exit), missing/malformed building/switch metadata preserved as unknown, getter member-lookup exceptions isolated without field fallback.
+- 55 actual-Lua unit test checks pass in `tools/test_light_snapshot.py`; 792 checks across 17 suites pass in `tools/run_tests.py`.
+- Strict pre-operation budget enforcement (total_reads never exceeds maxReads on any exit), evidenced `IsoBuilding:getID()` building identity without `BuildingDef` namespace conflation, missing/malformed building/switch metadata preserved as unknown, getter member-lookup exceptions isolated without field fallback.
 - Independent lighting remains OPEN. Lighting and visual confirmation remain unknown; Knowledge admission stays disabled. External/model AI remains ON HOLD.

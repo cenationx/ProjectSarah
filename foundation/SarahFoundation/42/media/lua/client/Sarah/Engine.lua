@@ -692,11 +692,14 @@ function Engine.new()
         local res = adapter.diagnosticSampler:sample(api)
         return res
     end
-    function adapter.remove(npc)
+    local function removeCharacter(npc)
         Engine.clearOwnership(npc)
-        if adapter.resetPerception then adapter.resetPerception() end
         npc:removeFromWorld()
         npc:removeFromSquare()
+    end
+    function adapter.remove(npc)
+        if adapter.resetPerception then adapter.resetPerception() end
+        removeCharacter(npc)
     end
     local function construct(square, record)
         if not square or not square:isFree(false) then error("spawn square unavailable") end
@@ -784,7 +787,7 @@ function Engine.new()
         local cleaned,cleanupError=pcall(function()
             if adapter.verificationNPC then
                 adapter.verificationNPC:getModData().SarahFoundationId="CheckpointVerifier"
-                adapter.remove(adapter.verificationNPC)
+                removeCharacter(adapter.verificationNPC)
                 local cell=getCell()
                 assert(adapter.verificationNPC:getCurrentSquare()==nil and
                     not cell:getAddList():contains(adapter.verificationNPC) and

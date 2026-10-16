@@ -26,11 +26,19 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_PRODUCTION_FILES = [
     "42/media/lua/client/SarahFoundation.lua",
+    "42/media/lua/client/Sarah/CandidateCollector.lua",
     "42/media/lua/client/Sarah/Commands.lua",
     "42/media/lua/client/Sarah/Console.lua",
+    "42/media/lua/client/Sarah/Coverage.lua",
+    "42/media/lua/client/Sarah/DiagnosticSampler.lua",
     "42/media/lua/client/Sarah/Engine.lua",
+    "42/media/lua/client/Sarah/Knowledge.lua",
     "42/media/lua/client/Sarah/Lifecycle.lua",
+    "42/media/lua/client/Sarah/LightSourceSnapshot.lua",
     "42/media/lua/client/Sarah/Observations.lua",
+    "42/media/lua/client/Sarah/ObstructionNormalizer.lua",
+    "42/media/lua/client/Sarah/Perception.lua",
+    "42/media/lua/client/Sarah/SessionIdentity.lua",
     "42/media/lua/shared/Translate/EN/UI.json",
     "42/mod.info",
     "README.md",
@@ -437,14 +445,31 @@ def check_isolated_profile(runtime_root: Path) -> dict:
     return result
 
 
+def _collect_required_production_files(src_root: Path) -> list[str]:
+    """Return the deterministic union of REQUIRED_PRODUCTION_FILES and any actual source files under src_root."""
+    ordered = list(REQUIRED_PRODUCTION_FILES)
+    seen = set(ordered)
+    if src_root.is_dir():
+        discovered = []
+        for p in src_root.rglob("*"):
+            if p.is_file() and p.name != ".gitkeep":
+                rel = p.relative_to(src_root).as_posix()
+                if rel not in seen:
+                    discovered.append(rel)
+                    seen.add(rel)
+        ordered.extend(sorted(discovered))
+    return ordered
+
+
 def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
     """Compare required production source files against deployed mod files."""
     src_root = repo_root / "foundation/SarahFoundation"
     dst_root = runtime_root / "isolated/mods/SarahFoundation"
+    required_files = _collect_required_production_files(src_root)
 
     result = {
         "status": "synced",
-        "total_required": len(REQUIRED_PRODUCTION_FILES),
+        "total_required": len(required_files),
         "matching_count": 0,
         "different_count": 0,
         "missing_count": 0,
@@ -458,19 +483,19 @@ def check_deployed_files(repo_root: Path, runtime_root: Path) -> dict:
 
     if not src_root.is_dir():
         result["status"] = "source_missing"
-        result["source_missing_count"] = len(REQUIRED_PRODUCTION_FILES)
-        result["source_missing_files"] = list(REQUIRED_PRODUCTION_FILES)
+        result["source_missing_count"] = len(required_files)
+        result["source_missing_files"] = list(required_files)
         result["summary"] = "Production source directory foundation/SarahFoundation missing"
         return result
 
     if not dst_root.is_dir():
         result["status"] = "missing"
-        result["missing_count"] = len(REQUIRED_PRODUCTION_FILES)
-        result["missing_files"] = list(REQUIRED_PRODUCTION_FILES)
+        result["missing_count"] = len(required_files)
+        result["missing_files"] = list(required_files)
         result["summary"] = "Deployed mod directory runtime/isolated/mods/SarahFoundation missing"
         return result
 
-    for rel_str in REQUIRED_PRODUCTION_FILES:
+    for rel_str in required_files:
         rel_path = Path(rel_str)
         src_file = src_root / rel_path
         dst_file = dst_root / rel_path

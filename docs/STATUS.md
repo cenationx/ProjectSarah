@@ -1,3 +1,46 @@
+## Codex-reviewed Argon corrections (2026-10-16)
+
+Argon returned sole checkout ownership. Codex reviewed the production/tool diffs
+and independently verified792 checks across17 suites +11 runner +44 preflight
+self-tests PASS. Preflight checks the manifest plus all discovered source files;
+independent regressions block readiness for absent or modified perception modules.
+Checkpoint verifier cleanup uses private removeCharacter; successful/failed saves
+preserve live identities, snapshots and collector cursors. Actual Sarah removal
+still resets perception. Fresh-token readback, player restoration and pinned
+verifier cleanup failures remain covered. Building snapshots use IsoBuilding.getID
+without substituting BuildingDef identity; switched-lamp power remains unknown.
+No deployment, game launch or save/settings changes. Passing preflight self-tests
+is not a current READY result and does not establish a fresh verified backup.
+Do not assume the isolated profile/world name in the external report is current:
+re-read launch-isolated.ps1 and actual profile/latest-save state before live work.
+The light-source module remains inert; independent lighting OPEN and AI ON HOLD.
+Next: fresh verified isolated world/mod/profile backup, reviewed deployment of all
+production files, current Follow/Stop/render and clock acceptance, then separately
+reviewed source-access probing/calibration. Codex owns checkout.
+
+## Bounded correction: preflight completeness, verifier cleanup & building getter (2026-10-16)
+
+Resolved three Codex-confirmed findings from the Argon repository review:
+1. **Preflight Deployment Completeness (`tools/preflight.py`, `tools/test_preflight.py`)**:
+   - Expanded `REQUIRED_PRODUCTION_FILES` in `tools/preflight.py` from 9 to all 17 tracked production files under `foundation/SarahFoundation/` (adding `CandidateCollector.lua`, `Coverage.lua`, `DiagnosticSampler.lua`, `Knowledge.lua`, `LightSourceSnapshot.lua`, `ObstructionNormalizer.lua`, `Perception.lua`, and `SessionIdentity.lua`).
+   - Added `_collect_required_production_files(src_root)` in `check_deployed_files()` so preflight also unions `REQUIRED_PRODUCTION_FILES` with any non-`.gitkeep` files discovered in `foundation/SarahFoundation/`, preventing unlisted future source files from being silently ignored.
+   - Updated `tools/test_preflight.py` to populate mock source/deployed trees from the actual `foundation/SarahFoundation` directory rather than solely from `REQUIRED_PRODUCTION_FILES`, and added independent completeness and perception-module deployment regressions (`test_required_production_files_covers_entire_real_source_tree` and `test_missing_or_modified_perception_modules_block_ready_when_original_files_match`). Preflight no longer reports `READY` merely because the original 9 files match.
+2. **Checkpoint Verifier Cleanup vs Sarah Perception (`foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua`, `tools/test_checkpoint.py`)**:
+   - Separated character world/square/ownership removal (`removeCharacter(npc)`) from Sarah lifecycle invalidation (`adapter.remove(npc)`, which calls `adapter.resetPerception()` then `removeCharacter(npc)`).
+   - Updated `adapter.save` verifier cleanup to call `removeCharacter(adapter.verificationNPC)` instead of `adapter.remove(adapter.verificationNPC)`, preserving live perception state (`sampleGeneration`, `snapshots`, `snapshotFIFO`, `entityTracker`, `entityFIFO`, `sessionIdentity` epoch/identities, and `diagnosticSampler`/`candidateCollector` cursors) across checkpoint saves while retaining all verifier readback, local-player restoration, and pinned-verifier failure guarantees.
+   - Added regressions in `tools/test_checkpoint.py` (now 11 checks, +3 new) proving successful saves and failed saves (swallowed write, read error, cleanup failure) preserve live perception state across verifier cleanup, while actual `adapter.remove(npc)` resets perception state and rotates epoch.
+3. **Native Building Getter Spelling & Lamp-Calibration Docs (`foundation/SarahFoundation/42/media/lua/client/Sarah/LightSourceSnapshot.lua`, `tools/test_light_snapshot.py`, `docs/SARAH-LIGHTING-SOURCE-CANDIDATE.md`)**:
+   - Updated `LightSourceSnapshot.lua` building restriction probing from invented `getId()` / `getDef()` (`BuildingDef`) to the evidenced `IsoBuilding:getID()` (`IsoBuilding.java:93`, matching `LightingJNI.addLight`'s `IsoBuilding.getID()` identity namespace at `LightingJNI.java:340`). Removed `getDef()` fallback so `BuildingDef` and `IsoBuilding` IDs are never conflated. Missing, throwing, or malformed building metadata remains `"unknown"`, and pre-operation read budgets remain strictly enforced.
+   - Updated `tools/test_light_snapshot.py` fixtures (now 55 checks, +2 new) to match `IsoBuilding:getID()`, rejecting `getDef()` and `getId()` substitutes, verifying member-lookup/nil/budget behavior on `getID()`, and verifying switched hydro lamps (`switchCount > 0`) keep `powerStatus = "unknown"` and `freshness = "unknown"` on both unpowered and powered squares.
+   - Reconciled `docs/SARAH-LIGHTING-SOURCE-CANDIDATE.md` with `IsoBuilding:getID()` and conservative switched-lamp `powerStatus`/`freshness` behavior (distinguishing unswitched `switchCount == 0` stale detection from switched `switchCount > 0` remaining `"unknown"`).
+4. **Scope & Verification**:
+   - Read budgets were not increased; stale-idle-adapter and command-invalidation refactors deferred; retired-action ownership guards and queue-wide `Stop` guarantees preserved; `LightSourceSnapshot` remains inert.
+   - Independent lighting remains OPEN (source presence and geometry do not imply confirmed sight; confirmed production memory remains empty). External/model AI remains ON HOLD.
+   - Full aggregate suite: 792 checks across 17 suites PASS (`tools/run_tests.py`).
+   - Runner self-tests: 11 tests PASS (`tools/test_runner.py`).
+   - Preflight self-tests: 44 tests PASS (`tools/test_preflight.py`).
+   - No deployment, game launch, saves/settings changes, commit, or push. Sole editing ownership returned to Codex.
+
 ## Codex-reviewed Astra corrections (2026-10-08)
 
 Gemini returned sole editing ownership. Codex reviewed Engine/Commands diffs and

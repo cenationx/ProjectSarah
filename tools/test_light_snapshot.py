@@ -439,9 +439,9 @@ test("Building - Outdoor source is unrestricted with buildingId nil", function()
     assert(r.sources[1].buildingId == nil)
 end)
 
-test("Building - Restricted building with valid getId", function()
+test("Building - Restricted building with valid getID", function()
     local snap = LightSourceSnapshot.new()
-    local b = { getId = function() return 42 end }
+    local b = { getID = function() return 42 end }
     local r = snap:snapshot({
         capture = mk_cap,
         getLightSources = function() return { mk_source({ localToBuilding = b }) } end,
@@ -466,9 +466,9 @@ test("Building - Throwing getLocalToBuilding yields unknown building restriction
     assert(r.sources[1].buildingId == nil)
 end)
 
-test("Building - Building object with throwing getId yields unknown restriction", function()
+test("Building - Building object with throwing getID yields unknown restriction", function()
     local snap = LightSourceSnapshot.new()
-    local b = { getId = function() error("getId failed") end }
+    local b = { getID = function() error("getID failed") end, id = 42 }
     local r = snap:snapshot({
         capture = mk_cap,
         getLightSources = function() return { mk_source({ localToBuilding = b }) } end,
@@ -632,7 +632,7 @@ test("Purity - Returned snapshot contains only copied primitives, no object hand
     local raw_src = mk_source({
         x = 1002,
         y = 2002,
-        localToBuilding = { id = 50 },
+        localToBuilding = { getID = function() return 50 end },
     })
     local r = snap:snapshot({
         capture = mk_cap,
@@ -649,19 +649,44 @@ test("Purity - Returned snapshot contains only copied primitives, no object hand
     assert(s.visual == nil and s.targetIllumination == nil)
 end)
 
-test("Building - Extracts building ID via def object getId method", function()
+test("Building - Rejects BuildingDef getDef() and invented getId() while extracting IsoBuilding:getID()", function()
     local snap = LightSourceSnapshot.new()
-    local b = {
-        getDef = function() return { getId = function() return 108 end } end,
+    -- Case 1: Building object with only getDef() or invented getId() must NOT be substituted for IsoBuilding:getID()
+    local def_called = false
+    local b_only_def_and_wrong_case = {
+        getId = function() return 999 end,
+        getDef = function()
+            def_called = true
+            return { getID = function() return 108 end, getId = function() return 108 end, id = 108 }
+        end,
     }
-    local r = snap:snapshot({
+    local r1 = snap:snapshot({
         capture = mk_cap,
-        getLightSources = function() return { mk_source({ localToBuilding = b }) } end,
+        getLightSources = function() return { mk_source({ localToBuilding = b_only_def_and_wrong_case }) } end,
         getSquare = function() return mk_square(true, true) end,
     })
-    assert(#r.sources == 1)
-    assert(r.sources[1].buildingRestriction == "restricted")
-    assert(r.sources[1].buildingId == 108)
+    assert(#r1.sources == 1)
+    assert(r1.sources[1].buildingRestriction == "unknown", "missing IsoBuilding:getID() must remain unknown rather than substituting BuildingDef or getId")
+    assert(r1.sources[1].buildingId == nil)
+    assert(def_called == false, "getDef() must not be probed")
+
+    -- Case 2: Building object with both IsoBuilding:getID() and BuildingDef:getDef() uses IsoBuilding:getID()
+    local b_both = {
+        getID = function() return 42 end,
+        getDef = function()
+            def_called = true
+            return { getID = function() return 108 end, id = 108 }
+        end,
+    }
+    local r2 = snap:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { mk_source({ localToBuilding = b_both }) } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(#r2.sources == 1)
+    assert(r2.sources[1].buildingRestriction == "restricted")
+    assert(r2.sources[1].buildingId == 42)
+    assert(def_called == false)
 end)
 
 test("Power - Throwing haveElectricity does not prevent checking hasGridPower", function()
@@ -846,7 +871,7 @@ end)
 
 test("Building Regression - Malformed building object without valid integer ID yields unknown", function()
     local snap = LightSourceSnapshot.new()
-    local b_bad = { getId = function() return "not_an_int" end }
+    local b_bad = { getID = function() return "not_an_int" end }
     local src = mk_source({ localToBuilding = b_bad })
     local r = snap:snapshot({
         capture = mk_cap,
@@ -1018,6 +1043,110 @@ test("Lookup Exception - Throwing __index on switches getter yields unknown swit
     assert(#r.sources == 1)
     assert(r.sources[1].switchCount == nil)
     assert(r.sources[1].powerStatus == "unknown")
+end)
+
+-- 16. Regressions: Evidenced IsoBuilding:getID() & Switched-Lamp Conservative Power/Freshness
+test("Building Regression - Throwing __index or nil return on IsoBuilding:getID() does not fall back to raw id and preserves read budgets", function()
+    local snap = LightSourceSnapshot.new()
+    local mt_throw = {
+        __index = function(t, k)
+            if k == "getID" then
+                error("JNI member lookup error on IsoBuilding.getID")
+            end
+            return rawget(t, k)
+        end
+    }
+    local b_throw = setmetatable({ id = 77 }, mt_throw)
+    local b_nil = { getID = function() return nil end, id = 88 }
+
+    local r1 = snap:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { mk_source({ localToBuilding = b_throw }) } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(#r1.sources == 1)
+    assert(r1.sources[1].buildingRestriction == "unknown")
+    assert(r1.sources[1].buildingId == nil)
+
+    local r2 = snap:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { mk_source({ localToBuilding = b_nil }) } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(#r2.sources == 1)
+    assert(r2.sources[1].buildingRestriction == "unknown")
+    assert(r2.sources[1].buildingId == nil)
+
+    -- Verify getID() read is charged against maxReads (read 27 after 5 collection reads + 20 raw-field property reads + 1 getLocalToBuilding read)
+    local getID_attempts = 0
+    local b_counted = {
+        getID = function()
+            getID_attempts = getID_attempts + 1
+            return 42
+        end
+    }
+    local snap26 = LightSourceSnapshot.new({ maxReads = 26 })
+    local r26 = snap26:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { mk_source({ localToBuilding = b_counted }) } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(r26.status == "budget_exhausted" and r26.counts.total_reads == 26)
+    assert(getID_attempts == 0, "getID must not be invoked when budget is exhausted at read 26")
+
+    local snap27 = LightSourceSnapshot.new({ maxReads = 27 })
+    local r27 = snap27:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { mk_source({ localToBuilding = b_counted }) } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(r27.status == "budget_exhausted" and r27.counts.total_reads == 27)
+    assert(getID_attempts == 1, "getID must be charged as read 27 before switches read")
+end)
+
+test("Switched Lamp Regression - Switched hydro lamp on unpowered or powered square keeps powerStatus and freshness unknown", function()
+    local snap = LightSourceSnapshot.new()
+    local sw_one = { size = function() return 1 end }
+
+    -- Unpowered square with switched active hydro lamp: generatorPower=false, gridPower=false, but powerStatus/freshness remain unknown
+    local src_unpowered = mk_source({
+        hydroPowered = true,
+        active = true,
+        switches = sw_one,
+    })
+    local r_unpowered = snap:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { src_unpowered } end,
+        getSquare = function() return mk_square(false, false) end,
+    })
+    assert(#r_unpowered.sources == 1)
+    local s1 = r_unpowered.sources[1]
+    assert(s1.switchCount == 1)
+    assert(s1.generatorPower == false and s1.gridPower == false)
+    assert(s1.powerStatus == "unknown", "switched hydro lamp must not promote powerStatus from unknown without switch supply semantics")
+    assert(s1.freshness == "unknown", "switched hydro lamp with unknown powerStatus must keep freshness unknown")
+    assert(r_unpowered.incomplete == true)
+    assert(r_unpowered.counts.unverified_power == 1)
+
+    -- Powered square with switched active hydro lamp: generatorPower=true, gridPower=true, powerStatus/freshness still remain unknown
+    local src_powered = mk_source({
+        hydroPowered = true,
+        active = true,
+        switches = sw_one,
+    })
+    local r_powered = snap:snapshot({
+        capture = mk_cap,
+        getLightSources = function() return { src_powered } end,
+        getSquare = function() return mk_square(true, true) end,
+    })
+    assert(#r_powered.sources == 1)
+    local s2 = r_powered.sources[1]
+    assert(s2.switchCount == 1)
+    assert(s2.generatorPower == true and s2.gridPower == true)
+    assert(s2.powerStatus == "unknown")
+    assert(s2.freshness == "unknown")
+    assert(r_powered.incomplete == true)
+    assert(r_powered.counts.unverified_power == 1)
 end)
 
 print(string.format("RESULT %d light snapshot checks passed", tests_passed))

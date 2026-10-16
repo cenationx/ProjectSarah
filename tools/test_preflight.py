@@ -67,16 +67,22 @@ class TestPreflight(unittest.TestCase):
         self.mock_runtime.mkdir(parents=True)
         self.reports_dir.mkdir(parents=True)
 
-        # 1. Source files in mock_repo/foundation/SarahFoundation
+        # 1. Source files in mock_repo/foundation/SarahFoundation derived from actual repo tree
+        real_src_root = REPO_ROOT / "foundation/SarahFoundation"
+        real_rel_files = sorted(
+            p.relative_to(real_src_root).as_posix()
+            for p in real_src_root.rglob("*")
+            if p.is_file() and p.name != ".gitkeep"
+        )
         src_root = self.mock_repo / "foundation/SarahFoundation"
-        for rel in preflight.REQUIRED_PRODUCTION_FILES:
+        for rel in real_rel_files:
             f = src_root / rel
             f.parent.mkdir(parents=True, exist_ok=True)
             f.write_text(f"content of {rel}\n", encoding="utf-8")
 
         # 2. Deployed files in mock_runtime/isolated/mods/SarahFoundation (matching source)
         dst_root = self.mock_runtime / "isolated/mods/SarahFoundation"
-        for rel in preflight.REQUIRED_PRODUCTION_FILES:
+        for rel in real_rel_files:
             f = dst_root / rel
             f.parent.mkdir(parents=True, exist_ok=True)
             f.write_text(f"content of {rel}\n", encoding="utf-8")
@@ -227,6 +233,110 @@ class TestPreflight(unittest.TestCase):
         self.assertFalse(data["ready"])
         self.assertEqual(data["checks"]["deployed_files"]["status"], "missing")
         self.assertIn("42/media/lua/shared/Translate/EN/UI.json", data["checks"]["deployed_files"]["missing_files"])
+
+    def test_required_production_files_covers_entire_real_source_tree(self):
+        """REQUIRED_PRODUCTION_FILES must match the actual foundation/SarahFoundation tree independently."""
+        real_src_root = REPO_ROOT / "foundation/SarahFoundation"
+        self.assertTrue(real_src_root.is_dir())
+        actual_files = {
+            p.relative_to(real_src_root).as_posix()
+            for p in real_src_root.rglob("*")
+            if p.is_file() and p.name != ".gitkeep"
+        }
+        manifest_files = set(preflight.REQUIRED_PRODUCTION_FILES)
+        self.assertEqual(
+            len(preflight.REQUIRED_PRODUCTION_FILES),
+            len(manifest_files),
+            "Duplicate entries in REQUIRED_PRODUCTION_FILES",
+        )
+        self.assertEqual(
+            actual_files,
+            manifest_files,
+            f"Mismatch between foundation/SarahFoundation and REQUIRED_PRODUCTION_FILES: "
+            f"missing_from_manifest={sorted(actual_files - manifest_files)}, "
+            f"missing_from_tree={sorted(manifest_files - actual_files)}",
+        )
+        perception_modules = [
+            "42/media/lua/client/Sarah/CandidateCollector.lua",
+            "42/media/lua/client/Sarah/Coverage.lua",
+            "42/media/lua/client/Sarah/DiagnosticSampler.lua",
+            "42/media/lua/client/Sarah/Knowledge.lua",
+            "42/media/lua/client/Sarah/LightSourceSnapshot.lua",
+            "42/media/lua/client/Sarah/ObstructionNormalizer.lua",
+            "42/media/lua/client/Sarah/Perception.lua",
+            "42/media/lua/client/Sarah/SessionIdentity.lua",
+        ]
+        for rel in perception_modules:
+            self.assertIn(rel, manifest_files)
+
+    def test_missing_or_modified_perception_modules_block_ready_when_original_files_match(self):
+        """Preflight must not report READY merely because the original 9 files match."""
+        perception_modules = [
+            "42/media/lua/client/Sarah/CandidateCollector.lua",
+            "42/media/lua/client/Sarah/Coverage.lua",
+            "42/media/lua/client/Sarah/DiagnosticSampler.lua",
+            "42/media/lua/client/Sarah/Knowledge.lua",
+            "42/media/lua/client/Sarah/LightSourceSnapshot.lua",
+            "42/media/lua/client/Sarah/ObstructionNormalizer.lua",
+            "42/media/lua/client/Sarah/Perception.lua",
+            "42/media/lua/client/Sarah/SessionIdentity.lua",
+        ]
+        dst_root = self.mock_runtime / "isolated/mods/SarahFoundation"
+
+        # Case 1: All 8 perception modules missing while the original 9 files match
+        for rel in perception_modules:
+            (dst_root / rel).unlink()
+
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+
+        self.assertFalse(data["ready"])
+        self.assertEqual(data["overall"], "BLOCKED")
+        self.assertEqual(data["checks"]["deployed_files"]["status"], "missing")
+        self.assertEqual(data["checks"]["deployed_files"]["matching_count"], 9)
+        self.assertEqual(data["checks"]["deployed_files"]["missing_count"], 8)
+        for rel in perception_modules:
+            self.assertIn(rel, data["checks"]["deployed_files"]["missing_files"])
+
+        # Restore all 8 modules
+        for rel in perception_modules:
+            (dst_root / rel).write_text(f"content of {rel}\n", encoding="utf-8")
+
+        # Case 2: Each individual perception module modified or missing blocks READY
+        for rel in perception_modules:
+            target = dst_root / rel
+            target.write_text("stale perception module content\n", encoding="utf-8")
+            with patch("preflight.get_git_info", return_value=self._mock_git()), \
+                 patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+                mod_data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+            self.assertFalse(mod_data["ready"], f"Modified {rel} should block READY")
+            self.assertEqual(mod_data["overall"], "BLOCKED")
+            self.assertEqual(mod_data["checks"]["deployed_files"]["status"], "different")
+            self.assertIn(rel, mod_data["checks"]["deployed_files"]["mismatched_files"])
+
+            target.unlink()
+            with patch("preflight.get_git_info", return_value=self._mock_git()), \
+                 patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+                miss_data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+            self.assertFalse(miss_data["ready"], f"Missing {rel} should block READY")
+            self.assertEqual(miss_data["overall"], "BLOCKED")
+            self.assertEqual(miss_data["checks"]["deployed_files"]["status"], "missing")
+            self.assertIn(rel, miss_data["checks"]["deployed_files"]["missing_files"])
+
+            target.write_text(f"content of {rel}\n", encoding="utf-8")
+
+        # Case 3: An unlisted source file added under foundation/SarahFoundation is also enforced
+        unlisted_rel = "42/media/lua/client/Sarah/UnlistedFutureModule.lua"
+        unlisted_src = self.mock_repo / "foundation/SarahFoundation" / unlisted_rel
+        unlisted_src.write_text("return {}\n", encoding="utf-8")
+        with patch("preflight.get_git_info", return_value=self._mock_git()), \
+             patch("preflight.check_game_processes", return_value=self._mock_processes_clean()):
+            unlisted_data = preflight.run_preflight(self.mock_repo, self.mock_runtime)
+        self.assertFalse(unlisted_data["ready"])
+        self.assertEqual(unlisted_data["checks"]["deployed_files"]["status"], "missing")
+        self.assertIn(unlisted_rel, unlisted_data["checks"]["deployed_files"]["missing_files"])
+        unlisted_src.unlink()
 
     def test_probe_detection(self):
         """Temporary probe in deployed mod directory is detected and blocks readiness."""

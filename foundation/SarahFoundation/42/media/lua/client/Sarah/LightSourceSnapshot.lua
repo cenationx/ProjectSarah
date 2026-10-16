@@ -245,6 +245,9 @@ local function parse_source(src, charge_read)
     -- Building restriction:
     -- Only a successful authoritative building getter returning nil establishes unrestricted.
     -- Missing/malformed building metadata must remain unknown.
+    -- Inspected native IsoBuilding API exposes getID() (IsoBuilding.id, matching
+    -- LightingJNI.addLight's IsoBuilding.getID() identity namespace). BuildingDef
+    -- (getDef():getID()) is a distinct namespace and must not be substituted.
     local building_restriction = "unknown"
     local building_id = nil
 
@@ -256,30 +259,16 @@ local function parse_source(src, charge_read)
         building_restriction = "unrestricted"
         building_id = nil
     elseif b_st == "ok" and building_ref ~= nil then
-        building_restriction = "restricted"
-        local bid, bid_st = read_property(building_ref, "getId", "id", charge_read)
+        local bid, bid_st = read_property(building_ref, "getID", "id", charge_read)
         if bid_st == "budget_exhausted" then
             return nil, "budget_exhausted"
         end
         if bid_st == "ok" and is_int(bid) then
+            building_restriction = "restricted"
             building_id = math.floor(bid)
         else
-            local def_ref, def_st = read_property(building_ref, "getDef", "def", charge_read)
-            if def_st == "budget_exhausted" then
-                return nil, "budget_exhausted"
-            end
-            if def_st == "ok" and (type(def_ref) == "table" or type(def_ref) == "userdata") then
-                local did, did_st = read_property(def_ref, "getId", "id", charge_read)
-                if did_st == "budget_exhausted" then
-                    return nil, "budget_exhausted"
-                end
-                if did_st == "ok" and is_int(did) then
-                    building_id = math.floor(did)
-                end
-            end
-        end
-        if building_id == nil then
             building_restriction = "unknown"
+            building_id = nil
         end
     else
         building_restriction = "unknown"
