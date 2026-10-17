@@ -1,3 +1,30 @@
+## Codex-reviewed M1 retest candidate (2026-10-17)
+
+Argon returned sole editing ownership. Codex reviewed source/test diffs and
+independently verified797 checks/17 suites +11 runner +44 preflight PASS.
+Catch-up uses6-tile entry/3-tile exit hysteresis, preserves player pace, deadzone2,
+leash8, WalkHere walking and cancellation/ownership guards. Rendering now permits
+the engine couldSee predicate and restores alpha on its look-away branch. Installed
+IsoPlayer.updateLOS uses couldSee for character visibility, supporting a candidate;
+Java call sites and JNI flag bits do NOT prove every native wall/door/room case.
+The fixture occlusion results are injected policy behavior, not actual geometry.
+Candidate remains undeployed and native-unaccepted; prior look-away FAIL is not
+closed. Required retest: open-ground near/far look-away, wall/closed-open door,
+floor/cutaway/depth transitions, no unwanted alpha persistence, catch-up entry/
+exit/stationary target, player run/walk, leash, Stop and no automatic resumption.
+Preserve latest world/mod/profile in a fresh verified backup before deployment.
+Latest preserved test state is post-live-20261016-235932-UTC; deployed code remains
+914333b from the prior session. No launch/deployment/saves/settings changes in
+this correction review. Independent lighting OPEN; external/model AI ON HOLD.
+Codex owns checkout; next is a bounded isolated native retest.
+
+## Bounded M1 offline correction: look-away rendering & Follow catch-up (2026-10-17)
+
+Completed `docs/NEXT-M1-CORRECTION-BATCH.md` offline from clean checkpoint `caf4eb8`:
+1. Nearby look-away rendering (`Engine.lua`, `tools/test_render.py`): Static inspection of Build 42.21 classes/bytecode (`FBORenderCell.java`, `IsoPlayer.java`, `IsoGameCharacter.java`, `IsoGridSquare.java`, `LightingJNI$JNILighting.class`, `IsoObject.class`, `ModelSlotRenderData.class`) confirmed `square:isCanSee(0)` (`vis & 2`) is restricted to player `0`'s facing cone whereas `square:isCouldSee(0)` (`vis & 4`) is the omnidirectional unobstructed LOS predicate (`true` on open ground when facing away; `false` behind walls, closed doors, or unseen rooms), and identified the look-away alpha dead-band in `IsoPlayer.updateLOS()` where `IsoGameCharacter.TestIfSeen(0, player)` skips `setTargetAlpha(0, 1.0f)` outside `detectionRange` when `not square:isCanSee(0)`. `adapter.render` now accepts `square:isCanSee(0)` OR `square:isCouldSee(0)` on the same floor and restores `npc:setAlphaAndTarget(0, 1.0)` (or `setTargetAlpha` + `setAlpha` fallback) on the `couldSee` look-away path while keeping wall/door/room-obstructed squares, other floors, unloaded squares, and off-screen NPCs skipped and decoupled from Sarah's perception (34 render checks PASS, +3 new).
+2. Distance-based Follow catch-up (`Commands.lua`, `tools/test_follow.py`): Added `resolveFollowPace(act, data, distSq)` with 6-tile start (`distSq >= 36.0`) and 3-tile stop (`distSq <= 9.0`) hysteresis inside the 2-tile deadzone (`distSq <= 4.0`) and 8-tile leash (`distSq <= 64.0`), preserving `WalkHere` walking invariance, single-action ownership, retired-callback guards, and `Stop` cleanup (73 follow checks PASS, +2 new).
+3. Full suite: 797 checks across 17 suites (`tools/run_tests.py`), 11 runner self-tests (`tools/test_runner.py`), and 44 preflight self-tests (`tools/test_preflight.py`) PASS. No deployment, game launch, save/settings changes, commit, or push. Sole editing ownership returned to Codex.
+
 ## Native session closed and latest state preserved (2026-10-17)
 
 Deployed gameplay914333b. User-reported pace switching and Stop/no-auto-resume

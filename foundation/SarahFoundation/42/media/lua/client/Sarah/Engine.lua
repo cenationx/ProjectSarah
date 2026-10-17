@@ -191,10 +191,24 @@ function Engine.new()
         local cell=getCell()
         if not cell:getObjectList():contains(npc) or cell:getRemoveList():contains(npc) then return false end
         local square=npc:getCurrentSquare()
-        -- Conservative scope: visible squares on the local player's floor.
-        if not square or math.floor(npc:getZ())~=math.floor(player:getZ()) or not square:isCanSee(playerIndex) then return false end
+        -- Conservative scope: unobstructed squares on the local player's floor.
+        -- Inspected character visibility uses isCouldSee alongside directional isCanSee.
+        -- This is a look-away rendering candidate; actual wall/door/room occlusion
+        -- and alpha behavior require isolated native acceptance.
+        if not square or math.floor(npc:getZ())~=math.floor(player:getZ()) then return false end
+        local canSee=square:isCanSee(playerIndex)==true
+        local couldSee=(not canSee) and square.isCouldSee~=nil and square:isCouldSee(playerIndex)==true
+        if not canSee and not couldSee then return false end
         local light=square:getLightInfo(playerIndex)
         if not light then return false end
+        if couldSee then
+            if npc.setAlphaAndTarget then
+                pcall(npc.setAlphaAndTarget,npc,playerIndex,1.0)
+            else
+                if npc.setTargetAlpha then pcall(npc.setTargetAlpha,npc,playerIndex,1.0) end
+                if npc.setAlpha then pcall(npc.setAlpha,npc,playerIndex,1.0) end
+            end
+        end
         npc:renderShadow(npc:getX(),npc:getY(),npc:getZ())
         npc:render(npc:getX(),npc:getY(),npc:getZ(),light,true,false,nil)
         return true

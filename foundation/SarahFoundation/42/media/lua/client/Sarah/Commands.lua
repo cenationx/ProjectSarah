@@ -49,6 +49,23 @@ local function isPlayerAlive(data)
     end
     return false
 end
+local FOLLOW_CATCHUP_START_DIST_SQ=36.0
+local FOLLOW_CATCHUP_STOP_DIST_SQ=9.0
+local function resolveFollowPace(act,data,distSq)
+    if type(act)=='table' and isValidNumber(distSq) then
+        if distSq>=FOLLOW_CATCHUP_START_DIST_SQ then
+            act.catchUp=true
+        elseif distSq<=FOLLOW_CATCHUP_STOP_DIST_SQ then
+            act.catchUp=false
+        else
+            act.catchUp=(act.catchUp==true)
+        end
+    end
+    if (data and data.playerRunning) or (type(act)=='table' and act.catchUp==true) then
+        return 'run'
+    end
+    return 'walk'
+end
 function Commands.new(observe,stopCallback,identityProvider,walkCallback,validateCallback,perceiveCallback,knowledge,timeProvider,resetPerceptionCallback)
     local function resolveKnowledge(k)
         if k then return k end
@@ -225,6 +242,8 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             action.retireStep=nil
         end
         action.stepGen=(action.stepGen or 0)+1
+        action.catchUp=false
+        action.pace='walk'
         self.active=nil
         action.state='cancelled'
         action.summary=reason or 'cancelled'
@@ -398,10 +417,13 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return false,'no valid target near player'
         end
 
+        local dx=px-nx
+        local dy=py-ny
+        local distSq=dx*dx+dy*dy
         act.stepGen=(act.stepGen or 0)+1
         local curStepGen=act.stepGen
         act.stepState='walking'
-        act.pace=(data and data.playerRunning) and 'run' or 'walk'
+        act.pace=resolveFollowPace(act,data,distSq)
         act.stepTicks=0
         act.currentTarget=chosenTarget
         act.lastTarget=chosenTarget
@@ -478,6 +500,13 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 if obsOk and type(obsData)=='table' and obsData.npc and isValidCoord(obsData.npc.x,obsData.npc.y,obsData.npc.z) then
                     self.active.lastProgressX=obsData.npc.x
                     self.active.lastProgressY=obsData.npc.y
+                    if obsData.player and isValidCoord(obsData.player.x,obsData.player.y,obsData.player.z) then
+                        local cdx=obsData.player.x-obsData.npc.x
+                        local cdy=obsData.player.y-obsData.npc.y
+                        if (cdx*cdx+cdy*cdy)<=FOLLOW_CATCHUP_STOP_DIST_SQ then
+                            self.active.catchUp=false
+                        end
+                    end
                 end
                 self.active.currentTarget=nil
                 self.active.cooldown=0
@@ -570,7 +599,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 return false,'timeout'
             end
 
-            local desiredPace=(data and data.playerRunning) and 'run' or 'walk'
+            local desiredPace=(distSq<=4.0) and 'walk' or resolveFollowPace(act,data,distSq)
             if act.pace~=desiredPace then
                 act.pace=desiredPace
                 if act.stepAction and act.stepAction.setPace then
@@ -584,6 +613,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 act.stallTicks=0
                 act.lastProgressX=nx
                 act.lastProgressY=ny
+                act.catchUp=false
                 act.pace='walk'
                 if act.stepTicks>=minRetargetTicks then
                     if act.retireStep then
@@ -685,6 +715,8 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             act.stallTicks=0
             act.lastProgressX=nx
             act.lastProgressY=ny
+            act.catchUp=false
+            act.pace='walk'
             act.summary='Following player (in range)'
             self:updateHistory(act.id,'running',act.summary)
             return true
@@ -1096,6 +1128,8 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 npc=npcOwner,
                 stepGen=0,
                 stepState='idle',
+                pace='walk',
+                catchUp=false,
                 stepTicks=0,
                 stallTicks=0,
                 lastProgressX=nx,

@@ -1,3 +1,48 @@
+## Codex-reviewed M1 retest candidate (2026-10-17)
+
+Argon returned sole editing ownership. Codex reviewed source/test diffs and
+independently verified797 checks/17 suites +11 runner +44 preflight PASS.
+Catch-up uses6-tile entry/3-tile exit hysteresis, preserves player pace, deadzone2,
+leash8, WalkHere walking and cancellation/ownership guards. Rendering now permits
+the engine couldSee predicate and restores alpha on its look-away branch. Installed
+IsoPlayer.updateLOS uses couldSee for character visibility, supporting a candidate;
+Java call sites and JNI flag bits do NOT prove every native wall/door/room case.
+The fixture occlusion results are injected policy behavior, not actual geometry.
+Candidate remains undeployed and native-unaccepted; prior look-away FAIL is not
+closed. Required retest: open-ground near/far look-away, wall/closed-open door,
+floor/cutaway/depth transitions, no unwanted alpha persistence, catch-up entry/
+exit/stationary target, player run/walk, leash, Stop and no automatic resumption.
+Preserve latest world/mod/profile in a fresh verified backup before deployment.
+Latest preserved test state is post-live-20261016-235932-UTC; deployed code remains
+914333b from the prior session. No launch/deployment/saves/settings changes in
+this correction review. Independent lighting OPEN; external/model AI ON HOLD.
+Codex owns checkout; next is a bounded isolated native retest.
+
+## Bounded M1 offline correction: look-away rendering & Follow catch-up (2026-10-17)
+
+Completed `docs/NEXT-M1-CORRECTION-BATCH.md` offline starting from clean checkpoint `caf4eb8`:
+1. **Nearby Look-Away Rendering (`foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua`, `tools/test_render.py`)**:
+   - **Static Build 42.21 Evidence**:
+     - `FBORenderCell.renderPlayers` (`FBORenderCell.java:3328-3373`) iterates only `IsoPlayer.players[0..numPlayers-1]` in single-player, and `FBORenderCell.renderMovingObject` (`line 3376`) skips `IsoPlayer.class`, so single-player `IsoPlayer` NPCs must be drawn via `Events.RenderOpaqueObjectsInWorld` (`FBORenderCell.renderOpaqueObjectsEvent`, `lines 1032, 3306-3326`).
+     - `square:isCanSee(0)` (`IsoGridSquare.java:7465, 7677`, `LightingJNI$JNILighting.bCanSee`, bit `vis & 2`) is strictly directional (requires `square` to lie inside player `0`'s facing cone). When the player turns away on open ground, `square:isCanSee(0)` becomes `false`.
+     - `square:isCouldSee(0)` (`IsoGridSquare.java:7681`, `LightingJNI$JNILighting.bCouldSee`, bit `vis & 4`) is the omnidirectional unobstructed line-of-sight predicate from player `0` to `square`: `true` on open ground regardless of player facing, and `false` behind walls, closed doors, or unseen rooms (consistent with `IsoPlayer.updateLOS` at `IsoPlayer.java:5413-5425` and `IsoPlayer.checkCanSeeClient` at `lines 5582-5592` when `hidePlayersBehindYou` is false, and with `evidence/world-render-production-spawn-summary.txt` where Sarah behind a closed door had `couldSee = false, canSee = false`).
+     - **Alpha Dead-Band on Look-Away**: `IsoGameCharacter.render` (`IsoGameCharacter.java:6138, 6147`) aborts if `isAlphaAndTargetZero(0)` or `isAlphaZero(0)` (`alpha[0] <= 0.001f`), and `ModelSlotRenderData.init` (`offset 623`) reads `getAlpha(0)`. In `IsoPlayer.updateLOS()` (`IsoPlayer.java:5426-5488`), when `couldSee` is `true` and `isCanSee(0)` is `false` on an `IsoPlayer`, `canSee` is promoted to `true` (`line 5420`), skipping the `targetAlpha = 0.0f` fade (`line 5484`), but `isVisibleToPlayer[0]` (`IsoGameCharacter.TestIfSeen`, `IsoGameCharacter.java:2001-2009`) requires `dist < player.getDetectionRange()` when `not square:isCanSee(0)`. Thus beyond `detectionRange` (e.g. 3-8 tiles behind the player's facing cone), `updateLOS()` skips `setTargetAlpha(0, 1.0f)` (`line 5466`), leaving `alpha[0]` / `targetAlpha[0]` at `0.0f` after first-tick `neverDoneAlpha` reset (`IsoObject.updateAlpha`) or after emerging from behind a wall while the player faces away.
+   - **Fix**: Updated `adapter.render` in `Engine.lua` to accept `square:isCanSee(playerIndex) == true` OR (`square.isCouldSee ~= nil and square:isCouldSee(playerIndex) == true`) on the player's floor, and when `couldSee` is used (`not canSee and couldSee`), restore `npc:setAlphaAndTarget(playerIndex, 1.0)` (or `setTargetAlpha` + `setAlpha` fallback) after `getLightInfo(playerIndex)` succeeds and before `npc:renderShadow` / `npc:render`. Wall/door/unseen-room squares (`canSee == false, couldSee == false`), other floors, unloaded squares, off-screen NPCs, and non-resident/dead/partial NPCs remain skipped and never force alpha. Player camera visibility remains completely decoupled from Sarah's own perception (`samplePerception`).
+   - **Offline Verification**: Added 3 actual-Lua regression groups in `tools/test_render.py` (now 34 checks PASS, up from 31).
+2. **Distance-Based Follow Catch-Up with Hysteresis (`foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`, `tools/test_follow.py`)**:
+   - Added bounded catch-up hysteresis helper `resolveFollowPace(act, data, distSq)` inside the existing 2-tile deadzone (`distSq <= 4.0`) and 8-tile leash (`distSq <= 64.0`):
+     - Enter catch-up running (`act.catchUp = true`) when `distSq >= 36.0` (6 tiles).
+     - Exit catch-up running (`act.catchUp = false`) when `distSq <= 9.0` (3 tiles).
+     - Preserve `act.catchUp` across `(9.0, 36.0)` (`3 < dist < 6` tiles), including across retargeted steps and intermediate step completions, preventing walk/run oscillation on a single distance threshold.
+     - Return `'run'` when `data.playerRunning` or `act.catchUp == true`, and `'walk'` otherwise (with deadzone `distSq <= 4.0` and `cancelActive` resetting `act.catchUp = false` and `act.pace = 'walk'`).
+   - Preserved `WalkHere` walking invariant (even at 6-8 tiles or when player runs), 2-tile deadzone, 8-tile leash, single-action ownership, retired-callback guards, and `Stop` cleanup without auto-resume.
+   - **Offline Verification**: Added 2 actual-Lua regression groups in `tools/test_follow.py` (now 73 checks PASS, up from 71).
+3. **Suite Totals & Handoff**:
+   - `tools/run_tests.py`: 797 checks across 17 suites PASS.
+   - `tools/test_runner.py`: 11 runner self-tests PASS.
+   - `tools/test_preflight.py`: 44 preflight self-tests PASS.
+   - Offline fixture checks only; native gameplay acceptance remains pending Codex live verification after a fresh verified isolated backup and deployment. No deployment, game launch, save/settings changes, commit, or push performed. Sole checkout editing ownership returned to Codex.
+
 ## Native session closed and latest state preserved (2026-10-17)
 
 Deployed gameplay914333b. User-reported pace switching and Stop/no-auto-resume

@@ -65,11 +65,15 @@ Core={getMyDocumentFolder=function() return 'G:/Codex/Project Sarah/runtime/isol
 ModData={getOrCreate=function() return {} end}
 local count=0
 local function fixture()
-    local f={draws=0,shadows=0,registered=true,removing=false,visible=true,light={},client=false,server=false}
+    local f={draws=0,shadows=0,registered=true,removing=false,visible=true,couldSee=false,light={},client=false,server=false}
     local player={x=10,y=20,z=0}
     player.getZ=function() return player.z end; player.getX=function() return player.x end; player.getY=function() return player.y end
-    local npc={data={SarahFoundationId='Sarah'},z=0,dead=false,onScreen=true,npc=true}
-    local square={isCanSee=function() return f.visible end,getLightInfo=function() return f.light end}
+    local npc={data={SarahFoundationId='Sarah'},z=0,dead=false,onScreen=true,npc=true,alpha=1.0,targetAlpha=1.0,alphaUpdates=0}
+    local square={
+        isCanSee=function(_,idx) assert(idx==0); return f.visible end,
+        isCouldSee=function(_,idx) assert(idx==0); return f.couldSee end,
+        getLightInfo=function(_,idx) assert(idx==0); return f.light end
+    }
     square.isFree=function() return f.free~=false end
     npc.square=square
     npc.isDead=function() return npc.dead end
@@ -78,6 +82,18 @@ local function fixture()
     npc.isOnScreen=function() return npc.onScreen end
     npc.getCurrentSquare=function() return npc.square end
     npc.getX=function() return 10 end; npc.getY=function() return 20 end; npc.getZ=function() return npc.z end
+    npc.setAlphaAndTarget=function(self,idx,val)
+        assert(self==npc and idx==0)
+        self.alpha=val; self.targetAlpha=val; self.alphaUpdates=self.alphaUpdates+1
+    end
+    npc.setAlpha=function(self,idx,val)
+        assert(self==npc and idx==0)
+        self.alpha=val; self.alphaUpdates=self.alphaUpdates+1
+    end
+    npc.setTargetAlpha=function(self,idx,val)
+        assert(self==npc and idx==0)
+        self.targetAlpha=val; self.alphaUpdates=self.alphaUpdates+1
+    end
     npc.renderShadow=function(self,x,y,z) assert(self==npc and x==10 and y==20 and z==npc.z); f.shadows=f.shadows+1 end
     npc.render=function(self,x,y,z,light,opaque,translucent,shader)
         assert(self==npc and x==10 and y==20 and z==npc.z and light==f.light)
@@ -105,6 +121,49 @@ end
 test('visible actual NPC drawn with its square lighting',function()
     local f=fixture(); local player=f.player
     assert(f.adapter.render(f.npc,0)); assert(f.draws==1 and f.shadows==1 and f.player==player)
+end)
+test('open-ground look-away NPC (isCanSee false, isCouldSee true) renders and restores zeroed alpha',function()
+    local f=fixture()
+    f.visible=false
+    f.couldSee=true
+    f.npc.alpha=0.0
+    f.npc.targetAlpha=0.0
+    assert(f.adapter.render(f.npc,0)==true)
+    assert(f.draws==1 and f.shadows==1)
+    assert(f.npc.alpha==1.0 and f.npc.targetAlpha==1.0 and f.npc.alphaUpdates==1)
+
+    -- Fallback path when setAlphaAndTarget is absent
+    local f2=fixture()
+    f2.visible=false
+    f2.couldSee=true
+    f2.npc.setAlphaAndTarget=nil
+    f2.npc.alpha=0.0
+    f2.npc.targetAlpha=0.0
+    assert(f2.adapter.render(f2.npc,0)==true)
+    assert(f2.draws==1 and f2.shadows==1)
+    assert(f2.npc.alpha==1.0 and f2.npc.targetAlpha==1.0 and f2.npc.alphaUpdates==2)
+end)
+test('wall or room-obstructed NPC (isCanSee false, isCouldSee false) is skipped and never forces alpha',function()
+    local f=fixture()
+    f.visible=false
+    f.couldSee=false
+    f.npc.alpha=0.0
+    f.npc.targetAlpha=0.0
+    assert(f.adapter.render(f.npc,0)==false)
+    assert(f.draws==0 and f.shadows==0)
+    assert(f.npc.alpha==0.0 and f.npc.targetAlpha==0.0 and f.npc.alphaUpdates==0)
+end)
+test('look-away path still enforces same-floor, on-screen, loaded-square, resident, and light safeguards',function()
+    skipped(function(f) f.visible=false; f.couldSee=true; f.npc.z=1 end)
+    skipped(function(f) f.visible=false; f.couldSee=true; f.npc.onScreen=false end)
+    skipped(function(f) f.visible=false; f.couldSee=true; f.npc.square=nil end)
+    skipped(function(f) f.visible=false; f.couldSee=true; f.registered=false end)
+    skipped(function(f) f.visible=false; f.couldSee=true; f.removing=true end)
+    local f=fixture()
+    f.visible=false; f.couldSee=true; f.light=nil
+    f.npc.alpha=0.0; f.npc.targetAlpha=0.0
+    assert(f.adapter.render(f.npc,0)==false)
+    assert(f.draws==0 and f.shadows==0 and f.npc.alphaUpdates==0)
 end)
 test('no player or NPC produces no drawing',function()
     skipped(function(f) f.player=nil end); skipped(function(f) f.npc=nil end)

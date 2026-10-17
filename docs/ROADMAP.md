@@ -7,7 +7,7 @@ See MILESTONE-REVIEW-2026-10-07.md for scope and acceptance requirements.
 | Milestone | Outcome | Current state | Exit gate |
 |---|---|---|---|
 | M0 Foundation | One persistent NPC; safe death/unload/recovery | Narrow native evidence accepted; wider limits open | Supported-scope recovery and no duplicates/resurrection |
-| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Pace and Stop case passed; look-away rendering FAIL; catch-up improvement pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
+| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Pace and Stop case passed; look-away render and Follow catch-up candidates verified offline; native retest pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
 | M2a Independent observations | Sarah-relative geometry, admitted lighting and bounded memory | Offline candidates; clock pause/advance observed; native lighting OPEN | Native exposure/coverage, calibrated lighting, expiry and lifecycle resets |
 | M2b Equipment and exchange | Melee equip, one garment, one-item give/take | Policy/proposals; native adapters unaccepted | Exact item conservation, appearance, capacity, cancellation and restart |
 | M2c Commanded work | One-container loot, then room/house; equipment improvement | Planned | Accepted discovery, reachability, partial results, capacity and Stop |
@@ -20,7 +20,7 @@ Track each capability as not started, implemented, offline verified, native
 accepted or blocked. Record owner, code revision, deployed revision, evidence,
 limitation and next action. Test totals are not completion percentages.
 
-Priority: correct native look-away rendering failure and add bounded Follow catch-up; retest before completing the
+Priority: review, deploy after a fresh verified backup, and native-retest the M1 look-away rendering (`square:isCouldSee(0)` + look-away alpha dead-band restoration) and bounded Follow catch-up (6-tile start / 3-tile stop hysteresis) corrections before completing the
 isolated Follow/Stop/render and clock acceptance batch; calibrate one explicit
 lamp; decide the lighting route. Independent manual equip work may proceed where
 its action/target safety is established, without granting autonomous sight.
@@ -30,6 +30,10 @@ Add acceptance criteria for Stop during commit boundaries, inventory/appearance
 persistence, no stale task resumption, measured performance, ordinary travel and
 floor transitions, and truthful partial-failure results. Keep larger user goals;
 do not add hunger/hearing/multiplayer/distant simulation as current blockers.
+
+## Bounded M1 offline correction: look-away rendering & Follow catch-up (2026-10-17)
+
+Completed `docs/NEXT-M1-CORRECTION-BATCH.md` offline: (1) `Engine.lua` (`adapter.render`) now permits same-floor rendering when `square:isCanSee(0)` is true OR `square:isCouldSee(0)` is true (Build 42.21's omnidirectional unobstructed LOS bit `vis & 4`, which is true on open ground behind the player's facing cone and false behind walls, closed doors, or unseen rooms), and restores `npc:setAlphaAndTarget(0, 1.0)` on the `couldSee` look-away path so `IsoGameCharacter.TestIfSeen`'s `detectionRange` cutoff does not leave `alpha[0]` at `0.0f` and trigger `IsoGameCharacter.render`'s `isAlphaZero` early return; verified in `tools/test_render.py` (34 checks PASS, +3 new); (2) `Commands.lua` (`resolveFollowPace`, `dispatchFollowStep`, `tickFollow`, `onStepComplete`, `cancelActive`) adds bounded distance-based Follow catch-up hysteresis (`FOLLOW_CATCHUP_START_DIST_SQ = 36.0` / 6 tiles to enter catch-up run even when player walks or stands still, `FOLLOW_CATCHUP_STOP_DIST_SQ = 9.0` / 3 tiles to drop back to walk when player is not running), preserving the 2-tile deadzone, 8-tile leash, `WalkHere` walking invariant, single-action ownership, retired-callback guards, and `Stop` cleanup; verified in `tools/test_follow.py` (73 checks PASS, +2 new). Full test runner: 797 checks across 17 suites, 11 runner self-tests, 44 preflight self-tests PASS. Native gameplay acceptance remains pending Codex isolated deployment and live retest after a fresh verified backup. Independent lighting OPEN; external AI ON HOLD.
 
 ## Bounded preflight, verifier cleanup, and building getter correction offline (2026-10-16)
 

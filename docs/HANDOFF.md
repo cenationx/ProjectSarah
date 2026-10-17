@@ -1,3 +1,46 @@
+## Codex-reviewed M1 retest candidate (2026-10-17)
+
+Argon returned sole editing ownership. Codex reviewed source/test diffs and
+independently verified797 checks/17 suites +11 runner +44 preflight PASS.
+Catch-up uses6-tile entry/3-tile exit hysteresis, preserves player pace, deadzone2,
+leash8, WalkHere walking and cancellation/ownership guards. Rendering now permits
+the engine couldSee predicate and restores alpha on its look-away branch. Installed
+IsoPlayer.updateLOS uses couldSee for character visibility, supporting a candidate;
+Java call sites and JNI flag bits do NOT prove every native wall/door/room case.
+The fixture occlusion results are injected policy behavior, not actual geometry.
+Candidate remains undeployed and native-unaccepted; prior look-away FAIL is not
+closed. Required retest: open-ground near/far look-away, wall/closed-open door,
+floor/cutaway/depth transitions, no unwanted alpha persistence, catch-up entry/
+exit/stationary target, player run/walk, leash, Stop and no automatic resumption.
+Preserve latest world/mod/profile in a fresh verified backup before deployment.
+Latest preserved test state is post-live-20261016-235932-UTC; deployed code remains
+914333b from the prior session. No launch/deployment/saves/settings changes in
+this correction review. Independent lighting OPEN; external/model AI ON HOLD.
+Codex owns checkout; next is a bounded isolated native retest.
+
+## Bounded M1 offline correction: look-away rendering & Follow catch-up (2026-10-17)
+
+Completed `docs/NEXT-M1-CORRECTION-BATCH.md` offline from clean checkpoint `caf4eb8`:
+1. **Nearby Look-Away Rendering (`foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua`, `tools/test_render.py`)**:
+   - Static inspection of Build 42.21 classes/bytecode (`FBORenderCell.java`, `IsoPlayer.java`, `IsoGameCharacter.java`, `IsoGridSquare.java`, `LightingJNI$JNILighting.class`, `IsoObject.class`, `ModelSlotRenderData.class`) confirmed:
+     - `square:isCanSee(0)` (`vis & 2`) is restricted to player `0`'s directional vision cone, becoming `false` when the player turns away on open ground.
+     - `square:isCouldSee(0)` (`vis & 4`) is the omnidirectional unobstructed line-of-sight predicate from player `0` to `square` (`true` on open ground regardless of player facing; `false` behind walls, closed doors, or unseen rooms, matching `IsoPlayer.updateLOS` at `IsoPlayer.java:5413-5425` when `!hidePlayersBehindYou`).
+     - In `IsoPlayer.updateLOS()` (`IsoPlayer.java:5426-5488`), when `couldSee` is `true` and `isCanSee(0)` is `false`, `IsoGameCharacter.TestIfSeen(0, player)` (`IsoGameCharacter.java:2001-2009`) returns `false` whenever `dist >= player.getDetectionRange()`, causing `updateLOS()` to skip `movingPlayer.setTargetAlpha(0, 1.0f)` (`line 5466`) while `IsoGameCharacter.render` (`IsoGameCharacter.java:6138, 6147`) aborts if `isAlphaAndTargetZero(0)` or `isAlphaZero(0)` (`alpha[0] <= 0.001f`).
+   - Updated `adapter.render` in `Engine.lua` to allow same-floor squares where `square:isCanSee(playerIndex) == true` OR (`square.isCouldSee ~= nil and square:isCouldSee(playerIndex) == true`), and on the `couldSee` look-away branch (`not canSee and couldSee`) restore `npc:setAlphaAndTarget(playerIndex, 1.0)` (or `setTargetAlpha` + `setAlpha` fallback) after `square:getLightInfo(playerIndex)` succeeds. Wall/door/room-obstructed squares (`canSee == false, couldSee == false`), other floors, unloaded squares, off-screen NPCs, and non-resident/dead/partial NPCs remain skipped and never force alpha. Player camera visibility remains strictly separate from Sarah's own perception (`samplePerception`).
+   - Added 3 actual-Lua regression groups in `tools/test_render.py` (34 checks PASS, up from 31).
+2. **Distance-Based Follow Catch-Up with Hysteresis (`foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`, `tools/test_follow.py`)**:
+   - Added `resolveFollowPace(act, data, distSq)` with 6-tile start (`FOLLOW_CATCHUP_START_DIST_SQ = 36.0`) and 3-tile stop (`FOLLOW_CATCHUP_STOP_DIST_SQ = 9.0`) hysteresis inside the existing 2-tile deadzone (`distSq <= 4.0`) and 8-tile leash (`distSq <= 64.0`).
+   - Sarah enters `catchUp = true` (`pace = 'run'`) at `dist >= 6` tiles even when the player is walking or stationary, retains `catchUp = true` across `(3, 6)` tiles (including across mid-follow retargets and intermediate step completions), and drops back to `'walk'` at `dist <= 3` tiles when `playerRunning` is false (or immediately upon entering the 2-tile deadzone or `Stop`/cancellation).
+   - Preserved `WalkHere` walking invariant, single-action ownership, retired-callback guards, and `Stop` cleanup without automatic resumption.
+   - Added 2 actual-Lua regression groups in `tools/test_follow.py` (73 checks PASS, up from 71).
+3. **Verification & Handoff to Codex**:
+   - `tools/run_tests.py`: 797 checks across 17 suites PASS.
+   - `tools/test_runner.py`: 11 runner self-tests PASS.
+   - `tools/test_preflight.py`: 44 preflight self-tests PASS.
+   - Modified files: `foundation/SarahFoundation/42/media/lua/client/Sarah/Engine.lua`, `foundation/SarahFoundation/42/media/lua/client/Sarah/Commands.lua`, `tools/test_render.py`, `tools/test_follow.py`, `tools/reports/test-report.json`, `tools/reports/test-report.md`, `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/HANDOFF.md`, `docs/CLAUDE-RESUME.md`.
+   - No deployment to `runtime/isolated/mods/SarahFoundation/`, no game launch, no save/settings changes, no commit or push.
+   - Sole checkout editing ownership is returned to Codex for review, fresh isolated backup, deployment, and native live retest.
+
 ## Native session closed and latest state preserved (2026-10-17)
 
 Deployed gameplay914333b. User-reported pace switching and Stop/no-auto-resume

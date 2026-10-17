@@ -2550,5 +2550,148 @@ test('reentrant same-Follow step dispatch preserves newer step generation stepAc
     assert(dReentrantFail.active.stepAction == action3, 'newer stepAction must remain intact after older step failure')
 end)
 
+-- 72. Distance-based Follow catch-up starts running at >=6 tiles even when player walks/stands still, with 3-to-6 tile hysteresis
+test('distance-based follow catch-up starts at >=6 tiles when player is stationary/walking and holds hysteresis until <=3 tiles', function()
+    local activeWalkAction = nil
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 16, y = 10, z = 0}})
+
+    local customObserve = function()
+        local base = f.observe()
+        base.playerRunning = false
+        base.playerIsRunning = false
+        return base
+    end
+
+    local walkCallback = function(target, onComplete, onFail, actionTable)
+        local actionObj = {
+            target = target,
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p) self.pace = p end
+        }
+        activeWalkAction = actionObj
+        return true, actionObj
+    end
+
+    local d = Commands.new(customObserve, function()
+        if activeWalkAction then activeWalkAction = nil end
+        return true
+    end, f.identityProvider, walkCallback)
+
+    -- 72a. Initial dispatch at 6 tiles (distSq = 36.0) with stationary player enters catch-up run
+    local resFollow = d:execute('follow')
+    assert(resFollow.state == 'running')
+    assert(d.active and d.active.command == 'follow')
+    assert(d.active.catchUp == true, 'catchUp must activate at 6 tiles (distSq = 36)')
+    assert(d.active.pace == 'run', 'initial step at 6 tiles must run even when player is not running')
+    assert(activeWalkAction ~= nil and activeWalkAction.pace == 'run')
+
+    -- 72b. Sarah closes gap to 4.5 tiles (distSq = 20.25, inside (9, 36) hysteresis band): stays running
+    f.npcPos.x = 11.5
+    d:tick()
+    assert(d.active.catchUp == true, 'catchUp must remain true inside hysteresis band (4.5 tiles)')
+    assert(d.active.pace == 'run')
+    assert(activeWalkAction.pace == 'run')
+
+    -- 72c. Retargeting while still inside hysteresis band (e.g. player shifts to (16, 12),Sarah at (12, 10) -> distSq = 20) keeps run pace on new step
+    f.npcPos.x = 12.0; f.npcPos.y = 10.0
+    for _ = 1, 5 do d:tick() end
+    f.playerPos.x = 16.0; f.playerPos.y = 12.0 -- distSq = 16 + 4 = 20 (in hysteresis band)
+    d:tick()
+    assert(d.active.catchUp == true, 'retargeted step in hysteresis band must preserve catchUp')
+    assert(d.active.pace == 'run')
+    assert(activeWalkAction ~= nil and activeWalkAction.pace == 'run')
+
+    -- 72d. Sarah closes gap to 3 tiles (distSq = 9.0): exits catch-up and drops back to walk
+    f.npcPos.x = 13.0; f.npcPos.y = 12.0 -- dx = 3, dy = 0 -> distSq = 9.0
+    d:tick()
+    assert(d.active.catchUp == false, 'catchUp must clear at <=3 tiles (distSq <= 9)')
+    assert(d.active.pace == 'walk', 'pace must drop to walk at <=3 tiles when player is not running')
+    assert(activeWalkAction.pace == 'walk')
+
+    -- 72e. Gap drifts to 5 tiles (distSq = 25.0 < 36.0): stays walking because catchUp is false
+    f.playerPos.x = 18.0; f.playerPos.y = 12.0 -- dx = 5, dy = 0 -> distSq = 25.0
+    d:tick()
+    assert(d.active.catchUp == false, 'must not re-enter catchUp below 6 tiles')
+    assert(d.active.pace == 'walk')
+    assert(activeWalkAction.pace == 'walk')
+end)
+
+-- 73. Mid-stride catch-up acceleration, step completion transition, deadzone/stop reset, and WalkHere walking invariance at 6-7 tiles
+test('mid-stride catch-up acceleration, step completion hysteresis, deadzone/stop reset, and WalkHere walking invariant at 6-7 tiles', function()
+    local playerRunning = false
+    local activeWalkAction = nil
+    local f = makeFixture({npcPos = {x = 10, y = 10, z = 0}, playerPos = {x = 13.5, y = 10, z = 0}})
+
+    local customObserve = function()
+        local base = f.observe()
+        base.playerRunning = playerRunning
+        base.playerIsRunning = playerRunning
+        return base
+    end
+
+    local walkCallback = function(target, onComplete, onFail, actionTable)
+        local actionObj = {
+            target = target,
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p) self.pace = p end
+        }
+        activeWalkAction = actionObj
+        return true, actionObj
+    end
+
+    local d = Commands.new(customObserve, function()
+        if activeWalkAction then activeWalkAction = nil end
+        return true
+    end, f.identityProvider, walkCallback)
+
+    -- 73a. Start follow at 3.5 tiles (distSq = 12.25): starts walking
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(d.active.catchUp == false and d.active.pace == 'walk')
+    assert(activeWalkAction.pace == 'walk')
+
+    -- 73b. Walking player opens gap to 6.5 tiles (distSq = 42.25 >= 36.0): mid-stride acceleration to run
+    f.playerPos.x = 16.5
+    d:tick()
+    assert(d.active.catchUp == true, 'must enter catchUp mid-stride when gap reaches >=6 tiles')
+    assert(d.active.pace == 'run')
+    assert(activeWalkAction.pace == 'run')
+
+    -- 73c. Step completes at intermediate square (13, 10) while player is at (16.5, 10) (distSq = 12.25 > 9.0):
+    -- idle pace resets to walk, but catchUp remains true so next step dispatches as run
+    f.npcPos.x = 13.0
+    activeWalkAction.onComplete()
+    assert(d.active.stepState == 'idle')
+    assert(d.active.pace == 'walk')
+    assert(d.active.catchUp == true, 'catchUp must persist when step completes outside 3-tile stop threshold')
+    d:tick()
+    assert(d.active.stepState == 'walking')
+    assert(d.active.pace == 'run' and activeWalkAction.pace == 'run')
+
+    -- 73d. Deadzone entry (<=2 tiles) immediately resets catchUp and pace to walk
+    f.npcPos.x = 15.0; f.playerPos.x = 16.5 -- dx = 1.5 -> distSq = 2.25 <= 4.0
+    d:tick()
+    assert(d.active.catchUp == false)
+    assert(d.active.pace == 'walk')
+    assert(activeWalkAction.pace == 'walk')
+
+    -- 73e. Stop clears active follow cleanly
+    d:execute('stop')
+    assert(d.active == nil and activeWalkAction == nil)
+
+    -- 73f. WalkHere at 7 tiles (distSq = 49 >= 36) strictly remains walking
+    f.npcPos.x = 10.0; f.npcPos.y = 10.0
+    local resWalk = d:execute('walk here', {x = 17, y = 10, z = 0})
+    assert(resWalk.state == 'running')
+    assert(d.active.command == 'walk here')
+    assert(d.active.pace == 'walk')
+    assert(activeWalkAction ~= nil and activeWalkAction.pace == 'walk')
+    d:execute('stop')
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')
