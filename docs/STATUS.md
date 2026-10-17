@@ -1,3 +1,85 @@
+## Native M1 retest closed: partial passes, stutter/window open (2026-10-17)
+
+Deployedcd14868. User-reported open-road look-away and one solid-wall/closed-door
+occlusion case passed; stationary-target catch-up run/deceleration passed. Exact
+thresholds not measured. Continuous-motion run-start/stop stutter NOT ACCEPTED;
+trace includes pace=run/catch=true with one npcRun=false sample. Sampling does
+not establish cause. Updated-build explicit Stop/no-resume response ambiguous;
+no new complete Stop regression claim. Window-distance visibility limitation open.
+See evidence/m1-retest-20261017.md and sanitized transition CSV.
+User quit normally; Codex confirmed CLOSED and log SAVED b / GameThread exited.
+Pre-test m1-retest-20261017-003056-UTC:527 verified files/495 world files.
+Post-test post-m1-retest-20261017-004631-UTC:770 verified files/738 world files.
+Backups under ignored runtime/backups contain manifests and RESTORE.txt; no restore.
+No gameplay source changes during tests; normal saves/settings untouched.
+Next coding task: docs/NEXT-M1-SMOOTHING-BATCH.md. Diagnose supported continuous
+owned retarget without weakening Stop, then investigate window limitation. No
+speculative visibility bypass. Codex owns checkout until explicit manual handoff.
+Automated baseline797/17 +11 runner +44 preflight remains unchanged. Full M1,
+wall/floor coverage, clock reload/reset and native queue inspection remain open.
+Independent lighting OPEN; external/model AI ON HOLD. Prior IN PROGRESS notes
+below are superseded by this closed-session summary.
+
+## Native retest: obstruction case passed, window limitation open (2026-10-17)
+
+User confirms requested solid-wall/closed-door case hides Sarah and clear sight
+shows her again. Nearby open-road look-away also passed. User reports window
+visibility requires Sarah about2-3tiles away; geometry/window/curtain state not
+captured, cause unverified. Full rendering gate OPEN; continuous-motion stutter
+also unresolved. See evidence/m1-retest-20261017.md and sanitized transition CSV.
+Normal quit/save requested; shutdown/post-test preservation pending. No live code
+changes; independent lighting unknown and external AI ON HOLD.
+
+## Native M1 retest: continuous-motion stutter unresolved (2026-10-17)
+
+User reports repeated run-start/stop animation.30-sample bounded trace ended and
+removed itself without error. Catch-up engaged at gap6.15 (pace=run/catch=true),
+but gap5.51 sample had npcRun=false with pace=run/catch=true. Other catch-up samples
+run normally. Below6 after leaving catch-up, walking follows current hysteresis.
+See sanitized evidence/follow-transition-trace-20261017.csv. Exact root cause not
+established; inspect full stop/restart retarget transitions offline, preserving
+strict explicit Stop, ownership and native physiology. No live code changes.
+Initial stationary-target catch-up and open-road look-away case passed; continuous
+smoothness not accepted. Wall/closed-door case requested, then clean exit/backup.
+
+## Native M1 retest: continuous run-to-walk catch-up unresolved (2026-10-17)
+
+User reports persistent walking gap when releasing run while retaining movement;
+stopping/restarting movement triggers catch-up. Initial stationary-target6-7tile
+catch-up case passed, but continuous transition not accepted. Need actual gap and
+pace/catchUp/native-running readings before classifying threshold vs logic/engine
+issue. Bounded read-only trace requested; no code changes/deployment while running.
+New-build Stop/no-resume regression remains unconfirmed from ambiguous response;
+wall/door/floor occlusion still pending. Open-road look-away user case passed.
+
+## Native M1 retest: catch-up partial PASS (2026-10-17)
+
+User reports deployedcd14868 Sarah ran to close larger stationary-target gap and
+slowed near player (estimated about2tiles). Catch-up behavior accepted for this
+case; exact6/3tile hysteresis not measured. Open-road look-away case also passed.
+Next updated-build Stop/no-auto-resume regression requested, then wall/door
+occlusion. Full M1, rendering boundaries and lighting remain unaccepted. Game open.
+
+## Native M1 retest: open-road look-away partial PASS (2026-10-17)
+
+At deployedcd14868, user reports Sarah stays visible when player faces away on
+open road. Prior observed failure is corrected for this case. No wall/door/floor
+occlusion acceptance or full rendering/M1 completion inferred. Catch-up6-7tile
+stationary-target run/deceleration/arrival case requested. Game remains open;
+no live source edits. Backup m1-retest-20261017-003056-UTC verified before deploy.
+
+## IN PROGRESS: M1 rendering/catch-up native retest (2026-10-17)
+
+User resumed retest. Codex sole editor; clean sourcecd14868 before preparation.
+Fresh backup runtime/backups/m1-retest-20261017-003056-UTC:527 hash-verified files,
+including495 selected world files plus prior mod/profile. No restore performed.
+All17 production files deployed/hash-matched tocd14868. Preflight READY at clean
+cd14868 before these progress notes. Isolated Sandbox/2026-10-05_19-04-21;
+launcher PID27584. Main menu Continue selected. No new native PASS recorded yet.
+Pending open-road look-away, catch-up6/3, Stop/no-resume, wall/door/floor occlusion,
+alpha behavior and remaining clock reload/reset. No normal saves/settings used.
+LightSourceSnapshot remains inert; independent lighting OPEN; AI ON HOLD.
+
 ## Codex-reviewed M1 retest candidate (2026-10-17)
 
 Argon returned sole editing ownership. Codex reviewed source/test diffs and

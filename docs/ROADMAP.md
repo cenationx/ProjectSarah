@@ -7,7 +7,7 @@ See MILESTONE-REVIEW-2026-10-07.md for scope and acceptance requirements.
 | Milestone | Outcome | Current state | Exit gate |
 |---|---|---|---|
 | M0 Foundation | One persistent NPC; safe death/unload/recovery | Narrow native evidence accepted; wider limits open | Supported-scope recovery and no duplicates/resurrection |
-| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Pace and Stop case passed; look-away render and Follow catch-up candidates verified offline; native retest pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
+| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Look-away/obstruction and initial catch-up cases passed; continuous-motion stutter and window limitation OPEN | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
 | M2a Independent observations | Sarah-relative geometry, admitted lighting and bounded memory | Offline candidates; clock pause/advance observed; native lighting OPEN | Native exposure/coverage, calibrated lighting, expiry and lifecycle resets |
 | M2b Equipment and exchange | Melee equip, one garment, one-item give/take | Policy/proposals; native adapters unaccepted | Exact item conservation, appearance, capacity, cancellation and restart |
 | M2c Commanded work | One-container loot, then room/house; equipment improvement | Planned | Accepted discovery, reachability, partial results, capacity and Stop |
@@ -20,11 +20,7 @@ Track each capability as not started, implemented, offline verified, native
 accepted or blocked. Record owner, code revision, deployed revision, evidence,
 limitation and next action. Test totals are not completion percentages.
 
-Priority: review, deploy after a fresh verified backup, and native-retest the M1 look-away rendering (`square:isCouldSee(0)` + look-away alpha dead-band restoration) and bounded Follow catch-up (6-tile start / 3-tile stop hysteresis) corrections before completing the
-isolated Follow/Stop/render and clock acceptance batch; calibrate one explicit
-lamp; decide the lighting route. Independent manual equip work may proceed where
-its action/target safety is established, without granting autonomous sight.
-No source presence or geometric clarity implies confirmed sight.
+Priority: complete NEXT-M1-SMOOTHING-BATCH.md for continuous-motion stutter and the window-distance limitation, then review and perform a freshly backed-up native retest. Prior open-ground and one obstruction case passed; full M1 remains OPEN. Independent manual equip inspection may proceed only within its own supported gates. Source presence or geometric clarity never implies confirmed sight.
 
 Add acceptance criteria for Stop during commit boundaries, inventory/appearance
 persistence, no stale task resumption, measured performance, ordinary travel and

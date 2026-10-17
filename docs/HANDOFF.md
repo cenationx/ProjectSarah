@@ -1,3 +1,37 @@
+## Native M1 retest closed: partial passes, stutter/window open (2026-10-17)
+
+Deployedcd14868. User-reported open-road look-away and one solid-wall/closed-door
+occlusion case passed; stationary-target catch-up run/deceleration passed. Exact
+thresholds not measured. Continuous-motion run-start/stop stutter NOT ACCEPTED;
+trace includes pace=run/catch=true with one npcRun=false sample. Sampling does
+not establish cause. Updated-build explicit Stop/no-resume response ambiguous;
+no new complete Stop regression claim. Window-distance visibility limitation open.
+See evidence/m1-retest-20261017.md and sanitized transition CSV.
+User quit normally; Codex confirmed CLOSED and log SAVED b / GameThread exited.
+Pre-test m1-retest-20261017-003056-UTC:527 verified files/495 world files.
+Post-test post-m1-retest-20261017-004631-UTC:770 verified files/738 world files.
+Backups under ignored runtime/backups contain manifests and RESTORE.txt; no restore.
+No gameplay source changes during tests; normal saves/settings untouched.
+Next coding task: docs/NEXT-M1-SMOOTHING-BATCH.md. Diagnose supported continuous
+owned retarget without weakening Stop, then investigate window limitation. No
+speculative visibility bypass. Codex owns checkout until explicit manual handoff.
+Automated baseline797/17 +11 runner +44 preflight remains unchanged. Full M1,
+wall/floor coverage, clock reload/reset and native queue inspection remain open.
+Independent lighting OPEN; external/model AI ON HOLD. Prior IN PROGRESS notes
+below are superseded by this closed-session summary.
+
+## IN PROGRESS: M1 rendering/catch-up native retest (2026-10-17)
+
+User resumed retest. Codex sole editor; clean sourcecd14868 before preparation.
+Fresh backup runtime/backups/m1-retest-20261017-003056-UTC:527 hash-verified files,
+including495 selected world files plus prior mod/profile. No restore performed.
+All17 production files deployed/hash-matched tocd14868. Preflight READY at clean
+cd14868 before these progress notes. Isolated Sandbox/2026-10-05_19-04-21;
+launcher PID27584. Main menu Continue selected. No new native PASS recorded yet.
+Pending open-road look-away, catch-up6/3, Stop/no-resume, wall/door/floor occlusion,
+alpha behavior and remaining clock reload/reset. No normal saves/settings used.
+LightSourceSnapshot remains inert; independent lighting OPEN; AI ON HOLD.
+
 ## Codex-reviewed M1 retest candidate (2026-10-17)
 
 Argon returned sole editing ownership. Codex reviewed source/test diffs and
