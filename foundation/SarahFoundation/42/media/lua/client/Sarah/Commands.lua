@@ -51,17 +51,27 @@ local function isPlayerAlive(data)
 end
 local FOLLOW_CATCHUP_START_DIST_SQ=36.0
 local FOLLOW_CATCHUP_STOP_DIST_SQ=9.0
-local function resolveFollowPace(act,data,distSq)
+local function resolveFollowPace(act,data,distSq,playerMoved)
+    local playerRunning=(data and data.playerRunning==true) or false
     if type(act)=='table' and isValidNumber(distSq) then
+        if playerRunning then
+            act.postRunCarry=true
+        elseif playerMoved==false then
+            act.postRunCarry=false
+        end
         if distSq>=FOLLOW_CATCHUP_START_DIST_SQ then
             act.catchUp=true
+            act.postRunCarry=false
         elseif distSq<=FOLLOW_CATCHUP_STOP_DIST_SQ then
             act.catchUp=false
+        elseif not playerRunning and act.postRunCarry==true and playerMoved==true then
+            act.catchUp=true
+            act.postRunCarry=false
         else
             act.catchUp=(act.catchUp==true)
         end
     end
-    if (data and data.playerRunning) or (type(act)=='table' and act.catchUp==true) then
+    if playerRunning or (type(act)=='table' and act.catchUp==true) then
         return 'run'
     end
     return 'walk'
@@ -241,8 +251,10 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             action.retireStep()
             action.retireStep=nil
         end
+        action.stepAction=nil
         action.stepGen=(action.stepGen or 0)+1
         action.catchUp=false
+        action.postRunCarry=false
         action.pace='walk'
         self.active=nil
         action.state='cancelled'
@@ -402,7 +414,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
         end
         return nil
     end
-    function self:dispatchFollowStep(data,nx,ny,nz,px,py,pz,precomputedTarget)
+    function self:dispatchFollowStep(data,nx,ny,nz,px,py,pz,precomputedTarget,isRetarget,playerMoved)
         local act=self.active
         if not act or act.command~='follow' then return false,'no active follow' end
         if not isValidCoord(nx,ny,nz) or not isValidCoord(px,py,pz) then
@@ -417,13 +429,26 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return false,'no valid target near player'
         end
 
+        if playerMoved==nil then
+            local prevPx=act.lastPlayerPos and act.lastPlayerPos.x or px
+            local prevPy=act.lastPlayerPos and act.lastPlayerPos.y or py
+            playerMoved=((px-prevPx)*(px-prevPx)+(py-prevPy)*(py-prevPy))>1e-6
+            act.lastPlayerPos={x=px,y=py,z=pz}
+        end
+
         local dx=px-nx
         local dy=py-ny
         local distSq=dx*dx+dy*dy
+        local prevAction=(isRetarget==true) and act.stepAction or nil
+        if act.retireStep then
+            act.retireStep()
+            act.retireStep=nil
+        end
+        act.stepAction=nil
         act.stepGen=(act.stepGen or 0)+1
         local curStepGen=act.stepGen
         act.stepState='walking'
-        act.pace=resolveFollowPace(act,data,distSq)
+        act.pace=resolveFollowPace(act,data,distSq,playerMoved)
         act.stepTicks=0
         act.currentTarget=chosenTarget
         act.lastTarget=chosenTarget
@@ -491,6 +516,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             stepRetired=true
             if self.active then
                 self.active.retireStep=nil
+                self.active.stepAction=nil
                 self.active.stepGen=self.active.stepGen+1
                 self.active.stepState='idle'
                 self.active.stepTicks=0
@@ -505,6 +531,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                         local cdy=obsData.player.y-obsData.npc.y
                         if (cdx*cdx+cdy*cdy)<=FOLLOW_CATCHUP_STOP_DIST_SQ then
                             self.active.catchUp=false
+                            self.active.postRunCarry=false
                         end
                     end
                 end
@@ -521,9 +548,42 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             stepRetired=true
             if self.active then
                 self.active.retireStep=nil
+                self.active.stepAction=nil
                 self.active.stepGen=self.active.stepGen+1
             end
             self:cancelActive(reason or 'path failed')
+        end
+
+        if isRetarget==true then
+            if prevAction and type(prevAction.retarget)=='function' then
+                local okRet,retRes=pcall(prevAction.retarget,prevAction,chosenTarget,onStepComplete,onStepFail,act.pace)
+                if okRet and retRes==true then
+                    if not stepRetired and self.active and self.active == act and self.active.id == actId and self.active.token == actToken and self.active.stepGen == curStepGen and self.active.stepState == 'walking' then
+                        act.stepAction = prevAction
+                    end
+                    return true
+                end
+            end
+            local stopOk,stopErr=self:invokeStop('retarget',{
+                id=act.id,
+                command=act.command,
+                state=act.state,
+                owner=act.owner,
+                controller=act.owner,
+                npc=act.npc,
+                session=act.session
+            })
+            if not stopOk then
+                stepRetired=true
+                self.stopFailed=stopErr or 'stop failed'
+                act.stopFailed=self.stopFailed
+                self:cancelActive(stopErr or 'stop failed')
+                return false,stopErr
+            end
+            if not self.active or self.active~=act or self.active.id~=actId or self.active.token~=actToken or self.active.stepGen~=curStepGen then
+                stepRetired=true
+                return false,'cancelled during retarget stop'
+            end
         end
 
         local walkOk,actOrErr=self:invokeWalk(chosenTarget,onStepComplete,onStepFail,act)
@@ -591,6 +651,11 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return false,'player out of range (>8 tiles)'
         end
 
+        local prevPx=act.lastPlayerPos and act.lastPlayerPos.x or px
+        local prevPy=act.lastPlayerPos and act.lastPlayerPos.y or py
+        local playerMoved=((px-prevPx)*(px-prevPx)+(py-prevPy)*(py-prevPy))>1e-6
+        act.lastPlayerPos={x=px,y=py,z=pz}
+
         if act.stepState=='walking' then
             act.stepTicks=(act.stepTicks or 0)+1
             local maxStepTicks=act.maxStepTicks or 600
@@ -599,7 +664,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 return false,'timeout'
             end
 
-            local desiredPace=(distSq<=4.0) and 'walk' or resolveFollowPace(act,data,distSq)
+            local desiredPace=(distSq<=4.0) and 'walk' or resolveFollowPace(act,data,distSq,playerMoved)
             if act.pace~=desiredPace then
                 act.pace=desiredPace
                 if act.stepAction and act.stepAction.setPace then
@@ -614,12 +679,14 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                 act.lastProgressX=nx
                 act.lastProgressY=ny
                 act.catchUp=false
+                act.postRunCarry=false
                 act.pace='walk'
                 if act.stepTicks>=minRetargetTicks then
                     if act.retireStep then
                         act.retireStep()
                         act.retireStep=nil
                     end
+                    act.stepAction=nil
                     act.stepGen=(act.stepGen or 0)+1
                     local stopOk,stopErr=self:invokeStop('in range',{
                         id=act.id,
@@ -675,32 +742,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
                     if newTarget then
                         local isSameTarget=act.currentTarget and (newTarget.x==act.currentTarget.x and newTarget.y==act.currentTarget.y and newTarget.z==act.currentTarget.z)
                         if not isSameTarget then
-                            if act.retireStep then
-                                act.retireStep()
-                                act.retireStep=nil
-                            end
-                            act.stepGen=(act.stepGen or 0)+1
-
-                            local stopOk,stopErr=self:invokeStop('retarget',{
-                                id=act.id,
-                                command=act.command,
-                                state=act.state,
-                                owner=act.owner,
-                                controller=act.owner,
-                                npc=act.npc,
-                                session=act.session
-                            })
-                            if not stopOk then
-                                self.stopFailed=stopErr or 'stop failed'
-                                act.stopFailed=self.stopFailed
-                                self:cancelActive(stopErr or 'stop failed')
-                                return false,stopErr
-                            end
-
-                            act.stepState='idle'
-                            act.stepTicks=0
-                            act.currentTarget=nil
-                            return self:dispatchFollowStep(data,nx,ny,nz,px,py,pz,newTarget)
+                            return self:dispatchFollowStep(data,nx,ny,nz,px,py,pz,newTarget,true,playerMoved)
                         else
                             act.targetPlayer={x=px,y=py,z=pz}
                         end
@@ -716,6 +758,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             act.lastProgressX=nx
             act.lastProgressY=ny
             act.catchUp=false
+            act.postRunCarry=false
             act.pace='walk'
             act.summary='Following player (in range)'
             self:updateHistory(act.id,'running',act.summary)
@@ -727,7 +770,7 @@ function Commands.new(observe,stopCallback,identityProvider,walkCallback,validat
             return true
         end
 
-        return self:dispatchFollowStep(data,nx,ny,nz,px,py,pz)
+        return self:dispatchFollowStep(data,nx,ny,nz,px,py,pz,nil,false,playerMoved)
     end
     function self:tick()
         local valid,reason=self:checkLifecycle()

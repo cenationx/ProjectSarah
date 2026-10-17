@@ -2693,5 +2693,389 @@ test('mid-stride catch-up acceleration, step completion hysteresis, deadzone/sto
     d:execute('stop')
 end)
 
+-- 74. Continuous moving targets across repeated retargets preserve owned locomotion in-place and fall back safely when retarget fails
+test('continuous moving targets across repeated retargets preserve owned locomotion in-place and fall back safely when retarget fails', function()
+    local playerRunning = true
+    local walkStartCount = 0
+    local retargetCount = 0
+    local stopCallReasons = {}
+    local activeAction = nil
+    local retargetShouldFail = false
+    local stopShouldFail = false
+
+    local f = makeFixture({npcPos = {x = 10.0, y = 10.0, z = 0}, playerPos = {x = 14.0, y = 10.0, z = 0}})
+    local customObserve = function()
+        local base = f.observe()
+        base.playerRunning = playerRunning
+        base.playerIsRunning = playerRunning
+        return base
+    end
+
+    local d = Commands.new(customObserve, function(reason, act)
+        stopCallReasons[#stopCallReasons + 1] = reason
+        if stopShouldFail then return false, 'fallback stop jammed' end
+        activeAction = nil
+        return true
+    end, f.identityProvider, function(target, onComplete, onFail, actionTable)
+        walkStartCount = walkStartCount + 1
+        local obj = {
+            id = 'walk_' .. walkStartCount,
+            target = {x = target.x, y = target.y, z = target.z},
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p)
+                self.pace = p
+                return true
+            end,
+            retarget = function(self, newTarget, newOnComplete, newOnFail, newPace)
+                if retargetShouldFail then
+                    return false, 'retarget unavailable'
+                end
+                retargetCount = retargetCount + 1
+                self.target = {x = newTarget.x, y = newTarget.y, z = newTarget.z}
+                self.onComplete = newOnComplete
+                self.onFail = newOnFail
+                self.pace = newPace or self.pace
+                return true
+            end
+        }
+        activeAction = obj
+        return true, obj
+    end)
+
+    -- Start Follow while player is running
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(walkStartCount == 1 and retargetCount == 0 and #stopCallReasons == 0)
+    local initialAction = activeAction
+    assert(d.active.stepAction == initialAction)
+    assert(initialAction.pace == 'run')
+
+    -- Repeated moving-target retargets (3 cycles of 6 ticks while player & Sarah advance East and turn North)
+    -- Cycle 1: East to (16, 10), Sarah advances to (12, 10)
+    for t = 1, 6 do
+        f.playerPos.x = 14.0 + (2.0 * t / 6.0)
+        f.npcPos.x = 10.0 + (2.0 * t / 6.0)
+        d:tick()
+    end
+    assert(walkStartCount == 1, 'in-place retarget must NOT start a replacement walk action')
+    assert(retargetCount == 1, 'first moving-target retarget must update active action in place')
+    assert(#stopCallReasons == 0, 'in-place retarget must NOT invoke full engine stop')
+    assert(d.active.stepAction == initialAction)
+    assert(initialAction.target.x == 15 and initialAction.target.y == 10)
+    assert(initialAction.pace == 'run')
+
+    -- Cycle 2: Orthogonal turn North to (16, 13), Sarah advances to (14, 10.5)
+    for t = 1, 6 do
+        f.playerPos.y = 10.0 + (3.0 * t / 6.0)
+        f.npcPos.x = 12.0 + (2.0 * t / 6.0)
+        f.npcPos.y = 10.0 + (0.5 * t / 6.0)
+        d:tick()
+    end
+    assert(walkStartCount == 1)
+    assert(retargetCount == 2)
+    assert(#stopCallReasons == 0)
+    assert(d.active.stepAction == initialAction)
+    assert(initialAction.pace == 'run')
+
+    -- Cycle 3: Fallback when in-place retarget returns false (e.g. pathToLocation unavailable)
+    retargetShouldFail = true
+    for t = 1, 6 do
+        f.playerPos.y = 13.0 + (2.5 * t / 6.0)
+        f.npcPos.y = 10.5 + (2.0 * t / 6.0)
+        d:tick()
+    end
+    assert(retargetCount == 2)
+    assert(#stopCallReasons == 1 and stopCallReasons[1] == 'retarget', 'failed in-place retarget must fall back to invokeStop(retarget)')
+    assert(walkStartCount == 2, 'fallback must dispatch replacement walk')
+    assert(d.active.stepAction == activeAction and activeAction ~= initialAction)
+
+    -- Cycle 4: Fallback stop failure blocks movement pending recovery
+    stopShouldFail = true
+    for t = 1, 6 do
+        f.playerPos.x = 16.0 + (2.5 * t / 6.0)
+        f.npcPos.x = 14.0 + (1.0 * t / 6.0)
+        d:tick()
+    end
+    assert(d.active == nil)
+    assert(d.stopFailed == 'fallback stop jammed')
+    local followBlocked = d:execute('follow')
+    assert(followBlocked.state == 'rejected')
+
+    stopShouldFail = false
+    local recover = d:execute('stop')
+    assert(recover.state == 'completed' and d.stopFailed == nil)
+end)
+
+-- 75. Run-to-walk with held movement latches post-run catch-up until <=3 tiles without oscillating, while stationary run-release walks immediately
+test('run-to-walk with held movement latches post-run catch-up until <=3 tiles without oscillating', function()
+    local playerRunning = true
+    local activeAction = nil
+    local f = makeFixture({npcPos = {x = 10.0, y = 10.0, z = 0}, playerPos = {x = 12.67, y = 10.0, z = 0}})
+
+    local customObserve = function()
+        local base = f.observe()
+        base.playerRunning = playerRunning
+        base.playerIsRunning = playerRunning
+        return base
+    end
+
+    local d = Commands.new(customObserve, function()
+        activeAction = nil
+        return true
+    end, f.identityProvider, function(target, onComplete, onFail, actionTable)
+        local obj = {
+            target = {x = target.x, y = target.y, z = target.z},
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p) self.pace = p; return true end,
+            retarget = function(self, newTarget, newOnComplete, newOnFail, newPace)
+                self.target = {x = newTarget.x, y = newTarget.y, z = newTarget.z}
+                self.onComplete = newOnComplete
+                self.onFail = newOnFail
+                self.pace = newPace or self.pace
+                return true
+            end
+        }
+        activeAction = obj
+        return true, obj
+    end)
+
+    -- 75a. Start at gap = 2.67 tiles while player is running (models trace frame 7827)
+    local res = d:execute('follow')
+    assert(res.state == 'running')
+    assert(d.active.pace == 'run' and d.active.catchUp == false and d.active.postRunCarry == true)
+
+    -- Player releases Run while continuing movement (held walk) as gap opens to 3.76 tiles (models trace frame 7857)
+    playerRunning = false
+    f.npcPos.x = 11.0
+    f.playerPos.x = 14.76 -- gap = 3.76 tiles (distSq = 14.14 > 9.0, < 36.0)
+    d:tick()
+    assert(d.active.catchUp == true, 'run-to-walk with held movement at 3.76 tiles must latch catchUp')
+    assert(d.active.postRunCarry == false, 'postRunCarry must be consumed when catchUp latches')
+    assert(d.active.pace == 'run' and activeAction.pace == 'run', 'Sarah must keep running to close post-run gap')
+
+    -- Across subsequent ticks and an in-place retarget while gap is 3.4..4.4 tiles, Sarah stays running
+    for t = 1, 6 do
+        f.playerPos.x = 14.76 + 0.08 * t
+        f.npcPos.x = 11.0 + 0.18 * t
+        d:tick()
+        assert(d.active.catchUp == true and d.active.pace == 'run' and activeAction.pace == 'run')
+    end
+
+    -- Sarah closes gap to <= 3.0 tiles (e.g. 2.9 tiles, distSq = 8.41 <= 9.0): exits catch-up and transitions to walk
+    f.npcPos.x = f.playerPos.x - 2.9
+    d:tick()
+    assert(d.active.catchUp == false, 'catchUp must exit at <=3 tiles')
+    assert(d.active.pace == 'walk' and activeAction.pace == 'walk', 'pace must drop to walk once post-run gap closes to <=3 tiles')
+
+    -- Continued walking where gap drifts to 3.6 tiles (without player running again) must NOT re-trigger catch-up (no oscillation)
+    f.playerPos.x = f.npcPos.x + 3.6
+    d:tick()
+    assert(d.active.catchUp == false and d.active.pace == 'walk' and activeAction.pace == 'walk')
+
+    -- 75b. Player runs at 2.6 tiles, releases run at 2.8 tiles (<=3 tiles) while continuing to walk, then gap drifts >3 tiles (3.2 tiles):
+    -- postRunCarry remains armed during continuous walk and catches the drift above 3 tiles once
+    playerRunning = true
+    f.playerPos.x = f.npcPos.x + 2.6
+    d:tick()
+    assert(d.active.pace == 'run' and d.active.postRunCarry == true)
+
+    -- Release run at 2.8 tiles while still moving
+    playerRunning = false
+    f.npcPos.x = f.npcPos.x + 0.05
+    f.playerPos.x = f.npcPos.x + 2.8 -- distSq = 7.84 <= 9.0
+    d:tick()
+    assert(d.active.pace == 'walk' and d.active.postRunCarry == true, 'postRunCarry stays armed while continuous walk is <=3 tiles')
+
+    -- Continued walk widens gap to 3.3 tiles (distSq = 10.89 > 9.0)
+    f.playerPos.x = f.npcPos.x + 3.3
+    d:tick()
+    assert(d.active.catchUp == true and d.active.postRunCarry == false and d.active.pace == 'run', 'drift >3 tiles during continuous post-run walk latches catchUp once')
+
+    -- Closes back to 2.9 tiles -> walks steadily
+    f.npcPos.x = f.playerPos.x - 2.9
+    d:tick()
+    assert(d.active.catchUp == false and d.active.pace == 'walk')
+    d:execute('stop')
+end)
+
+-- 76. In-place retarget callback isolation, reentry/late completion, Stop, leash, failure, and explicit restart
+test('in-place retarget callback isolation, reentry/late completion, Stop, leash, failure, and explicit restart', function()
+    local callbacks = {}
+    local activeAction = nil
+    local stopCount = 0
+    local f = makeFixture({npcPos = {x = 10.0, y = 10.0, z = 0}, playerPos = {x = 14.0, y = 10.0, z = 0}})
+
+    local d = Commands.new(f.observe, function(reason)
+        stopCount = stopCount + 1
+        activeAction = nil
+        return true
+    end, f.identityProvider, function(target, onComplete, onFail, actionTable)
+        callbacks[#callbacks + 1] = {onComplete = onComplete, onFail = onFail, kind = 'walk'}
+        local obj = {
+            target = {x = target.x, y = target.y, z = target.z},
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p) self.pace = p; return true end,
+            retarget = function(self, newTarget, newOnComplete, newOnFail, newPace)
+                callbacks[#callbacks + 1] = {onComplete = newOnComplete, onFail = newOnFail, kind = 'retarget'}
+                self.target = {x = newTarget.x, y = newTarget.y, z = newTarget.z}
+                self.onComplete = newOnComplete
+                self.onFail = newOnFail
+                self.pace = newPace or self.pace
+                return true
+            end
+        }
+        activeAction = obj
+        return true, obj
+    end)
+
+    -- 76a. Start Follow and perform two in-place retargets
+    d:execute('follow')
+    assert(#callbacks == 1 and callbacks[1].kind == 'walk')
+
+    f.playerPos.x = 16.0; f.npcPos.x = 11.5
+    for _ = 1, 6 do d:tick() end
+    assert(#callbacks == 2 and callbacks[2].kind == 'retarget')
+
+    f.playerPos.y = 13.0; f.npcPos.x = 13.0
+    for _ = 1, 6 do d:tick() end
+    assert(#callbacks == 3 and callbacks[3].kind == 'retarget')
+    local genAfterRetarget2 = d.active.stepGen
+
+    -- Late/retired callbacks from Step 1 and Step 2 must be completely ignored
+    callbacks[1].onFail(nil, 'stale step 1 fail')
+    callbacks[1].onComplete()
+    callbacks[2].onFail(nil, 'stale step 2 fail')
+    callbacks[2].onComplete()
+    assert(d.active ~= nil and d.active.stepState == 'walking' and d.active.stepGen == genAfterRetarget2)
+    assert(#d.noticeQueue == 0)
+
+    -- 76b. Path failure on active in-place retargeted step (Step 3) cancels Follow cleanly
+    callbacks[3].onFail(activeAction, 'path failed')
+    assert(d.active == nil)
+    assert(d.lastAction.state == 'cancelled' and d.lastAction.reason == 'path failed')
+    local notices = d:consumeNotices()
+    assert(#notices == 1 and notices[1].reason == 'path failed')
+
+    -- 76c. Subsequent explicit restart works, then 8-tile leash break after in-place retarget disengages cleanly
+    f.npcPos.x = 10.0; f.npcPos.y = 10.0
+    f.playerPos.x = 14.0; f.playerPos.y = 10.0
+    local resRestart = d:execute('follow')
+    assert(resRestart.state == 'running' and d.active ~= nil)
+    f.playerPos.x = 16.0; f.npcPos.x = 11.0
+    for _ = 1, 6 do d:tick() end
+    assert(callbacks[#callbacks].kind == 'retarget')
+
+    -- Player crosses 8-tile leash (npc at 11, player at 20 -> dist = 9 > 8)
+    f.playerPos.x = 20.0
+    local okLeash, errLeash = d:tick()
+    assert(okLeash == false and errLeash:find('out of range'))
+    assert(d.active == nil)
+    d:consumeNotices()
+
+    -- 76d. Explicit restart, in-place retarget, then explicit user Stop and no auto-resume
+    f.npcPos.x = 10.0; f.playerPos.x = 14.0
+    assert(d:execute('follow').state == 'running')
+    f.playerPos.x = 16.0; f.npcPos.x = 11.0
+    for _ = 1, 6 do d:tick() end
+    local staleCbBeforeStop = callbacks[#callbacks]
+
+    local stopRes = d:execute('stop')
+    assert(stopRes.state == 'completed' and d.active == nil)
+    staleCbBeforeStop.onComplete()
+    staleCbBeforeStop.onFail(nil, 'late fail after stop')
+    for _ = 1, 10 do
+        f.playerPos.x = 15.0
+        d:tick()
+    end
+    assert(d.active == nil and #d:consumeNotices() == 0)
+end)
+
+-- 77. Commands requires explicit literal true from optional retarget; nil result follows safe stop/replacement path
+test('retarget requires explicit true and falls back to safe stop/replacement path on nil result', function()
+    local stopReasons = {}
+    local walkCalls = 0
+    local retargetCalls = 0
+    local retargetReturnMode = 'nil'
+    local actions = {}
+    local f = makeFixture({npcPos = {x = 10.0, y = 10.0, z = 0}, playerPos = {x = 14.0, y = 10.0, z = 0}})
+
+    local d = Commands.new(f.observe, function(reason)
+        stopReasons[#stopReasons + 1] = reason
+        return true
+    end, f.identityProvider, function(target, onComplete, onFail, actionTable)
+        walkCalls = walkCalls + 1
+        local obj = {
+            id = walkCalls,
+            target = {x = target.x, y = target.y, z = target.z},
+            pace = (actionTable and actionTable.pace) or 'walk',
+            onComplete = onComplete,
+            onFail = onFail,
+            setPace = function(self, p) self.pace = p; return true end,
+            retarget = function(self, newTarget, newOnComplete, newOnFail, newPace)
+                retargetCalls = retargetCalls + 1
+                if retargetReturnMode == 'nil' then
+                    return nil
+                elseif retargetReturnMode == 'table' then
+                    return {}
+                elseif retargetReturnMode == 'true' then
+                    self.target = {x = newTarget.x, y = newTarget.y, z = newTarget.z}
+                    self.onComplete = newOnComplete
+                    self.onFail = newOnFail
+                    self.pace = newPace or self.pace
+                    return true
+                end
+                return false
+            end
+        }
+        actions[#actions + 1] = obj
+        return true, obj
+    end)
+
+    -- Initial Follow step
+    local res = d:execute('follow')
+    assert(res.state == 'running' and walkCalls == 1 and #stopReasons == 0)
+    assert(d.active.stepAction == actions[1])
+
+    -- 1. Retarget returns nil -> must NOT invent success; must invokeStop('retarget') and invokeWalk replacement
+    retargetReturnMode = 'nil'
+    f.playerPos.x = 16.0; f.npcPos.x = 11.0
+    for _ = 1, 6 do d:tick() end
+    assert(retargetCalls == 1)
+    assert(#stopReasons == 1 and stopReasons[1] == 'retarget', 'nil retarget return must trigger invokeStop("retarget")')
+    assert(walkCalls == 2 and d.active.stepAction == actions[2], 'nil retarget return must dispatch replacement walk')
+
+    -- Stale callbacks on action 1 must be retired; action 2 remains active
+    actions[1].onFail(actions[1], 'stale fail')
+    actions[1].onComplete()
+    assert(d.active ~= nil and d.active.stepState == 'walking' and d.active.stepAction == actions[2])
+
+    -- 2. Retarget returns non-boolean table -> also rejected; falls back to stop + replacement walk
+    retargetReturnMode = 'table'
+    f.playerPos.x = 18.0; f.npcPos.x = 13.0
+    for _ = 1, 6 do d:tick() end
+    assert(retargetCalls == 2)
+    assert(#stopReasons == 2 and stopReasons[2] == 'retarget')
+    assert(walkCalls == 3 and d.active.stepAction == actions[3])
+
+    -- 3. Retarget returns explicit literal true -> accepted in-place without invokeStop or replacement walk
+    retargetReturnMode = 'true'
+    f.playerPos.x = 20.0; f.npcPos.x = 15.0
+    for _ = 1, 6 do d:tick() end
+    assert(retargetCalls == 3)
+    assert(#stopReasons == 2 and walkCalls == 3 and d.active.stepAction == actions[3])
+    assert(actions[3].target.x == 19)
+
+    -- 4. Explicit Stop halts cleanly
+    local stopRes = d:execute('stop')
+    assert(stopRes.state == 'completed' and d.active == nil)
+    assert(#stopReasons == 3 and stopReasons[3] == 'stopped by user')
+end)
+
 print('RESULT ' .. count .. ' follow checks passed')
 ''')

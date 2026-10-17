@@ -99,6 +99,79 @@ local function getWalkActionClass()
             pcall(self.character.setRunning, self.character, newPace == "run")
             return true
         end
+        function cls:start()
+            if not self.finished and self:isCurrentOwner() then
+                local shouldRun = (self.pace == "run")
+                pcall(self.character.setRunning, self.character, shouldRun)
+                if ISWalkToTimedAction.start then
+                    ISWalkToTimedAction.start(self)
+                end
+            end
+        end
+        function cls:retarget(location, onSuccess, onFail, pace)
+            if self.finished then return false, "finished" end
+            if not self:isCurrentOwner() then
+                return false, "retired"
+            end
+            if not ISTimedActionQueue or type(ISTimedActionQueue.hasAction) ~= "function" then
+                return false, "queue membership unavailable"
+            end
+            local okHas, has = pcall(ISTimedActionQueue.hasAction, self)
+            if not okHas or has ~= true then
+                return false, "action not queued"
+            end
+            if not location then
+                return false, "missing target square"
+            end
+            local okRaw, rx, ry, rz = pcall(function()
+                if type(location.getX) == "function" then
+                    return location:getX(), location:getY(), location:getZ()
+                end
+                return location.x, location.y, location.z
+            end)
+            if not okRaw then
+                return false, "invalid target coordinates"
+            end
+            local resolvedSq = location
+            if self.adapter and type(self.adapter.validateTarget) == "function" then
+                local valid, sqOrErr = self.adapter.validateTarget(self.character, { x = rx, y = ry, z = rz })
+                if not valid then
+                    return false, sqOrErr
+                end
+                if type(location.getX) ~= "function" then
+                    resolvedSq = sqOrErr
+                end
+            end
+            local okCoord, tx, ty, tz = pcall(function()
+                if type(resolvedSq.getX) == "function" then
+                    return resolvedSq:getX(), resolvedSq:getY(), resolvedSq:getZ()
+                end
+                return resolvedSq.x, resolvedSq.y, resolvedSq.z
+            end)
+            if not okCoord or type(tx) ~= "number" or type(ty) ~= "number" or type(tz) ~= "number"
+               or tx ~= tx or ty ~= ty or tz ~= tz
+               or tx == math.huge or tx == -math.huge or ty == math.huge or ty == -math.huge or tz == math.huge or tz == -math.huge then
+                return false, "invalid target coordinates"
+            end
+            if not self.character.getPathFindBehavior2 then
+                return false, "pathfinder unavailable"
+            end
+            local okPf, pf = pcall(self.character.getPathFindBehavior2, self.character)
+            if not okPf or not pf or type(pf.pathToLocation) ~= "function" then
+                return false, "pathToLocation unavailable"
+            end
+            local okPath, errPath = pcall(pf.pathToLocation, pf, math.floor(tx), math.floor(ty), math.floor(tz))
+            if not okPath then
+                return false, "pathToLocation failed: " .. tostring(errPath)
+            end
+            self.location = resolvedSq
+            self.result = nil
+            if onSuccess ~= nil then self.onSuccess = onSuccess end
+            if onFail ~= nil then self.onFail = onFail end
+            self.pace = pace or self.pace or "walk"
+            pcall(self.character.setRunning, self.character, self.pace == "run")
+            return true, self
+        end
         function cls:update()
             if not self.finished and self:isCurrentOwner() then
                 local shouldRun = (self.pace == "run")
@@ -193,25 +266,92 @@ function Engine.new()
         local square=npc:getCurrentSquare()
         -- Conservative scope: unobstructed squares on the local player's floor.
         -- Inspected character visibility uses isCouldSee alongside directional isCanSee.
-        -- This is a look-away rendering candidate; actual wall/door/room occlusion
-        -- and alpha behavior require isolated native acceptance.
+        -- Native IsoPlayer/TestIfSeen spotting gates dark-square light fallback on
+        -- player.getDetectionRange() (2.0..3.5 tiles) and immediate setAlpha(1.0) on
+        -- distance < 2.0 tiles, which can leave alpha/targetAlpha zeroed even when
+        -- canSee is true (e.g. through a window beyond 2-3.5 tiles). Sync alpha only
+        -- after canSee or couldSee and all residency/floor/light guards pass.
         if not square or math.floor(npc:getZ())~=math.floor(player:getZ()) then return false end
         local canSee=square:isCanSee(playerIndex)==true
         local couldSee=(not canSee) and square.isCouldSee~=nil and square:isCouldSee(playerIndex)==true
         if not canSee and not couldSee then return false end
         local light=square:getLightInfo(playerIndex)
         if not light then return false end
-        if couldSee then
-            if npc.setAlphaAndTarget then
-                pcall(npc.setAlphaAndTarget,npc,playerIndex,1.0)
-            else
-                if npc.setTargetAlpha then pcall(npc.setTargetAlpha,npc,playerIndex,1.0) end
-                if npc.setAlpha then pcall(npc.setAlpha,npc,playerIndex,1.0) end
-            end
+        if npc.setAlphaAndTarget then
+            pcall(npc.setAlphaAndTarget,npc,playerIndex,1.0)
+        else
+            if npc.setTargetAlpha then pcall(npc.setTargetAlpha,npc,playerIndex,1.0) end
+            if npc.setAlpha then pcall(npc.setAlpha,npc,playerIndex,1.0) end
         end
         npc:renderShadow(npc:getX(),npc:getY(),npc:getZ())
         npc:render(npc:getX(),npc:getY(),npc:getZ(),light,true,false,nil)
         return true
+    end
+    function adapter.probeVisibility(npc, playerIndex)
+        playerIndex = playerIndex or 0
+        local player = getSpecificPlayer and getSpecificPlayer(playerIndex) or nil
+        if not player or not npc then
+            return { status = "unavailable", reason = not player and "missing player" or "missing npc" }
+        end
+        local okCoords, nx, ny, nz, px, py, pz = pcall(function()
+            return npc:getX(), npc:getY(), npc:getZ(), player:getX(), player:getY(), player:getZ()
+        end)
+        if not okCoords or type(nx) ~= "number" or type(ny) ~= "number" or type(nz) ~= "number"
+           or type(px) ~= "number" or type(py) ~= "number" or type(pz) ~= "number" then
+            return { status = "unavailable", reason = "invalid coordinates" }
+        end
+        local dx, dy = nx - px, ny - py
+        local dist = math.sqrt(dx * dx + dy * dy)
+        local sameFloor = (math.floor(nz) == math.floor(pz))
+        local sq = npc.getCurrentSquare and npc:getCurrentSquare() or nil
+        local canSee = (sq ~= nil and sq.isCanSee ~= nil and sq:isCanSee(playerIndex) == true) or false
+        local couldSee = (sq ~= nil and sq.isCouldSee ~= nil and sq:isCouldSee(playerIndex) == true) or false
+        local hasLight = (sq ~= nil and sq.getLightInfo ~= nil and sq:getLightInfo(playerIndex) ~= nil) or false
+        local onScreen = (npc.isOnScreen ~= nil and npc:isOnScreen() == true) or false
+        local alpha, targetAlpha = nil, nil
+        if npc.getAlpha then
+            local okA, a = pcall(npc.getAlpha, npc, playerIndex)
+            if okA and type(a) == "number" then alpha = a end
+        end
+        if npc.getTargetAlpha then
+            local okT, ta = pcall(npc.getTargetAlpha, npc, playerIndex)
+            if okT and type(ta) == "number" then targetAlpha = ta end
+        end
+        local detectionRange = nil
+        if player.getDetectionRange then
+            local okD, dr = pcall(player.getDetectionRange, player)
+            if okD and type(dr) == "number" then detectionRange = dr end
+        end
+        local los = nil
+        local cell = getCell and getCell() or nil
+        if cell and LosUtil and type(LosUtil.lineClear) == "function" then
+            local okL, res = pcall(LosUtil.lineClear, cell, math.floor(px), math.floor(py), math.floor(pz), math.floor(nx), math.floor(ny), math.floor(nz), false)
+            if okL and res ~= nil then
+                if type(res) == "table" and type(res.name) == "string" then
+                    los = res.name
+                elseif type(res) == "table" and type(res.toString) == "function" then
+                    local okS, s = pcall(res.toString, res)
+                    los = okS and tostring(s) or tostring(res)
+                else
+                    los = tostring(res)
+                end
+            end
+        end
+        return {
+            status = "ok",
+            dist = dist,
+            sameFloor = sameFloor,
+            hasSquare = sq ~= nil,
+            canSee = canSee,
+            couldSee = couldSee,
+            hasLight = hasLight,
+            onScreen = onScreen,
+            alpha = alpha,
+            targetAlpha = targetAlpha,
+            detectionRange = detectionRange,
+            los = los,
+            wouldRender = sameFloor and sq ~= nil and (canSee or couldSee) and hasLight and onScreen
+        }
     end
     function adapter.listNPCs()
         local result, seen = {}, {}

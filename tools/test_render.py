@@ -1508,5 +1508,332 @@ test('Integrated Engine / DiagnosticSampler / CandidateCollector full samplePerc
     adapter.readBudget = nil
     getCell = oldGetCell
 end)
+test('SarahWalkAction:start and SarahWalkAction:retarget preserve continuous owned locomotion without queue churn', function()
+    local f = fixture()
+    local adapter = f.adapter
+
+    local pathLocations = {}
+    local pathCancelled = 0
+    local queueAdds = 0
+    local queueClears = 0
+    local baseStarts = 0
+
+    f.npc.running = false
+    f.npc.setRunning = function(self, r) self.running = r end
+    f.npc.getPathFindBehavior2 = function(self)
+        return {
+            pathToLocation = function(_, tx, ty, tz)
+                table.insert(pathLocations, {x = tx, y = ty, z = tz})
+            end,
+            cancel = function()
+                pathCancelled = pathCancelled + 1
+            end,
+        }
+    end
+    f.npc.setPath2 = function(self, p) end
+
+    local activeQueueAction = nil
+    ISTimedActionQueue = {
+        add = function(act)
+            queueAdds = queueAdds + 1
+            activeQueueAction = act
+        end,
+        clear = function(c)
+            queueClears = queueClears + 1
+            activeQueueAction = nil
+        end,
+        hasAction = function(act)
+            return activeQueueAction == act
+        end,
+    }
+    ISWalkToTimedAction = {
+        new = function(self, char, sq)
+            local o = {character = char, location = sq}
+            setmetatable(o, self)
+            return o
+        end,
+        derive = function(self, name)
+            local cls = {}
+            cls.__index = cls
+            setmetatable(cls, {__index = self})
+            return cls
+        end,
+        start = function(self)
+            baseStarts = baseStarts + 1
+        end,
+        perform = function(self) end,
+        stop = function(self) end,
+        update = function(self) end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function()
+        return {
+            getGridSquare = function(_, x, y, z)
+                return {
+                    getX = function() return x end,
+                    getY = function() return y end,
+                    getZ = function() return z end,
+                    isFree = function() return true end,
+                }
+            end,
+            getObjectList = function() return {contains = function(_, obj) return obj == f.npc end} end,
+            getAddList = function() return {contains = function() return false end} end,
+            getRemoveList = function() return {contains = function() return false end} end,
+        }
+    end
+
+    local sq1 = {getX = function() return 12 end, getY = function() return 20 end, getZ = function() return 0 end, isFree = function() return true end}
+    local sq2 = {getX = function() return 14 end, getY = function() return 20 end, getZ = function() return 0 end, isFree = function() return true end}
+    local sq3 = {getX = function() return 15 end, getY = function() return 20 end, getZ = function() return 0 end, isFree = function() return true end}
+
+    local cb1Called = false
+    local cb2Called = false
+    local ok, act = adapter.walk(f.npc, sq1, function() cb1Called = true end, nil, 'run')
+    assert(ok and act)
+    assert(queueAdds == 1 and queueClears == 0)
+
+    -- Simulate IsoPlayer.updateInternal2 resetting running=false before ISTimedActionQueue:tick() -> waitToStart() -> start()
+    f.npc.running = false
+    act:start()
+    assert(baseStarts == 1, 'SarahWalkAction:start must delegate to ISWalkToTimedAction.start')
+    assert(f.npc.running == true, 'SarahWalkAction:start must re-apply running=true on initial start tick')
+
+    -- In-place retarget to sq2 with pace='run': updates PathFindBehavior2 without queue clear/add or path cancel
+    local retOk1, retAct1 = act:retarget(sq2, function() cb2Called = true end, nil, 'run')
+    assert(retOk1 == true and retAct1 == act)
+    assert(queueAdds == 1 and queueClears == 0 and pathCancelled == 0, 'in-place retarget must not clear/re-add queue or cancel path')
+    assert(#pathLocations == 1 and pathLocations[1].x == 14 and pathLocations[1].y == 20 and pathLocations[1].z == 0)
+    assert(act.location == sq2 and act.pace == 'run' and f.npc.running == true)
+
+    -- In-place retarget to sq3 transitioning from 'run' to 'walk'
+    local cb3Called = false
+    local retOk2 = act:retarget(sq3, function() cb3Called = true end, nil, 'walk')
+    assert(retOk2 == true)
+    assert(#pathLocations == 2 and pathLocations[2].x == 15)
+    assert(act.pace == 'walk' and f.npc.running == false, 'retarget to walk must immediately clear running flag')
+
+    -- Invalid target (different floor) is rejected by retarget without corrupting active action
+    local badSq = {getX = function() return 16 end, getY = function() return 20 end, getZ = function() return 1 end, isFree = function() return true end}
+    local retBad, retErr = act:retarget(badSq, nil, nil, 'walk')
+    assert(retBad == false and retErr == 'Target is on a different floor.')
+    assert(#pathLocations == 2)
+
+    -- Final perform triggers only the latest retarget callback (cb3), never retired cb1/cb2
+    act:perform()
+    assert(cb1Called == false and cb2Called == false and cb3Called == true)
+
+    -- Retarget on finished action returns false
+    local retAfterFinish = act:retarget(sq2, nil, nil, 'walk')
+    assert(retAfterFinish == false)
+
+    getCell = oldGetCell
+end)
+test('window/distance visibility alpha sync and read-only adapter.probeVisibility diagnostics', function()
+    local f = fixture()
+
+    -- 1. Visible square (isCanSee == true, isCouldSee == false) with zeroed alpha (e.g. beyond detectionRange ~2-3.5 tiles or dark interior through window)
+    f.visible = true
+    f.couldSee = false
+    f.npc.alpha = 0.0
+    f.npc.targetAlpha = 0.0
+    f.npc.getAlpha = function(self, idx) return self.alpha end
+    f.npc.getTargetAlpha = function(self, idx) return self.targetAlpha end
+    f.player.x = 15
+    f.player.y = 20
+    f.player.getDetectionRange = function() return 2.5 end
+
+    local oldLosUtil = LosUtil
+    local resWindow = {
+        toString = function() return 'ClearThroughWindow' end
+    }
+    LosUtil = {
+        lineClear = function(cell, x1, y1, z1, x2, y2, z2, b)
+            return resWindow
+        end
+    }
+
+    -- Read-only probeVisibility before render must NOT mutate alpha, targetAlpha, or draw counts
+    local probeBefore = f.adapter.probeVisibility(f.npc, 0)
+    assert(probeBefore ~= nil and probeBefore.status == 'ok')
+    assert(probeBefore.canSee == true and probeBefore.couldSee == false)
+    assert(probeBefore.hasLight == true and probeBefore.onScreen == true and probeBefore.sameFloor == true)
+    assert(probeBefore.alpha == 0.0 and probeBefore.targetAlpha == 0.0)
+    assert(probeBefore.detectionRange == 2.5 and probeBefore.dist == 5.0)
+    assert(probeBefore.los == 'ClearThroughWindow')
+    assert(probeBefore.wouldRender == true)
+    assert(f.npc.alphaUpdates == 0 and f.draws == 0 and f.shadows == 0, 'probeVisibility must be strictly read-only')
+
+    -- Render now restores alpha=1.0 on canSee == true square and draws Sarah
+    assert(f.adapter.render(f.npc, 0) == true)
+    assert(f.draws == 1 and f.shadows == 1)
+    assert(f.npc.alpha == 1.0 and f.npc.targetAlpha == 1.0 and f.npc.alphaUpdates == 1)
+
+    -- 2. Occluded square (isCanSee == false, isCouldSee == false) must still report wouldRender == false and never force alpha
+    f.visible = false
+    f.couldSee = false
+    f.npc.alpha = 0.0
+    f.npc.targetAlpha = 0.0
+    f.npc.alphaUpdates = 0
+    local probeOccluded = f.adapter.probeVisibility(f.npc, 0)
+    assert(probeOccluded.wouldRender == false)
+    assert(f.adapter.render(f.npc, 0) == false)
+    assert(f.npc.alpha == 0.0 and f.npc.targetAlpha == 0.0 and f.npc.alphaUpdates == 0)
+
+    LosUtil = oldLosUtil
+end)
+test('SarahWalkAction:retarget rejects false, nil, exception, and unavailable hasAction without native mutation, and falls back cleanly', function()
+    local f = fixture()
+    local adapter = f.adapter
+
+    local pathLocations = {}
+    local pathCancelled = 0
+    local setRunningCalls = 0
+    local queueAdds = 0
+    local queueClears = 0
+
+    f.npc.running = false
+    f.npc.setRunning = function(self, r)
+        setRunningCalls = setRunningCalls + 1
+        self.running = r
+    end
+    f.npc.getPathFindBehavior2 = function(self)
+        return {
+            pathToLocation = function(_, tx, ty, tz)
+                table.insert(pathLocations, {x = tx, y = ty, z = tz})
+            end,
+            cancel = function()
+                pathCancelled = pathCancelled + 1
+            end,
+        }
+    end
+    f.npc.setPath2 = function(self, p) end
+
+    local activeQueueAction = nil
+    local hasActionMode = 'true'
+    ISTimedActionQueue = {
+        add = function(act)
+            queueAdds = queueAdds + 1
+            activeQueueAction = act
+        end,
+        clear = function(c)
+            queueClears = queueClears + 1
+            activeQueueAction = nil
+        end,
+        hasAction = function(act)
+            if hasActionMode == 'false' then return false end
+            if hasActionMode == 'nil' then return nil end
+            if hasActionMode == 'error' then error('simulated hasAction error') end
+            return activeQueueAction == act
+        end,
+    }
+
+    local oldGetCell = getCell
+    getCell = function()
+        return {
+            getGridSquare = function(_, x, y, z)
+                return {
+                    getX = function() return x end,
+                    getY = function() return y end,
+                    getZ = function() return z end,
+                    isFree = function() return true end,
+                }
+            end,
+            getObjectList = function() return {contains = function(_, obj) return obj == f.npc end} end,
+            getAddList = function() return {contains = function() return false end} end,
+            getRemoveList = function() return {contains = function() return false end} end,
+        }
+    end
+
+    local sq1 = {getX = function() return 12 end, getY = function() return 20 end, getZ = function() return 0 end, isFree = function() return true end}
+    local sq2 = {getX = function() return 14 end, getY = function() return 20 end, getZ = function() return 0 end, isFree = function() return true end}
+
+    local cb1 = function() end
+    local cb2 = function() end
+    local ok, act = adapter.walk(f.npc, sq1, cb1, nil, 'walk')
+    assert(ok and act)
+    setRunningCalls = 0
+
+    -- 1. hasAction returns false -> rejected without pathToLocation or setRunning mutation
+    hasActionMode = 'false'
+    local rFalse, errFalse = act:retarget(sq2, cb2, nil, 'run')
+    assert(rFalse == false and errFalse == 'action not queued')
+    assert(#pathLocations == 0 and setRunningCalls == 0 and f.npc.running == false)
+    assert(act.location == sq1 and act.pace == 'walk' and act.onSuccess == cb1)
+
+    -- 2. hasAction returns nil -> rejected without pathToLocation or setRunning mutation
+    hasActionMode = 'nil'
+    local rNil, errNil = act:retarget(sq2, cb2, nil, 'run')
+    assert(rNil == false and errNil == 'action not queued')
+    assert(#pathLocations == 0 and setRunningCalls == 0 and f.npc.running == false)
+    assert(act.location == sq1 and act.pace == 'walk' and act.onSuccess == cb1)
+
+    -- 3. hasAction throws exception -> rejected without pathToLocation or setRunning mutation
+    hasActionMode = 'error'
+    local rErr, errThrow = act:retarget(sq2, cb2, nil, 'run')
+    assert(rErr == false and errThrow == 'action not queued')
+    assert(#pathLocations == 0 and setRunningCalls == 0 and f.npc.running == false)
+    assert(act.location == sq1 and act.pace == 'walk' and act.onSuccess == cb1)
+
+    -- 4. hasAction is unavailable (nil) -> rejected without pathToLocation or setRunning mutation
+    local savedHasAction = ISTimedActionQueue.hasAction
+    ISTimedActionQueue.hasAction = nil
+    local rUnavail, errUnavail = act:retarget(sq2, cb2, nil, 'run')
+    assert(rUnavail == false and errUnavail == 'queue membership unavailable')
+    assert(#pathLocations == 0 and setRunningCalls == 0 and f.npc.running == false)
+    assert(act.location == sq1 and act.pace == 'walk' and act.onSuccess == cb1)
+    ISTimedActionQueue.hasAction = savedHasAction
+
+    -- 5. Integrated fallback and explicit Stop verification when hasAction is nil/unavailable
+    adapter.stop(f.npc)
+    queueAdds = 0; queueClears = 0; pathCancelled = 0; setRunningCalls = 0
+    hasActionMode = 'nil'
+
+    local playerPos = {x = 14.0, y = 20.0, z = 0}
+    local observe = function()
+        return {
+            state = 'active',
+            npc = {x = 10.0, y = 20.0, z = 0},
+            player = {x = playerPos.x, y = playerPos.y, z = playerPos.z, dead = false, isDead = false, alive = true},
+            playerDead = false,
+            playerAlive = true,
+            playerRunning = true,
+        }
+    end
+    local ctrl = {npc = f.npc, adapter = adapter}
+    local d = Commands.new(observe, function()
+        return adapter.stop(f.npc)
+    end, function()
+        return ctrl, f.npc
+    end, function(target, onComplete, onFail, actionTable)
+        local valid, sqOrErr = adapter.validateTarget(f.npc, target)
+        if not valid then return false, sqOrErr end
+        local p = (actionTable and actionTable.pace) or 'walk'
+        return adapter.walk(f.npc, sqOrErr, onComplete, onFail, p)
+    end)
+
+    local resFollow = d:execute('follow')
+    assert(resFollow.state == 'running' and queueAdds == 1 and queueClears == 0)
+    local firstAct = adapter.currentAction
+    assert(firstAct ~= nil and d.active.stepAction == firstAct)
+
+    -- Trigger moving-target retarget while hasAction returns nil:
+    -- SarahWalkAction:retarget rejects without pathToLocation, and Commands falls back to stop + replacement walk
+    playerPos.x = 16.0
+    for _ = 1, 6 do d:tick() end
+    assert(#pathLocations == 0, 'rejected in-place retarget must not call pathToLocation')
+    assert(queueClears == 1 and pathCancelled == 1 and queueAdds == 2, 'Commands must execute full-stop + replacement walk fallback')
+    local secondAct = adapter.currentAction
+    assert(secondAct ~= nil and secondAct ~= firstAct and d.active.stepAction == secondAct)
+    assert(firstAct:isCurrentOwner() == false and secondAct:isCurrentOwner() == true)
+
+    -- Explicit Stop halts cleanly and clears ownership
+    local stopRes = d:execute('stop')
+    assert(stopRes.state == 'completed' and d.active == nil)
+    assert(queueClears == 2 and pathCancelled == 2 and f.npc.running == false)
+    assert(adapter.currentAction == nil and secondAct:isCurrentOwner() == false)
+
+    getCell = oldGetCell
+end)
 print('RESULT '..count..' total engine adapter checks passed')
 ''')
