@@ -1,3 +1,38 @@
+## Native session closed and latest state preserved (2026-10-17)
+
+Deployed gameplay914333b. User-reported pace switching and Stop/no-auto-resume
+passed this case; nearby open-road look-away rendering FAILED. Native clock
+paused stability, normal advancement and ~5x per-update change observed; exact
+wall-time calibration and reload/new-session reset pending. No full M1 acceptance.
+See evidence/native-acceptance-20261017.md for actors, values and limitations.
+User quit normally. Codex process check CLOSED; log SAVED a / GameThread exited.
+Pre-test backup live-acceptance-20261016-234628-UTC (475 verified files/451 world);
+post-test backup post-live-20261016-235932-UTC (527 verified files/495 world).
+Both ignored under runtime/backups with manifests and RESTORE.txt. No restore.
+Normal saves/settings untouched; no gameplay source changed during this session.
+Next manual coding assignment is docs/NEXT-M1-CORRECTION-BATCH.md: justified safe
+look-away rendering plus bounded Follow catch-up hysteresis; preserve Stop,
+loaded-world/occlusion guards, 8-tile leash and 2-tile deadzone. Codex owns checkout
+until explicit coding handoff. Fresh backup still required before next deployment.
+Independent lighting OPEN; LightSourceSnapshot inert; external/model AI ON HOLD.
+Historical IN PROGRESS entries below are superseded by this closed-session record.
+
+## IN PROGRESS: isolated native acceptance resumed (2026-10-17)
+
+User explicitly resumed live testing. Codex sole editor; source/deployed code
+checkpoint914333b, clean before preparation. Fresh backup:
+runtime/backups/live-acceptance-20261016-234628-UTC (475 copied files SHA256 verified,
+451 world files). Contains selected Sandbox world2026-10-05_19-04-21, deployed mod,
+Lua/InputBindings/options/latestSave/mod defaults and explicit RESTORE.txt.
+Preserve then-current state in a NEW verified backup before any restore.
+All17 production files copied/hash-matched. Preflight at914333b READY; this does
+not itself certify backup freshness (separate manifest/copy verification above).
+Launched tools/launch-isolated.ps1; PID23212. Isolated cachedir runtime/isolated;
+Continue selected from main menu. No normal saves/settings touched.
+Pending: loaded-world status, Follow pace/turns/Stop and queue/path/running cleanup,
+render look-away/walls/floors, pause/speed/reload clock checks. No new native PASS
+recorded yet. LightSourceSnapshot remains inert and lighting unknown. AI ON HOLD.
+
 ## Codex-reviewed Argon corrections (2026-10-16)
 
 Argon returned sole checkout ownership. Codex reviewed the production/tool diffs

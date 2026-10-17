@@ -1,3 +1,78 @@
+## Native session closed and latest state preserved (2026-10-17)
+
+Deployed gameplay914333b. User-reported pace switching and Stop/no-auto-resume
+passed this case; nearby open-road look-away rendering FAILED. Native clock
+paused stability, normal advancement and ~5x per-update change observed; exact
+wall-time calibration and reload/new-session reset pending. No full M1 acceptance.
+See evidence/native-acceptance-20261017.md for actors, values and limitations.
+User quit normally. Codex process check CLOSED; log SAVED a / GameThread exited.
+Pre-test backup live-acceptance-20261016-234628-UTC (475 verified files/451 world);
+post-test backup post-live-20261016-235932-UTC (527 verified files/495 world).
+Both ignored under runtime/backups with manifests and RESTORE.txt. No restore.
+Normal saves/settings untouched; no gameplay source changed during this session.
+Next manual coding assignment is docs/NEXT-M1-CORRECTION-BATCH.md: justified safe
+look-away rendering plus bounded Follow catch-up hysteresis; preserve Stop,
+loaded-world/occlusion guards, 8-tile leash and 2-tile deadzone. Codex owns checkout
+until explicit coding handoff. Fresh backup still required before next deployment.
+Independent lighting OPEN; LightSourceSnapshot inert; external/model AI ON HOLD.
+Historical IN PROGRESS entries below are superseded by this closed-session record.
+
+## Native clock pause/advance partial acceptance (2026-10-17)
+
+Native helpers returned ok=true, dt=0/reason=paused, err=nil; repeated paused
+reading stayed exactly137.9991227942519 at frame8264. User normal-speed run/pause
+then yielded146.71578948339447 at frame8787, err=nil. Supports pause stability and
+positive engine-time advance only; user interval approximate, not calibrated
+wall-time/speed scaling. Changed-speed case requested; reload/reset still pending.
+Rendering look-away FAIL remains open; no complete M1 or perception acceptance.
+
+## Native nearby look-away rendering FAIL (2026-10-17)
+
+User reports Sarah visible only when player faces her on open road. This fails
+nearby rendering independence at deployed914333b. Engine.lua195 explicitly gates
+manual FBO draw on square:isCanSee(playerIndex); do not blindly remove it without
+wall/floor/occlusion evidence. Pace matching and Stop cases passed by user report;
+full M1 still OPEN. Next finish clock baseline, cleanly exit, preserve latest
+isolated state, then bounded offline rendering/catch-up correction and retest.
+Clock paused helper probe requested; not yet accepted. No live code changes.
+
+## Native Stop/no-auto-resume partial acceptance (2026-10-17)
+
+User confirms mid-stride Stop worked and Sarah stayed stopped until explicitly
+ordered Follow again. Codex observed panel Stop#3 completed / Cancelled Follow#2,
+then explicit Follow#4; issued Stop#5 while paused and observed completed/cancelled
+Follow#4 without engine-stop error. This is observed behavior, not measured Stop
+latency or native queue/path/running-field introspection. Sarah now stopped; user
+asked for open-road look-toward/look-away rendering check and to pause afterward.
+Pace switching and Stop user cases passed at deployed914333b. Clock, rendering,
+reload and remaining movement gates pending; no complete M1 acceptance claim.
+
+## Native Follow pace partial result (2026-10-17)
+
+At deployed914333b in backed-up isolated Sandbox world, user reports Sarah runs
+when player runs and walks when player walks. Larger-gap approach still walks
+when player walks: current policy uses playerRunning only, no distance catch-up.
+This is user-observed switching, not measured speed or complete Follow acceptance.
+Catch-up improvement recorded for a later bounded coding batch; no source edits
+while game is running. Stop/no-auto-resume test now pending. Details in ignored
+runtime/live-acceptance-20261017-journal.txt. Rendering/clock gates remain pending.
+
+## IN PROGRESS: isolated native acceptance resumed (2026-10-17)
+
+User explicitly resumed live testing. Codex sole editor; source/deployed code
+checkpoint914333b, clean before preparation. Fresh backup:
+runtime/backups/live-acceptance-20261016-234628-UTC (475 copied files SHA256 verified,
+451 world files). Contains selected Sandbox world2026-10-05_19-04-21, deployed mod,
+Lua/InputBindings/options/latestSave/mod defaults and explicit RESTORE.txt.
+Preserve then-current state in a NEW verified backup before any restore.
+All17 production files copied/hash-matched. Preflight at914333b READY; this does
+not itself certify backup freshness (separate manifest/copy verification above).
+Launched tools/launch-isolated.ps1; PID23212. Isolated cachedir runtime/isolated;
+Continue selected from main menu. No normal saves/settings touched.
+Pending: loaded-world status, Follow pace/turns/Stop and queue/path/running cleanup,
+render look-away/walls/floors, pause/speed/reload clock checks. No new native PASS
+recorded yet. LightSourceSnapshot remains inert and lighting unknown. AI ON HOLD.
+
 ## Codex-reviewed Argon corrections (2026-10-16)
 
 Argon returned sole checkout ownership. Codex reviewed the production/tool diffs

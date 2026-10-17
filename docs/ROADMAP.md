@@ -7,8 +7,8 @@ See MILESTONE-REVIEW-2026-10-07.md for scope and acceptance requirements.
 | Milestone | Outcome | Current state | Exit gate |
 |---|---|---|---|
 | M0 Foundation | One persistent NPC; safe death/unload/recovery | Narrow native evidence accepted; wider limits open | Supported-scope recovery and no duplicates/resurrection |
-| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Implemented; partial live evidence; current pace/render gate pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
-| M2a Independent observations | Sarah-relative geometry, admitted lighting and bounded memory | Offline candidates and source snapshot verified; native lighting OPEN | Native exposure/coverage, calibrated lighting, expiry and lifecycle resets |
+| M1 First playable companion | Console, Walk Here, smooth Follow, Stop, nearby rendering | Pace and Stop case passed; look-away rendering FAIL; catch-up improvement pending | Current deployed revision passes movement/Stop, reload and wall/floor/look-away checks |
+| M2a Independent observations | Sarah-relative geometry, admitted lighting and bounded memory | Offline candidates; clock pause/advance observed; native lighting OPEN | Native exposure/coverage, calibrated lighting, expiry and lifecycle resets |
 | M2b Equipment and exchange | Melee equip, one garment, one-item give/take | Policy/proposals; native adapters unaccepted | Exact item conservation, appearance, capacity, cancellation and restart |
 | M2c Commanded work | One-container loot, then room/house; equipment improvement | Planned | Accepted discovery, reachability, partial results, capacity and Stop |
 | M2d Defense and construction | One-threat defense/retreat; one real build action | Planned | Native hit/cooldown, resource consumption and safe interruption |
@@ -20,7 +20,7 @@ Track each capability as not started, implemented, offline verified, native
 accepted or blocked. Record owner, code revision, deployed revision, evidence,
 limitation and next action. Test totals are not completion percentages.
 
-Priority: inert light-source snapshot accepted offline; run a small
+Priority: correct native look-away rendering failure and add bounded Follow catch-up; retest before completing the
 isolated Follow/Stop/render and clock acceptance batch; calibrate one explicit
 lamp; decide the lighting route. Independent manual equip work may proceed where
 its action/target safety is established, without granting autonomous sight.
